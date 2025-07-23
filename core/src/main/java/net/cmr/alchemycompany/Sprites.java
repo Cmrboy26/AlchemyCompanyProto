@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 public class Sprites {
 
     public enum SpriteType {
+        WATER,
         PLAINS,
         FOREST,
         MOUNTAINS,
