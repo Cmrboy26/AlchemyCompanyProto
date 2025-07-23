@@ -1,0 +1,8 @@
+X Adding and removing structures
+- Turn Logic
+X Resource Production
+- Structure Cost
+X Resource UI
+X Resource Manufacturing
+- Resource Storage
+- Troops

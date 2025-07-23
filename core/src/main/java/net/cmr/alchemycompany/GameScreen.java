@@ -1,5 +1,6 @@
 package net.cmr.alchemycompany;
 
+import java.awt.Color;
 import java.util.function.Consumer;
 
 import com.badlogic.gdx.Gdx;
@@ -19,13 +20,13 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.actions.SequenceAction;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import net.cmr.alchemycompany.Building.ArcherTowerBuilding;
@@ -38,9 +39,9 @@ import net.cmr.alchemycompany.Building.HeadquarterBuilding;
 import net.cmr.alchemycompany.Building.ResearchLabBuilding;
 import net.cmr.alchemycompany.Building.StatueBuilding;
 import net.cmr.alchemycompany.Building.StorageBuilding;
+import net.cmr.alchemycompany.Resources.Resource;
 import net.cmr.alchemycompany.Sprites.SpriteType;
 import net.cmr.alchemycompany.World.WorldFeature;
-import net.cmr.alchemycompany.World.WorldType;
 
 /**
  * First screen of the application. Displayed after the application is created.
@@ -152,18 +153,22 @@ public class GameScreen implements Screen {
                         buttonPressed |= button.isPressed();
                     }
                     if (!buttonPressed) {
-                        BuildingContext context = new BuildingContext(player, x, y);
+                        BuildingContext context = new BuildingContext(world, player, x, y);
                         BuildingButton button = buildingsGroup.getChecked();
                         Building building = button.createBuilding(context);
 
                         boolean canPlace = false;
-                        WorldFeature below = world.features[x][y];
+                        WorldFeature below = world.getFeature(x, y);
                         for (WorldFeature feature : building.getAllowedTiles()) {
                             if (below.equals(feature)) {
                                 canPlace = true;
                                 break;
                             }
                         }
+                        if (world.getBuilding(x, y) != null) {
+                            canPlace = false;
+                        }
+
                         if (canPlace) {
                             world.addBuilding(building);
                             if (!Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
@@ -182,6 +187,7 @@ public class GameScreen implements Screen {
                         Window popupTable = new Window("Building", skin);
                         popupTable.setName("building_popup");
                         popupTable.add(buildingAt.onClick(skin)).fill().expand().padBottom(5).row();
+
                         TextButton closeButton = new TextButton("Close", skin);
                         closeButton.pad(0, 10, 0, 10);
                         closeButton.addListener(new InputListener() {
@@ -191,7 +197,22 @@ public class GameScreen implements Screen {
                                 return true;
                             }
                         });
-                        popupTable.add(closeButton).align(Align.center).expand().row();
+                        popupTable.add(closeButton).align(Align.left).expand();
+
+                        if (!(buildingAt instanceof HeadquarterBuilding)) {
+                            TextButton removeButton = new TextButton("Destroy", skin);
+                            removeButton.pad(0, 10, 0, 10);
+                            removeButton.addListener(new InputListener() {
+                                @Override
+                                public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                                    popupTable.addAction(new SequenceAction(Actions.delay(0.1f), Actions.removeActor()));
+                                    world.removeBuilding(buildingAt);
+                                    return true;
+                                }
+                            });
+                            popupTable.add(removeButton).align(Align.right).expand();
+                        }
+
                         popupTable.pad(20);
                         popupTable.pack();
                         popupTable.setKeepWithinStage(true);
@@ -210,13 +231,14 @@ public class GameScreen implements Screen {
 
     private void renderWorld() {
         SpriteBatch batch = AlchemyCompany.getInstance().batch();
+        batch.setColor(com.badlogic.gdx.graphics.Color.WHITE);
         worldViewport.apply();
         batch.setProjectionMatrix(worldViewport.getCamera().combined);
         batch.begin();
 
         for (int y = world.height - 1; y >= 0; y--) {
             for (int x = 0; x < world.width; x++) {
-                World.WorldFeature feature = world.features[x][y];
+                World.WorldFeature feature = world.getFeature(x, y);
                 SpriteType spriteType = null;
                 switch (feature) {
                     case CRYSTAL_VALLEY:
@@ -292,6 +314,38 @@ public class GameScreen implements Screen {
         addToMenu.accept(new BuildingButton(skin, "Research\nLab", ResearchLabBuilding::new));
         addToMenu.accept(new BuildingButton(skin, "Archer\nTower", ArcherTowerBuilding::new));
         addToMenu.accept(new BuildingButton(skin, "Barracks", BarracksBuilding::new));
+
+        Table rightTopTable = new Table(skin);
+        rightTopTable.setFillParent(true);
+        rightTopTable.right().top();
+        stage.addActor(rightTopTable);
+
+        Table resourcesTable = new Table(skin);
+        resourcesTable.setBackground("window");
+        resourcesTable.pad(10);
+
+        Label key = new Label("Production : Stored", skin);
+        resourcesTable.add(key).growX().align(Align.right).pad(5).colspan(2).row();
+
+        for (final Resource r : Resource.values()) {
+            Label counter = new Label("- : -", skin) {
+                @Override
+                public void act(float delta) {
+                    float production = player.calculatedResourcePerSecond.getOrDefault(r, 0f);
+                    float stored = player.calculatedExcessResource.getOrDefault(r, 0f);
+                    setText(production + " : " + stored);
+                    super.act(delta);
+                }
+            };
+            Label label = new Label(r.name(), skin);
+            resourcesTable.add(counter).growX().align(Align.left).pad(5);
+            resourcesTable.add(label).growX().align(Align.left).pad(5).row();
+        }
+
+        rightTopTable.add(resourcesTable);
+
+        rightTopTable.pack();
+
 
     }
 

@@ -39,7 +39,7 @@ public class World {
     public final WorldType worldType;
     public final int width;
     public final int height;
-    public final WorldFeature[][] features;
+    private final WorldFeature[][] features;
     private final Building[][] buildings;
     private final long seed;
 
@@ -140,6 +140,15 @@ public class World {
         building.getPlayer().addBuilding(building);
     }
 
+    public void removeBuilding(Building building) {
+        buildings[building.getX()][building.getY()] = null;
+        building.getPlayer().removeBuilding(building);
+    }
+
+    public WorldFeature getFeature(int x, int y) {
+        return features[x][y];
+    }
+
     public Building getBuilding(int x, int y) {
         return buildings[x][y];
     }
@@ -150,7 +159,7 @@ public class World {
             int x = (int) (random.nextDouble() * width);
             int y = (int) (random.nextDouble() * height);
             System.out.println(x + ", " + y);
-            HeadquarterBuilding hq = new HeadquarterBuilding(new BuildingContext(player, x, y));
+            HeadquarterBuilding hq = new HeadquarterBuilding(new BuildingContext(this, player, x, y));
             for (WorldFeature feature : hq.getAllowedTiles()) {
                 if (feature == features[x][y]) {
                     addBuilding(hq);
