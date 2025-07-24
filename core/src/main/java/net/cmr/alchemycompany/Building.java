@@ -124,46 +124,45 @@ public abstract class Building {
     }
     public static abstract class AbstractStorageBuilding extends Building {
 
-        Resource resource;
-        float amountStored;
+        Map<Resource, Float> resourceMap;
 
         public AbstractStorageBuilding(SpriteType type, BuildingContext context) {
             super(type, context);
-        }
-
-        public void setResource(Resource resource) {
-            if (this.resource != resource) {
-                amountStored = 0;
-            }
-            this.resource = resource;
+            resourceMap = new HashMap<>();
         }
 
         public abstract float getMaxAmount();
-        public Resource getResource() { return resource; }
-        public float getAmountStored() { return amountStored; }
-        public void setAmountStored(float amount) {
-            this.amountStored = amount;
-            if (amountStored > getMaxAmount()) {
-                throw new RuntimeException("Stored more than maximum amount in storage building: (" + amountStored + " > " + getMaxAmount() + ")");
+        public float getAmountStored(Resource resource) { return resourceMap.getOrDefault(resource, 0f); }
+        protected void setAmountStored(Resource resource, float amount) {
+            resourceMap.put(resource, amount);
+            if (amount > getMaxAmount()) {
+                throw new RuntimeException("Stored more than maximum amount in storage building: (" + amount + " > " + getMaxAmount() + ")");
             }
         }
+        protected Map<Resource, Float> getStorageMap() {
+            return resourceMap;
+        }
+
         /**
          * @return amount of resource that cannot be added
          */
-        public float addAmount(float amount) {
+        public float addAmount(Resource resource, float amount) {
             if (amount < 0) { throw new RuntimeException("Cannot add negative amount in addAmount method"); }
-            if (amountStored + amount > getMaxAmount()) {
-                float amountToReturn = amountStored + amount - getMaxAmount();
-                setAmountStored(getMaxAmount());
+            if (getAmountStored(resource) + amount > getMaxAmount()) {
+                float amountToReturn = getAmountStored(resource) + amount - getMaxAmount();
+                setAmountStored(resource, getMaxAmount());
                 return amountToReturn;
             }
-            setAmountStored(amountStored + amount);
+            setAmountStored(resource, getAmountStored(resource) + amount);
             return 0;
         }
-        public void consumeAmount(float amount) {
+
+        public void consumeAmount(Resource resource, float amount) {
             if (amount < 0) { throw new RuntimeException("Cannot consume negative amount in consumeAmount method"); }
-            setAmountStored(amountStored - amount);
+            setAmountStored(resource, getAmountStored(resource) - amount);
         }
+
+        public abstract Resource[] getAllowedStoreResources();
 
     }
 
@@ -204,18 +203,22 @@ public abstract class Building {
     }
 
     public static class StorageBuilding extends AbstractStorageBuilding {
+        Resource specifiedResource;
         public StorageBuilding(BuildingContext context) { super(SpriteType.STORAGE, context); }
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP }; }
         @Override public Table onClick(Skin skin) {
             Table table = super.onClick(skin);
             SelectBox<Resource> selectionBox = new SelectBox<>(skin);
             selectionBox.setItems(Resource.values());
-            selectionBox.setSelected(getResource());
+            selectionBox.setSelected(specifiedResource);
             table.add(selectionBox).growX().row();
             selectionBox.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
-                    setResource(selectionBox.getSelected());
+                    if (specifiedResource != selectionBox.getSelected()) {
+                        resourceMap.clear();
+                    }
+                    specifiedResource = selectionBox.getSelected();
                     player.updateResourceConsumption();
                 }
             });
@@ -223,6 +226,12 @@ public abstract class Building {
             return table;
         }
         @Override public float getMaxAmount() { return 25; }
+        @Override public Resource[] getAllowedStoreResources() {
+            if (specifiedResource == null) {
+                return null;
+            }
+            return new Resource[] {specifiedResource};
+        }
     }
 
     public static class FactoryBuilding extends Building implements ConsumptionBuilding, ProductionBuilding {

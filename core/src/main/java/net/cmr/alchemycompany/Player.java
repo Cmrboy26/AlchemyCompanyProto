@@ -1,6 +1,7 @@
 package net.cmr.alchemycompany;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -26,7 +27,7 @@ public class Player {
     Map<Resource, Float> calculatedResourcePerSecond;
     Map<Resource, Float> currentStoredResources;
     Map<Resource, Float> calculatedNetStoredResourceNextTurn;
-    Map<AbstractStorageBuilding, Float> calculatedAmountToRemoveFromStorage = new HashMap<>();
+    Map<Pair<AbstractStorageBuilding, Resource>, Float> calculatedAmountToRemoveFromStorage = new HashMap<>();
 
     public Player(String name) {
         this.name = name;
@@ -75,7 +76,7 @@ public class Player {
         final Map<Resource, Float> rps = new HashMap<>();
         final Map<Resource, Float> initialStoredResource = new HashMap<>();
         final Map<Resource, Float> calculatedStoredResource = new HashMap<>();
-        final Map<AbstractStorageBuilding, Float> amountToRemoveFromStorage = new HashMap<>();
+        final Map<Pair<AbstractStorageBuilding, Resource>, Float> amountToRemoveFromStorage = new HashMap<>();
 
         final List<AbstractStorageBuilding> storageList = buildings.stream().filter(t -> {
             return (t instanceof AbstractStorageBuilding);
@@ -92,9 +93,11 @@ public class Player {
 
         // Sum up storage
         storageList.forEach(storage -> {
-            if (storage.getResource() == null) return;
-            initialStoredResource.put(storage.getResource(), initialStoredResource.getOrDefault(storage.getResource(), 0f) + storage.getAmountStored());
-            calculatedStoredResource.put(storage.getResource(), calculatedStoredResource.getOrDefault(storage.getResource(), 0f) + storage.getAmountStored());
+            if (storage.getAllowedStoreResources() == null) return;
+            for (Resource resource : storage.getAllowedStoreResources()) {
+                initialStoredResource.put(resource, initialStoredResource.getOrDefault(resource, 0f) + storage.getAmountStored(resource));
+                calculatedStoredResource.put(resource, calculatedStoredResource.getOrDefault(resource, 0f) + storage.getAmountStored(resource));
+            }
         });
 
         // Process production
@@ -182,21 +185,23 @@ public class Player {
                                 // Take the amount of resource out of storage from any building
                                 for (int j = 0; j < storageList.size(); j++) {
                                     AbstractStorageBuilding storage = storageList.get(j);
-                                    if (storage.getResource() == r) {
-                                        float calculatedAmountInStorage = storage.getAmountStored() - amountToRemoveFromStorage.getOrDefault(storage, 0f);
-                                        System.out.println(r.name() + " amount in storage "+calculatedAmountInStorage + " ("+storage.getAmountStored() + " - " + amountToRemoveFromStorage.getOrDefault(storage, 0f) + "), need " + neededStorage);
-                                        if (calculatedAmountInStorage >= neededStorage) {
-                                            // Remove from storage in calculation
-                                            amountToRemoveFromStorage.put(storage, amountToRemoveFromStorage.getOrDefault(storage, 0f) + neededStorage);
-                                            calculatedStoredResource.put(r, calculatedStoredResource.getOrDefault(r, 0f) - neededStorage);
-                                            neededStorage = 0;
-                                            // Everything has been taken from needed storages, so continue
-                                            break;
-                                        } else {
-                                            // Not enough to fully cover the amount needed, but add as much as possible.
-                                            neededStorage -= calculatedAmountInStorage;
-                                            amountToRemoveFromStorage.put(storage, calculatedAmountInStorage);
-                                            calculatedStoredResource.put(r, calculatedStoredResource.getOrDefault(r, 0f) - calculatedAmountInStorage);
+                                    for (Resource storageResource : storage.getAllowedStoreResources()) {
+                                        if (storageResource == r) {
+                                            float calculatedAmountInStorage = storage.getAmountStored(storageResource) - amountToRemoveFromStorage.getOrDefault(storage, 0f);
+                                            System.out.println(r.name() + " amount in storage "+calculatedAmountInStorage + " ("+storage.getAmountStored(storageResource) + " - " + amountToRemoveFromStorage.getOrDefault(storage, 0f) + "), need " + neededStorage);
+                                            if (calculatedAmountInStorage >= neededStorage) {
+                                                // Remove from storage in calculation
+                                                amountToRemoveFromStorage.put(new Pair<>(storage, storageResource), amountToRemoveFromStorage.getOrDefault(storage, 0f) + neededStorage);
+                                                calculatedStoredResource.put(r, calculatedStoredResource.getOrDefault(r, 0f) - neededStorage);
+                                                neededStorage = 0;
+                                                // Everything has been taken from needed storages, so continue
+                                                break;
+                                            } else {
+                                                // Not enough to fully cover the amount needed, but add as much as possible.
+                                                neededStorage -= calculatedAmountInStorage;
+                                                amountToRemoveFromStorage.put(new Pair<>(storage, storageResource), calculatedAmountInStorage);
+                                                calculatedStoredResource.put(r, calculatedStoredResource.getOrDefault(r, 0f) - calculatedAmountInStorage);
+                                            }
                                         }
                                     }
                                 }
@@ -288,9 +293,13 @@ public class Player {
 
         // Convert amountToRemoveFromStorage to Map<Resource, Float>
         Map<Resource, Float> netStoredResourceNextTurn = new HashMap<>();
-        for (Map.Entry<AbstractStorageBuilding, Float> entry : amountToRemoveFromStorage.entrySet()) {
-            Resource resource = entry.getKey().getResource();
+        for (Map.Entry<Pair<AbstractStorageBuilding, Resource>, Float> entry : amountToRemoveFromStorage.entrySet()) {
+            //for (Resource resource : entry.getKey().get.getAllowedStoreResources()) {
+            AbstractStorageBuilding building = entry.getKey().getFirst();
+            Resource resource = entry.getKey().getSecond();
             netStoredResourceNextTurn.put(resource, netStoredResourceNextTurn.getOrDefault(resource, 0f) - entry.getValue());
+            System.out.println("WOAH: "+resource+" - "+netStoredResourceNextTurn.get(resource));
+            //}
         }
         calculatedNetStoredResourceNextTurn = netStoredResourceNextTurn;
     }
@@ -299,9 +308,11 @@ public class Player {
         // Update resource consumption JUUUST in case
         updateResourceConsumption();
         // Consume resources from storage
-        calculatedAmountToRemoveFromStorage.forEach((b, f) -> {
+        calculatedAmountToRemoveFromStorage.forEach((p, f) -> {
+            AbstractStorageBuilding b = p.getFirst();
+            Resource r = p.getSecond();
             System.out.println(b.getX() +", "+b.getY() + ", " + f);
-            b.consumeAmount(f);
+            b.consumeAmount(r, f);
         });
         // Produce excess resources
         calculatedResourcePerSecond.forEach((r, f) -> {
@@ -310,10 +321,10 @@ public class Player {
             for (AbstractStorageBuilding storage : buildings.stream()
                     .filter(b -> b instanceof AbstractStorageBuilding)
                     .map(b -> (AbstractStorageBuilding) b)
-                    .filter(b -> r.equals(b.getResource()))
+                    .filter(b -> Arrays.asList(b.getAllowedStoreResources()).contains(r))
                     .collect(Collectors.toList())) {
                 if (remaining == 0) break;
-                remaining = storage.addAmount(remaining);
+                remaining = storage.addAmount(r, remaining);
                 System.out.println("remaining after storage put: "+remaining);
             }
         });
