@@ -56,6 +56,7 @@ public class GameScreen implements Screen {
     private int TILE_SIZE = 100;
     private ButtonGroup<BuildingButton> buildingsGroup;
     private Player player;
+    private int turn = 1;
 
     private int lastMouseX = -1;
     private int lastMouseY = -1;
@@ -324,16 +325,15 @@ public class GameScreen implements Screen {
         resourcesTable.setBackground("window");
         resourcesTable.pad(10);
 
-        Label key = new Label("Production : Stored", skin);
+        Label key = new Label("Stored", skin);
         resourcesTable.add(key).growX().align(Align.right).pad(5).colspan(2).row();
 
         for (final Resource r : Resource.values()) {
             Label counter = new Label("- : -", skin) {
                 @Override
                 public void act(float delta) {
-                    float production = player.calculatedResourcePerSecond.getOrDefault(r, 0f);
-                    float stored = player.calculatedExcessResource.getOrDefault(r, 0f);
-                    setText(production + " : " + stored);
+                    float stored = player.displayStoredResources.getOrDefault(r, 0f);
+                    setText(stored + "");
                     super.act(delta);
                 }
             };
@@ -345,6 +345,34 @@ public class GameScreen implements Screen {
         rightTopTable.add(resourcesTable);
 
         rightTopTable.pack();
+
+        Table rightBottomTable = new Table(skin);
+        rightBottomTable.setFillParent(true);
+        rightBottomTable.right().bottom();
+        stage.addActor(rightBottomTable);
+
+        Table turnTable = new Table(skin);
+        turnTable.setBackground("window");
+        turnTable.pad(10);
+        Label turnLabel = new Label("Turn: "+turn, skin);
+        turnLabel.setAlignment(Align.left);
+        turnTable.add(turnLabel).growX().pad(5).row();
+
+        TextButton nextTurnButton = new TextButton("Next\nTurn", skin);
+        nextTurnButton.addListener(new InputListener() {
+            @Override
+            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                nextTurnButton.setDisabled(true);
+                nextTurn();
+                nextTurnButton.setDisabled(false);
+                turnLabel.setText("Turn: "+turn);
+                return true;
+            }
+        });
+        turnTable.add(nextTurnButton).size(100);
+
+        rightBottomTable.add(turnTable);
+        rightBottomTable.pack();
 
 
     }
@@ -436,6 +464,17 @@ public class GameScreen implements Screen {
             cam.position.set(centerX, centerY, 0);
             cam.update();
         }
+    }
+
+    public void nextTurn() {
+        // Advance turn counter
+        turn++;
+        // Check win/loss
+        // Reset cooldowns
+        // Tick down research, construction, unit production counters
+        // Produce excess resources / turn if storage is available
+        // Consume resources, store excess resources
+        player.nextTurn();
     }
 
 }

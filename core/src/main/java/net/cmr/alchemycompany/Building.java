@@ -76,7 +76,8 @@ public abstract class Building {
     }
 
     public boolean canFunction() {
-        return !idle && !destroyed;
+        //return !idle && !destroyed;
+        return !destroyed;
     }
     public void setIdle() { idle = true; }
     public void setActive() { idle = false; }
@@ -124,40 +125,58 @@ public abstract class Building {
     }
     public static abstract class AbstractStorageBuilding extends Building {
 
-        Resource resource;
-        float amountStored;
+        Map<Resource, Float> resourceMap;
 
         public AbstractStorageBuilding(SpriteType type, BuildingContext context) {
             super(type, context);
+            resourceMap = new HashMap<>();
         }
 
-        public void setResource(Resource resource) {
-            if (this.resource != resource) {
-                amountStored = 0;
+        public abstract float getMaxAmount();
+        public float getAmountStored(Resource resource) { return resourceMap.getOrDefault(resource, 0f); }
+        protected void setAmountStored(Resource resource, float amount) {
+            resourceMap.put(resource, amount);
+            if (amount > getMaxAmount()) {
+                throw new RuntimeException("Stored more than maximum amount in storage building: (" + amount + " > " + getMaxAmount() + ")");
             }
-            this.resource = resource;
         }
-        public Resource getResource() { return resource; }
-        public float getAmountStored() { return amountStored; }
-        public void setAmountStored(float amount) {
-            this.amountStored = amount;
+        protected Map<Resource, Float> getStorageMap() {
+            return resourceMap;
         }
-        public void addAmount(float amount) {
+
+        /**
+         * @return amount of resource that cannot be added
+         */
+        public float addAmount(Resource resource, float amount) {
             if (amount < 0) { throw new RuntimeException("Cannot add negative amount in addAmount method"); }
-            setAmountStored(amountStored + amount);
+            if (getAmountStored(resource) + amount > getMaxAmount()) {
+                float amountToReturn = getAmountStored(resource) + amount - getMaxAmount();
+                setAmountStored(resource, getMaxAmount());
+                return amountToReturn;
+            }
+            setAmountStored(resource, getAmountStored(resource) + amount);
+            return 0;
         }
-        public void consumeAmount(float amount) {
-            if (amount > 0 ) { throw new RuntimeException("Cannot add negative amount in consumeAmount method"); }
-            setAmountStored(amountStored - amount);
+
+        public void consumeAmount(Resource resource, float amount) {
+            if (amount < 0) { throw new RuntimeException("Cannot consume negative amount in consumeAmount method"); }
+            setAmountStored(resource, getAmountStored(resource) - amount);
         }
+
+        public abstract Resource[] getAllowedStoreResources();
 
     }
 
     // Buildings
 
-    public static class HeadquarterBuilding extends Building {
+    public static class HeadquarterBuilding extends AbstractStorageBuilding {
         public HeadquarterBuilding(BuildingContext context) { super(SpriteType.HEADQUARTERS, context); }
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP, WorldFeature.FOREST, WorldFeature.CRYSTAL_VALLEY }; }
+        @Override public Resource[] getAllowedStoreResources() {
+            return Resource.values();
+        }
+        @Override
+        public float getMaxAmount() { return 5; }
     }
 
     public static class ExtractorBuilding extends Building implements ProductionBuilding {
@@ -190,8 +209,35 @@ public abstract class Building {
     }
 
     public static class StorageBuilding extends AbstractStorageBuilding {
+        Resource specifiedResource;
         public StorageBuilding(BuildingContext context) { super(SpriteType.STORAGE, context); }
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP }; }
+        @Override public Table onClick(Skin skin) {
+            Table table = super.onClick(skin);
+            SelectBox<Resource> selectionBox = new SelectBox<>(skin);
+            selectionBox.setItems(Resource.values());
+            selectionBox.setSelected(specifiedResource);
+            table.add(selectionBox).growX().row();
+            selectionBox.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    if (specifiedResource != selectionBox.getSelected()) {
+                        resourceMap.clear();
+                    }
+                    specifiedResource = selectionBox.getSelected();
+                    player.updateResourceConsumption();
+                }
+            });
+
+            return table;
+        }
+        @Override public float getMaxAmount() { return 25; }
+        @Override public Resource[] getAllowedStoreResources() {
+            if (specifiedResource == null) {
+                return null;
+            }
+            return new Resource[] {specifiedResource};
+        }
     }
 
     public static class FactoryBuilding extends Building implements ConsumptionBuilding, ProductionBuilding {
