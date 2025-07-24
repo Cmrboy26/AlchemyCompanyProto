@@ -10,7 +10,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
-import java.util.stream.IntStream;
+import java.util.stream.Collectors;
 
 import com.badlogic.gdx.math.Vector2;
 
@@ -18,7 +18,6 @@ import net.cmr.alchemycompany.Building.AbstractStorageBuilding;
 import net.cmr.alchemycompany.Building.ConsumptionBuilding;
 import net.cmr.alchemycompany.Building.HeadquarterBuilding;
 import net.cmr.alchemycompany.Building.ProductionBuilding;
-import net.cmr.alchemycompany.Building.StorageBuilding;
 import net.cmr.alchemycompany.Resources.Resource;
 
 public class Player {
@@ -54,7 +53,7 @@ public class Player {
             buildings.add(building);
         } else {
             boolean successful = buildings.add(building);
-            updateResourceConsumption();
+            updateResourceDisplay();
             System.out.println("Add: " + successful);
         }
     }
@@ -67,7 +66,7 @@ public class Player {
             System.out.println("YOU LOSE");
         } else {
             boolean successful = buildings.remove(building);
-            updateResourceConsumption();
+            updateResourceDisplay();
             System.out.println("Remove:" + successful);
         }
     }
@@ -77,25 +76,85 @@ public class Player {
         throw new RuntimeException("Implement");
     }
 
-    public void updateResourceConsumption() {
+    public void updateResourceDisplay() {
+        Map<Resource, Float> generationPerSecond = new HashMap<>();
+        Map<Resource, Float> trueResourcesInStorage = new HashMap<>();
+        Map<Resource, Float> calculatedStoredResources = new HashMap<>();
+        Map<Resource, Float> calculatedTotalStorageCapacity = new HashMap<>();
 
+        List<Building> toBeActive = calculateBuildingOutput(true, trueResourcesInStorage, calculatedStoredResources, calculatedTotalStorageCapacity);
+
+        for (Resource resource : Resource.values()) {
+            float inStorage = trueResourcesInStorage.getOrDefault(resource, 0f);
+            float afterTurn = Math.min(calculatedStoredResources.getOrDefault(resource, 0f), calculatedTotalStorageCapacity.getOrDefault(resource, 0f));
+            float rps = afterTurn - inStorage;
+            generationPerSecond.put(resource, rps);
+            System.out.println(rps + " : " + afterTurn + " - " + inStorage);
+        }
+        for (Building building : toBeActive) {
+            building.setActive();
+        }
+        System.out.println("calculated update resource display");
+
+        this.displayStoredResources = trueResourcesInStorage;
+        this.calculatedResourcePerSecond = generationPerSecond;
     }
 
     public void nextTurn() {
+        Map<Resource, Float> storedResources = new HashMap<>();
+        Map<Resource, Float> totalStorage = new HashMap<>();
+
+        List<Building> toBeActive = calculateBuildingOutput(true, new HashMap<>(), storedResources, totalStorage);
+
+        for (Building building : toBeActive) {
+            building.setActive();
+        }
+
+        /*System.out.println("Resources after turn:");
+        for (Map.Entry<Resource, Float> entry : storedResources.entrySet()) {
+            System.out.println(entry.getKey() + ": " + entry.getValue());
+        }*/
+
+        //final HashMap<Resource, Float> displayStoredResources = new HashMap<>();
+
+        // Fill storages with remaining resources
+        for (Building building : buildings) {
+            if (building instanceof AbstractStorageBuilding) {
+                AbstractStorageBuilding storage = (AbstractStorageBuilding) building;
+                for (Resource resource : storage.getAllowedStoreResources()) {
+                    storage.consumeAmount(resource, storage.getAmountStored(resource));
+                    float toAdd = storedResources.getOrDefault(resource, 0f);
+                    float remainingAfterAdd = storage.addAmount(resource, toAdd);
+                    storedResources.put(resource, remainingAfterAdd);
+                    //displayStoredResources.put(resource, displayStoredResources.getOrDefault(resource, 0f) + storage.getAmountStored(resource));
+                }
+            }
+        }
+        //this.displayStoredResources = displayStoredResources;
+        updateResourceDisplay();
+    }
+
+    /**
+     * @param resourcesInStorageOutput used for display in calculation
+     * @param storedResourcesOutput amount of resources to be stored at the end of a turn
+     * @param totalStorageCapacityOutput total amount of storage capacity (max holdable resources)
+     * @return list of buildings that should be converted to active instead of idle
+     */
+    public List<Building> calculateBuildingOutput(boolean setBuildingsIdle, final Map<Resource, Float> resourcesInStorageOutput, final Map<Resource, Float> storedResourcesOutput, final Map<Resource, Float> totalStorageCapacityOutput) {
         // Produce and consume all resources
         List<Building> buildingsToProcess = new ArrayList<>(buildings);
+        List<Building> toBeActive = new ArrayList<>();
         boolean[] finalBuildingsProcessed = new boolean[buildingsToProcess.size()];
         Arrays.fill(finalBuildingsProcessed, false);
 
         // Sort buildings here if needed
 
-        buildingsToProcess.forEach(b -> {
-            b.setIdle();
-        });
-        final HashMap<Resource, Float> storedResources = new HashMap<>();
-        BiConsumer<Resource, Float> addResource = (r, f) -> {
-            storedResources.put(r, storedResources.getOrDefault(r, 0f) + f);
-        };
+        if (setBuildingsIdle) {
+            buildingsToProcess.forEach(b -> {
+                b.setIdle();
+            });
+        }
+
         Callable<Boolean> everythingProcessed = () -> {
             for (int i = 0; i < finalBuildingsProcessed.length; i++) {
                 if (!finalBuildingsProcessed[i]) {
@@ -104,10 +163,9 @@ public class Player {
             }
             return true;
         };
-
-        // TODO: ISSUE: if there is no space for an item being transformed into something else (like sulfuric acid), the excess sulfur or water will not be stored
-        // For things like this, we could store the amount of storage space available for any resource, and if the resource in storedResources is equal to the max,
-        // then any building that produces that item should not produce anything until more gets consumed (or nothing will happen and it wont produce ever)
+        BiConsumer<Resource, Float> addResource = (r, f) -> {
+            storedResourcesOutput.put(r, storedResourcesOutput.getOrDefault(r, 0f) + f);
+        };
         try {
             do {
                 boolean[] buildingsProcessed = new boolean[buildingsToProcess.size()];
@@ -129,33 +187,45 @@ public class Player {
                     boolean isConsumptionBuilding = building instanceof ConsumptionBuilding;
                     boolean isStorageBuilding = building instanceof AbstractStorageBuilding;
 
-                    if (isProductionBuilding && !isConsumptionBuilding) {
-                        ProductionBuilding pBuilding = (ProductionBuilding) building;
-                        Map<Resource, Float> producedResources = pBuilding.getProductionPerTurn();
-                        for (Resource resource : producedResources.keySet()) {
-                            Float amount = producedResources.get(resource);
-                            addResource.accept(resource, amount);
-                        }
-                        buildingsProcessed[i] = true;
-                    }
-
-                    if (isConsumptionBuilding) {
-                        ConsumptionBuilding cBuilding = (ConsumptionBuilding) building;
-                        Map<Resource, Float> consumedResources = cBuilding.getConsumptionPerTurn();
-
+                    if (isConsumptionBuilding || isProductionBuilding) {
                         boolean needMoreResource = false;
-                        for (Resource resource : consumedResources.keySet()) {
-                            Float amount = consumedResources.get(resource);
-                            if (storedResources.getOrDefault(resource, 0f) < amount) {
-                                needMoreResource = true;
-                                break;
+                        boolean spaceAvailable = false;
+
+                        if (isConsumptionBuilding) {
+                            ConsumptionBuilding cBuilding = (ConsumptionBuilding) building;
+                            Map<Resource, Float> consumedResources = cBuilding.getConsumptionPerTurn();
+                            for (Resource resource : consumedResources.keySet()) {
+                                Float amount = consumedResources.get(resource);
+                                if (storedResourcesOutput.getOrDefault(resource, 0f) < amount) {
+                                    needMoreResource = true;
+                                    break;
+                                }
                             }
                         }
 
-                        if (!needMoreResource) {
-                            for (Resource resource : consumedResources.keySet()) {
-                                Float amount = consumedResources.get(resource);
-                                addResource.accept(resource, -amount);
+                        if (isProductionBuilding) {
+                            ProductionBuilding pBuilding = (ProductionBuilding) building;
+                            Map<Resource, Float> producedResources = pBuilding.getProductionPerTurn();
+                            for (Resource resource : producedResources.keySet()) {
+                                float totalResourcesAfter = storedResourcesOutput.getOrDefault(resource, 0f) + producedResources.getOrDefault(resource, 0f);
+                                System.out.println(totalResourcesAfter + ", " + totalStorageCapacityOutput.getOrDefault(resource, 0f));
+                                // If there is enough space for one "craft", allow the resource to be crafted
+                                if (totalResourcesAfter <= totalStorageCapacityOutput.getOrDefault(resource, 0f)) {
+                                    spaceAvailable = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        System.out.println(needMoreResource + ", " + spaceAvailable);
+                        if (!((isConsumptionBuilding && needMoreResource) || (isProductionBuilding && !spaceAvailable)) || (isProductionBuilding && !isConsumptionBuilding)) {
+                            if (isConsumptionBuilding) {
+                                ConsumptionBuilding cBuilding = (ConsumptionBuilding) building;
+                                Map<Resource, Float> consumedResources = cBuilding.getConsumptionPerTurn();
+                                for (Resource resource : consumedResources.keySet()) {
+                                    Float amount = consumedResources.get(resource);
+                                    addResource.accept(resource, -amount);
+                                }
                             }
 
                             if (isProductionBuilding) {
@@ -166,18 +236,27 @@ public class Player {
                                     addResource.accept(resource, amount);
                                 }
                             }
+
+                            toBeActive.add(building);
                             buildingsProcessed[i] = true;
                         }
                     }
 
                     if (isStorageBuilding) {
                         AbstractStorageBuilding sBuilding = (AbstractStorageBuilding) building;
+                        if (sBuilding.getAllowedStoreResources() == null) {
+                            buildingsProcessed[i] = true;
+                            continue;
+                        }
                         for (Resource resource : sBuilding.getAllowedStoreResources()) {
                             Float amount = sBuilding.getAmountStored(resource);
-                            sBuilding.consumeAmount(resource, amount);
                             addResource.accept(resource, amount);
+                            totalStorageCapacityOutput.put(resource, totalStorageCapacityOutput.getOrDefault(resource, 0f) + sBuilding.getMaxAmount());
+                            resourcesInStorageOutput.put(resource, resourcesInStorageOutput.getOrDefault(resource, 0f) + amount);
                         }
+
                         buildingsProcessed[i] = true;
+                        toBeActive.add(building);
                     }
                 }
 
@@ -194,27 +273,7 @@ public class Player {
             e.printStackTrace();
         }
 
-        System.out.println("Resources after turn:");
-        for (Map.Entry<Resource, Float> entry : storedResources.entrySet()) {
-            System.out.println(entry.getKey() + ": " + entry.getValue());
-        }
-
-        final HashMap<Resource, Float> displayStoredResources = new HashMap<>();
-
-        // Fill storages with remaining resources
-        for (Building building : buildings) {
-            if (building instanceof AbstractStorageBuilding) {
-                AbstractStorageBuilding storage = (AbstractStorageBuilding) building;
-                for (Resource resource : storage.getAllowedStoreResources()) {
-                    float toAdd = storedResources.getOrDefault(resource, 0f);
-                    float remainingAfterAdd = storage.addAmount(resource, toAdd);
-                    storedResources.put(resource, remainingAfterAdd);
-                    displayStoredResources.put(resource, displayStoredResources.getOrDefault(resource, 0f) + storage.getAmountStored(resource));
-                }
-            }
-        }
-        this.displayStoredResources = displayStoredResources;
-
+        return toBeActive;
     }
 
     @Override

@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -24,6 +25,7 @@ public abstract class Building {
     private int x, y;
     protected boolean idle = false; // purely a display state
     protected boolean destroyed = false; // functional state
+    protected boolean built = false;
 
     public Building(SpriteType type, BuildingContext context) {
         this.type = type;
@@ -38,7 +40,14 @@ public abstract class Building {
     }
 
     public void renderTile(SpriteBatch batch, float tileSize) {
+        if (idle) {
+            batch.setColor(Color.GRAY);
+        }
+        if (built) {
+            batch.setColor(Color.RED);
+        }
         batch.draw(Sprites.getTexture(type), x * tileSize, y * tileSize, tileSize, tileSize);
+        batch.setColor(Color.WHITE);
     }
 
     public Table onClick(Skin skin) {
@@ -47,10 +56,10 @@ public abstract class Building {
         table.add("Owner: " + player.toString()).fillX().pad(10).row();
         table.add("Name: " + getClass().getSimpleName().replaceAll("Building", "")).fillX().pad(10).row();
 
-        Label idleLabel = new Label("Idle: "+idle, skin) {
+        Label idleLabel = new Label("Idle", skin) {
             @Override
             public void act(float delta) {
-                setText("Idle: "+idle);
+                setText(idle ? "Idle" : "Active");
                 super.act(delta);
             }
         };
@@ -76,8 +85,7 @@ public abstract class Building {
     }
 
     public boolean canFunction() {
-        //return !idle && !destroyed;
-        return !destroyed;
+        return !destroyed && built;
     }
     public void setIdle() { idle = true; }
     public void setActive() { idle = false; }
@@ -123,6 +131,7 @@ public abstract class Building {
     public interface ConsumptionBuilding {
         Map<Resource, Float> getConsumptionPerTurn();
     }
+
     public static abstract class AbstractStorageBuilding extends Building {
 
         Map<Resource, Float> resourceMap;
@@ -176,7 +185,7 @@ public abstract class Building {
             return Resource.values();
         }
         @Override
-        public float getMaxAmount() { return 5; }
+        public float getMaxAmount() { return 10; }
     }
 
     public static class ExtractorBuilding extends Building implements ProductionBuilding {
@@ -225,7 +234,7 @@ public abstract class Building {
                         resourceMap.clear();
                     }
                     specifiedResource = selectionBox.getSelected();
-                    player.updateResourceConsumption();
+                    player.updateResourceDisplay();
                 }
             });
 
@@ -295,7 +304,7 @@ public abstract class Building {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
                     selectedRecipe = selectionBox.getSelected();
-                    player.updateResourceConsumption();
+                    player.updateResourceDisplay();
                 }
             });
 
@@ -312,9 +321,10 @@ public abstract class Building {
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP, WorldFeature.FOREST }; }
     }
 
-    public static class ArcherTowerBuilding extends Building {
+    public static class ArcherTowerBuilding extends Building implements ConsumptionBuilding {
         public ArcherTowerBuilding(BuildingContext context) { super(SpriteType.ARCHER_TOWER, context); }
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP, WorldFeature.FOREST, WorldFeature.MOUNTAINS, WorldFeature.CRYSTAL_VALLEY }; }
+        @Override public Map<Resource, Float> getConsumptionPerTurn() { return Resources.singleItem(Resource.IRON, 1f); }
     }
 
     public static class BarracksBuilding extends Building {

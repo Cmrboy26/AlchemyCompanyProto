@@ -325,7 +325,7 @@ public class GameScreen implements Screen {
         resourcesTable.setBackground("window");
         resourcesTable.pad(10);
 
-        Label key = new Label("Stored", skin);
+        Label key = new Label("Stored : Resource / Turn", skin);
         resourcesTable.add(key).growX().align(Align.right).pad(5).colspan(2).row();
 
         for (final Resource r : Resource.values()) {
@@ -333,7 +333,13 @@ public class GameScreen implements Screen {
                 @Override
                 public void act(float delta) {
                     float stored = player.displayStoredResources.getOrDefault(r, 0f);
-                    setText(stored + "");
+                    float rps = player.calculatedResourcePerSecond.getOrDefault(r, 0f);
+                    String rpsString = "";
+                    if (rps > 0) {
+                        rpsString += "+";
+                    }
+                    rpsString += rps;
+                    setText(stored + " ("+rpsString+")");
                     super.act(delta);
                 }
             };
