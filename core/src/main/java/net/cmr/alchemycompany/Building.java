@@ -137,17 +137,31 @@ public abstract class Building {
             }
             this.resource = resource;
         }
+
+        public abstract float getMaxAmount();
         public Resource getResource() { return resource; }
         public float getAmountStored() { return amountStored; }
         public void setAmountStored(float amount) {
             this.amountStored = amount;
+            if (amountStored > getMaxAmount()) {
+                throw new RuntimeException("Stored more than maximum amount in storage building: (" + amountStored + " > " + getMaxAmount() + ")");
+            }
         }
-        public void addAmount(float amount) {
+        /**
+         * @return amount of resource that cannot be added
+         */
+        public float addAmount(float amount) {
             if (amount < 0) { throw new RuntimeException("Cannot add negative amount in addAmount method"); }
+            if (amountStored + amount > getMaxAmount()) {
+                float amountToReturn = amountStored + amount - getMaxAmount();
+                setAmountStored(getMaxAmount());
+                return amountToReturn;
+            }
             setAmountStored(amountStored + amount);
+            return 0;
         }
         public void consumeAmount(float amount) {
-            if (amount > 0 ) { throw new RuntimeException("Cannot add negative amount in consumeAmount method"); }
+            if (amount < 0) { throw new RuntimeException("Cannot consume negative amount in consumeAmount method"); }
             setAmountStored(amountStored - amount);
         }
 
@@ -192,6 +206,23 @@ public abstract class Building {
     public static class StorageBuilding extends AbstractStorageBuilding {
         public StorageBuilding(BuildingContext context) { super(SpriteType.STORAGE, context); }
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP }; }
+        @Override public Table onClick(Skin skin) {
+            Table table = super.onClick(skin);
+            SelectBox<Resource> selectionBox = new SelectBox<>(skin);
+            selectionBox.setItems(Resource.values());
+            selectionBox.setSelected(getResource());
+            table.add(selectionBox).growX().row();
+            selectionBox.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    setResource(selectionBox.getSelected());
+                    player.updateResourceConsumption();
+                }
+            });
+
+            return table;
+        }
+        @Override public float getMaxAmount() { return 25; }
     }
 
     public static class FactoryBuilding extends Building implements ConsumptionBuilding, ProductionBuilding {
@@ -266,9 +297,15 @@ public abstract class Building {
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP, WorldFeature.FOREST }; }
     }
 
-    public static class ArcherTowerBuilding extends Building {
+    public static class ArcherTowerBuilding extends Building implements ConsumptionBuilding {
         public ArcherTowerBuilding(BuildingContext context) { super(SpriteType.ARCHER_TOWER, context); }
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP, WorldFeature.FOREST, WorldFeature.MOUNTAINS, WorldFeature.CRYSTAL_VALLEY }; }
+        @Override public Map<Resource, Float> getConsumptionPerTurn() {
+            Map<Resource, Float> cpt = new HashMap<>();
+            cpt.put(Resource.SULFURIC_ACID, 1f);
+            return cpt;
+        }
+
     }
 
     public static class BarracksBuilding extends Building {
