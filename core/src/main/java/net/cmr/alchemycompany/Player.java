@@ -27,6 +27,7 @@ public class Player {
     Set<Building> buildings;
     Map<Resource, Float> calculatedResourcePerSecond;
     Map<Resource, Float> displayStoredResources;
+    float sciencePoints = 0f;
 
     public Player(String name) {
         this.name = name;
@@ -71,9 +72,46 @@ public class Player {
         }
     }
 
+    public int getCountOf(Class<? extends Building> buildingClass) {
+        return (int) buildings.stream()
+                .filter(b -> b.getClass().equals(buildingClass))
+                .count();
+    }
+
     public boolean consumeResource(Resource resource, float amount) {
         // TODO: Confirm that storages can remove enough, remove enough, return true if done, return false if cant
-        throw new RuntimeException("Implement");
+        int count = 0;
+        for (Building building : buildings) {
+            if (building instanceof AbstractStorageBuilding) {
+                AbstractStorageBuilding storage = (AbstractStorageBuilding) building;
+                if (storage.getAllowedStoreResources() == null || storage.getAllowedStoreResources().length == 0) {
+                    continue; // No resources to store, skip
+                }
+                count += storage.getAmountStored(resource);
+            }
+        }
+
+        if (count >= amount) {
+            float remainingToConsume = amount;
+            for (Building building : buildings) {
+                if (building instanceof AbstractStorageBuilding) {
+                    AbstractStorageBuilding storage = (AbstractStorageBuilding) building;
+                    if (storage.getAllowedStoreResources() == null || storage.getAllowedStoreResources().length == 0) {
+                        continue; // No resources to store, skip
+                    }
+                    float available = storage.getAmountStored(resource);
+                    float amountToConsume = Math.min(remainingToConsume, available);
+                    if (amountToConsume > 0) {
+                        storage.consumeAmount(resource, amountToConsume);
+                        remainingToConsume -= amountToConsume;
+                        if (remainingToConsume <= 0) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public void updateResourceDisplay() {
@@ -89,7 +127,6 @@ public class Player {
             float afterTurn = Math.min(calculatedStoredResources.getOrDefault(resource, 0f), calculatedTotalStorageCapacity.getOrDefault(resource, 0f));
             float rps = afterTurn - inStorage;
             generationPerSecond.put(resource, rps);
-            System.out.println(rps + " : " + afterTurn + " - " + inStorage);
         }
         for (Building building : toBeActive) {
             building.setActive();
@@ -121,6 +158,9 @@ public class Player {
         for (Building building : buildings) {
             if (building instanceof AbstractStorageBuilding) {
                 AbstractStorageBuilding storage = (AbstractStorageBuilding) building;
+                if (storage.getAllowedStoreResources() == null || storage.getAllowedStoreResources().length == 0) {
+                    continue; // No resources to store, skip
+                }
                 for (Resource resource : storage.getAllowedStoreResources()) {
                     storage.consumeAmount(resource, storage.getAmountStored(resource));
                     float toAdd = storedResources.getOrDefault(resource, 0f);
@@ -208,7 +248,6 @@ public class Player {
                             Map<Resource, Float> producedResources = pBuilding.getProductionPerTurn();
                             for (Resource resource : producedResources.keySet()) {
                                 float totalResourcesAfter = storedResourcesOutput.getOrDefault(resource, 0f) + producedResources.getOrDefault(resource, 0f);
-                                System.out.println(totalResourcesAfter + ", " + totalStorageCapacityOutput.getOrDefault(resource, 0f));
                                 // If there is enough space for one "craft", allow the resource to be crafted
                                 if (totalResourcesAfter <= totalStorageCapacityOutput.getOrDefault(resource, 0f)) {
                                     spaceAvailable = true;
@@ -217,7 +256,6 @@ public class Player {
                             }
                         }
 
-                        System.out.println(needMoreResource + ", " + spaceAvailable);
                         if (!((isConsumptionBuilding && needMoreResource) || (isProductionBuilding && !spaceAvailable)) || (isProductionBuilding && !isConsumptionBuilding)) {
                             if (isConsumptionBuilding) {
                                 ConsumptionBuilding cBuilding = (ConsumptionBuilding) building;

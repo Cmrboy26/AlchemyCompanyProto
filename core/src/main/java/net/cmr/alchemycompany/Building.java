@@ -11,6 +11,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 
 import net.cmr.alchemycompany.Resources.Resource;
@@ -33,6 +34,7 @@ public abstract class Building {
         this.player = context.player;
         this.x = context.x;
         this.y = context.y;
+        built = true; // TODO: For testing purposes, all buildings are built by default
     }
 
     public SpriteType getSpriteType() {
@@ -43,7 +45,10 @@ public abstract class Building {
         if (idle) {
             batch.setColor(Color.GRAY);
         }
-        if (built) {
+        if (!built) {
+            batch.setColor(Color.YELLOW); // Not built yet, display in yellow
+        }
+        if (destroyed) {
             batch.setColor(Color.RED);
         }
         batch.draw(Sprites.getTexture(type), x * tileSize, y * tileSize, tileSize, tileSize);
@@ -120,8 +125,8 @@ public abstract class Building {
         public BuildingContext(World world, Player player, int x, int y) {
             this.world = world;
             this.player = player;
-            this.x = x;
-            this.y = y;
+            this.x = Math.max(Math.min(world.width - 1, x), 0);
+            this.y = Math.max(Math.min(world.height - 1, y), 0);
         }
     }
 
@@ -218,7 +223,7 @@ public abstract class Building {
     }
 
     public static class StorageBuilding extends AbstractStorageBuilding {
-        Resource specifiedResource;
+        Resource specifiedResource = Resource.WATER; // Default resource for storage
         public StorageBuilding(BuildingContext context) { super(SpriteType.STORAGE, context); }
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP }; }
         @Override public Table onClick(Skin skin) {
@@ -261,9 +266,14 @@ public abstract class Building {
                     cpt.put(Resource.SULFUR, 1f);
                     cpt.put(Resource.WATER, 1f);
                     break;
-                case BATTERY:
+                case GOLD:
                     cpt.put(Resource.IRON, 1f);
                     cpt.put(Resource.SULFURIC_ACID, 1f);
+                    cpt.put(Resource.CRYSTAL, 1f);
+                    break;
+                case TRANSMUTATE_COPPER_TO_IRON:
+                    cpt.put(Resource.SULFUR, 1f);
+                    cpt.put(Resource.COPPER, 1f);
                     break;
                 case NONE:
                 default:
@@ -277,8 +287,11 @@ public abstract class Building {
                 case SULFURIC_ACID:
                     rpt.put(Resource.SULFURIC_ACID, 1f);
                     break;
-                case BATTERY:
+                case GOLD:
                     rpt.put(Resource.GOLD, 1f);
+                    break;
+                case TRANSMUTATE_COPPER_TO_IRON:
+                    rpt.put(Resource.IRON, 1f);
                     break;
                 case NONE:
                 default:
@@ -290,7 +303,9 @@ public abstract class Building {
         private enum FactoryRecipes {
             NONE,
             SULFURIC_ACID,
-            BATTERY,
+            GOLD,
+            TRANSMUTATE_COPPER_TO_IRON,
+
         }
 
         @Override
@@ -300,11 +315,89 @@ public abstract class Building {
             selectionBox.setItems(FactoryRecipes.values());
             selectionBox.setSelected(selectedRecipe);
             table.add(selectionBox).growX().row();
+
+            // Create a table with two columns: left for input, right for output
+            Table resourcesTable = new Table(skin);
+
+            // Add headers
+            resourcesTable.add(new Label("Input Resources:", skin)).pad(5);
+            resourcesTable.add(new Label("Output Resources:", skin)).pad(5).row();
+
+            // Get input and output resources
+            Map<Resource, Float> consumption = getConsumptionPerTurn();
+            Map<Resource, Float> production = getProductionPerTurn();
+
+            // Find max rows needed
+            int maxRows = Math.max(consumption.size(), production.size());
+            Resource[] inputKeys = consumption.keySet().toArray(new Resource[0]);
+            Resource[] outputKeys = production.keySet().toArray(new Resource[0]);
+
+            for (int i = 0; i < maxRows; i++) {
+                // Input column
+                if (i < inputKeys.length) {
+                    Resource resource = inputKeys[i];
+                    Float amount = consumption.get(resource);
+                    resourcesTable.add(new Label(resource.toString() + ": " + amount, skin)).pad(5);
+                } else {
+                    resourcesTable.add().pad(5);
+                }
+                // Output column
+                if (i < outputKeys.length) {
+                    Resource resource = outputKeys[i];
+                    Float amount = production.get(resource);
+                    resourcesTable.add(new Label(resource.toString() + ": " + amount, skin)).pad(5);
+                } else {
+                    resourcesTable.add().pad(5);
+                }
+                resourcesTable.row();
+            }
+
+            table.add(resourcesTable).growX().row();
+
+            // Add listener to update resource table when recipe changes
             selectionBox.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
                     selectedRecipe = selectionBox.getSelected();
                     player.updateResourceDisplay();
+
+                    // Clear and repopulate resources table
+                    resourcesTable.clear();
+
+                    resourcesTable.add(new Label("Input Resources:", skin)).pad(5);
+                    resourcesTable.add(new Label("Output Resources:", skin)).pad(5).row();
+
+                    Map<Resource, Float> newConsumption = getConsumptionPerTurn();
+                    Map<Resource, Float> newProduction = getProductionPerTurn();
+
+                    int maxRows = Math.max(newConsumption.size(), newProduction.size());
+                    Resource[] inputKeys = newConsumption.keySet().toArray(new Resource[0]);
+                    Resource[] outputKeys = newProduction.keySet().toArray(new Resource[0]);
+
+                    for (int i = 0; i < maxRows; i++) {
+                        if (i < inputKeys.length) {
+                            Resource resource = inputKeys[i];
+                            Float amount = newConsumption.get(resource);
+                            resourcesTable.add(new Label(resource.toString() + ": " + amount, skin)).pad(5);
+                        } else {
+                            resourcesTable.add().pad(5);
+                        }
+                        if (i < outputKeys.length) {
+                            Resource resource = outputKeys[i];
+                            Float amount = newProduction.get(resource);
+                            resourcesTable.add(new Label(resource.toString() + ": " + amount, skin)).pad(5);
+                        } else {
+                            resourcesTable.add().pad(5);
+                        }
+                        resourcesTable.row();
+                    }
+
+                    table.invalidate();
+                    table.pack();
+                    if (table.getParent() instanceof Window) {
+                        ((Window) table.getParent()).invalidate();
+                        ((Window) table.getParent()).pack();
+                    }
                 }
             });
 

@@ -1,8 +1,5 @@
 package net.cmr.alchemycompany;
 
-import java.awt.Color;
-import java.util.function.Consumer;
-
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
@@ -24,22 +21,18 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.TextTooltip;
+import com.badlogic.gdx.scenes.scene2d.ui.TooltipManager;
 import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-import net.cmr.alchemycompany.Building.ArcherTowerBuilding;
-import net.cmr.alchemycompany.Building.BarracksBuilding;
-import net.cmr.alchemycompany.Building.BuildingConstructorFunction;
 import net.cmr.alchemycompany.Building.BuildingContext;
-import net.cmr.alchemycompany.Building.ExtractorBuilding;
-import net.cmr.alchemycompany.Building.FactoryBuilding;
 import net.cmr.alchemycompany.Building.HeadquarterBuilding;
-import net.cmr.alchemycompany.Building.ResearchLabBuilding;
-import net.cmr.alchemycompany.Building.StatueBuilding;
-import net.cmr.alchemycompany.Building.StorageBuilding;
 import net.cmr.alchemycompany.Resources.Resource;
+import net.cmr.alchemycompany.Shop.Cost;
+import net.cmr.alchemycompany.Shop.ShopOption;
 import net.cmr.alchemycompany.Sprites.SpriteType;
 import net.cmr.alchemycompany.World.WorldFeature;
 
@@ -158,19 +151,36 @@ public class GameScreen implements Screen {
                         BuildingButton button = buildingsGroup.getChecked();
                         Building building = button.createBuilding(context);
 
-                        boolean canPlace = false;
+                        boolean featureExists = false;
                         WorldFeature below = world.getFeature(x, y);
                         for (WorldFeature feature : building.getAllowedTiles()) {
                             if (below.equals(feature)) {
-                                canPlace = true;
+                                featureExists = true;
                                 break;
                             }
                         }
-                        if (world.getBuilding(x, y) != null) {
-                            canPlace = false;
+
+                        boolean spotOccupied = world.getBuilding(x, y) != null;
+
+                        boolean enoughResource = true;
+                        Cost cost = button.option.costFunction.apply(context);
+                        if (cost == null || cost.resources.isEmpty()) {
+                            enoughResource = true;
+                        } else {
+                            for (Resource resource : cost.resources.keySet()) {
+                                float amount = cost.resources.get(resource);
+                                if (player.displayStoredResources.getOrDefault(resource, 0f) < amount) {
+                                    enoughResource = false;
+                                    break;
+                                }
+                            }
                         }
 
-                        if (canPlace) {
+                        if (featureExists && enoughResource && !spotOccupied) {
+                            for (Resource resource : cost.resources.keySet()) {
+                                float amount = cost.resources.get(resource);
+                                player.consumeResource(resource, amount);
+                            }
                             world.addBuilding(building);
                             if (!Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
                                 buildingsGroup.getChecked().setChecked(false);
@@ -285,36 +295,66 @@ public class GameScreen implements Screen {
     }
 
     private void prepareUI() {
-        uiViewport = new ExtendViewport(1080, 720);
-        worldViewport = new ExtendViewport(1080, 720);
+        uiViewport = new ExtendViewport(1280, 720);
+        worldViewport = new ExtendViewport(1280, 720);
 
         skin = Sprites.getSkin();
         stage = new Stage(uiViewport, AlchemyCompany.getInstance().batch());
 
-        Table bottomMenu = new Table(skin);
-        bottomMenu.setFillParent(true);
-        bottomMenu.bottom();
-        stage.addActor(bottomMenu);
-
         int buttonSize = 70; // Size of the buttons in the bottom menu.
 
-        buildingsGroup = new ButtonGroup<>();
-        buildingsGroup.setMinCheckCount(0);
-        buildingsGroup.setMaxCheckCount(1);
+        // Right bottom table for buttons and turn counter
 
-        Consumer<BuildingButton> addToMenu = (BuildingButton b) -> {
-            buildingsGroup.add(b);
-            bottomMenu.add(b).size(buttonSize, buttonSize).pad(10);
-        };
+        Table rightBottomTable = new Table(skin);
+        rightBottomTable.setFillParent(true);
+        rightBottomTable.right().bottom();
+        stage.addActor(rightBottomTable);
 
-        //addToMenu.accept(new BuildingButton(skin, "HQ", HeadquarterBuilding::new));
-        addToMenu.accept(new BuildingButton(skin, "Extractor", ExtractorBuilding::new));
-        addToMenu.accept(new BuildingButton(skin, "Storage", StorageBuilding::new));
-        addToMenu.accept(new BuildingButton(skin, "Factory", FactoryBuilding::new));
-        addToMenu.accept(new BuildingButton(skin, "Statue", StatueBuilding::new));
-        addToMenu.accept(new BuildingButton(skin, "Research\nLab", ResearchLabBuilding::new));
-        addToMenu.accept(new BuildingButton(skin, "Archer\nTower", ArcherTowerBuilding::new));
-        addToMenu.accept(new BuildingButton(skin, "Barracks", BarracksBuilding::new));
+        Table buttonsTable = new Table(skin);
+        buttonsTable.setBackground("window");
+        buttonsTable.pad(10);
+
+        ButtonGroup<TextButton> optionsGroup = new ButtonGroup<>();
+        optionsGroup.setMinCheckCount(0);
+        optionsGroup.setMaxCheckCount(1);
+
+        TextButton buildingsButton = new TextButton("Buildings", skin, "toggle");
+        TextButton troopsButton = new TextButton("Troops", skin, "toggle");
+        TextButton researchButton = new TextButton("Research", skin, "toggle");
+        optionsGroup.add(buildingsButton, troopsButton, researchButton);
+
+        buttonsTable.add(buildingsButton).size(buttonSize, buttonSize / 2).pad(5).row();;
+        buttonsTable.add(troopsButton).size(buttonSize, buttonSize / 2).pad(5).row();
+        buttonsTable.add(researchButton).size(buttonSize, buttonSize / 2).pad(5).row();
+        rightBottomTable.add(buttonsTable).pad(10);
+
+        Table turnTable = new Table(skin);
+        turnTable.setBackground("window");
+        turnTable.pad(10);
+
+        Label turnLabel = new Label("Turn: "+turn, skin);
+        turnLabel.setAlignment(Align.left);
+        turnTable.add(turnLabel).growX().pad(5).row();
+
+        TextButton nextTurnButton = new TextButton("Next\nTurn", skin);
+        nextTurnButton.addListener(new InputListener() {
+            @Override
+            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                nextTurnButton.setDisabled(true);
+                nextTurn();
+                nextTurnButton.setDisabled(false);
+                turnLabel.setText("Turn: "+turn);
+                return true;
+            }
+        });
+        turnTable.add(nextTurnButton).size(100);
+
+        rightBottomTable.add(turnTable);
+        rightBottomTable.pack();
+
+        prepareBuildingMenu(buildingsButton);
+
+        // Right top table for resource counters and other info
 
         Table rightTopTable = new Table(skin);
         rightTopTable.setFillParent(true);
@@ -351,49 +391,105 @@ public class GameScreen implements Screen {
         rightTopTable.add(resourcesTable);
 
         rightTopTable.pack();
+    }
 
-        Table rightBottomTable = new Table(skin);
-        rightBottomTable.setFillParent(true);
-        rightBottomTable.right().bottom();
-        stage.addActor(rightBottomTable);
+    private void prepareBuildingMenu(final TextButton buildingsButton) {
+        Table purchaseBuildingTable = new Table(skin);
+        purchaseBuildingTable.setFillParent(true);
+        purchaseBuildingTable.left();
+        stage.addActor(purchaseBuildingTable);
 
-        Table turnTable = new Table(skin);
-        turnTable.setBackground("window");
-        turnTable.pad(10);
-        Label turnLabel = new Label("Turn: "+turn, skin);
-        turnLabel.setAlignment(Align.left);
-        turnTable.add(turnLabel).growX().pad(5).row();
-
-        TextButton nextTurnButton = new TextButton("Next\nTurn", skin);
-        nextTurnButton.addListener(new InputListener() {
-            @Override
-            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-                nextTurnButton.setDisabled(true);
-                nextTurn();
-                nextTurnButton.setDisabled(false);
-                turnLabel.setText("Turn: "+turn);
-                return true;
+        purchaseBuildingTable.addAction(Actions.forever(Actions.run(() -> {
+            if (buildingsButton.isChecked()) {
+                purchaseBuildingTable.setVisible(true);
+            } else {
+                purchaseBuildingTable.setVisible(false);
             }
-        });
-        turnTable.add(nextTurnButton).size(100);
+        })));
 
-        rightBottomTable.add(turnTable);
-        rightBottomTable.pack();
+        Table backgroundTable = new Table(skin);
+        backgroundTable.setBackground("window");
+        backgroundTable.pad(10);
+        purchaseBuildingTable.add(backgroundTable).pad(10).row();
 
+        Table buyOptions = new Table(skin);
+        buyOptions.setBackground("window");
+        buyOptions.pad(10);
+        backgroundTable.add(buyOptions);
+
+        buildingsGroup = new ButtonGroup<>();
+        buildingsGroup.setMinCheckCount(0);
+        buildingsGroup.setMaxCheckCount(1);
+
+        for (ShopOption option : ShopOption.values()) {
+            BuildingButton button = new BuildingButton(skin, option);
+            buildingsGroup.add(button);
+            buyOptions.add(button).size(200, 50).pad(5).row();
+        }
+
+        Table costTable = new Table(skin);
+        costTable.setBackground("window");
+        costTable.left();
+        purchaseBuildingTable.add(costTable).pad(10).fillX();
+
+        Label costLabel = new Label("Cost:", skin);
+        
+        costTable.addAction(Actions.forever(Actions.run(() -> {
+
+            BuildingButton selectedButton = buildingsGroup.getChecked();
+            costTable.setVisible(false);
+            costTable.pad(0);
+            if (selectedButton != null) {
+                costTable.clearChildren();
+                costTable.add(costLabel).align(Align.left).pad(5).row();
+                costTable.setVisible(true);
+                costTable.pad(10);
+
+                int cursorX = Gdx.input.getX();
+                int cursorY = Gdx.input.getY();
+                Vector2 tile = getTileCoordinates(cursorX, cursorY);
+                int x = (int) tile.x;
+                int y = (int) tile.y;
+                BuildingContext context = new BuildingContext(world, player, x, y);
+                Cost cost = selectedButton.option.costFunction.apply(context);
+                if (cost == null || cost.resources.isEmpty()) {
+                    costTable.add(new Label("No cost", skin)).align(Align.left).pad(5).row();
+                } else {
+                    for (Resource resource : cost.resources.keySet()) {
+                        float amount = cost.resources.get(resource);
+                        Label resourceLabel = new Label(resource.name() + ": " + amount, skin);
+                        costTable.add(resourceLabel).align(Align.left).pad(5).row();
+                    }
+                    if (cost.sciencePoints > 0) {
+                        Label scienceLabel = new Label("Science: " + cost.sciencePoints, skin);
+                        costTable.add(scienceLabel).align(Align.left).pad(5).row();
+                    }
+                }
+            }
+        })));
 
     }
 
     private class BuildingButton extends TextButton {
 
-        private final BuildingConstructorFunction bcf;
+        public final ShopOption option;
 
-        public BuildingButton(Skin skin, String name, BuildingConstructorFunction bcf) {
-            super(name, skin, "toggle");
-            this.bcf = bcf;
+        public BuildingButton(Skin skin, ShopOption option) {
+            super(option.name, skin, "toggle");
+            this.option = option;
+
+            TextTooltip tooltip = new TextTooltip(option.description, skin);
+            tooltip.setInstant(true);
+            TooltipManager.getInstance().initialTime = 0;
+            TooltipManager.getInstance().resetTime = 0f;
+            TooltipManager.getInstance().subsequentTime = 0f;
+            TooltipManager.getInstance().hideAll();
+
+            addListener(tooltip);
         }
 
         public Building createBuilding(BuildingContext context) {
-            return bcf.apply(context);
+            return option.constructor.apply(context);
         }
 
     }
