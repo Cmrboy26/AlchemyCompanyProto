@@ -1,8 +1,12 @@
 package net.cmr.alchemycompany;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -14,6 +18,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 
+import net.cmr.alchemycompany.BuildingAction.ConstructAction;
 import net.cmr.alchemycompany.Resources.Resource;
 import net.cmr.alchemycompany.Sprites.SpriteType;
 import net.cmr.alchemycompany.World.WorldFeature;
@@ -27,6 +32,7 @@ public abstract class Building {
     protected boolean idle = false; // purely a display state
     protected boolean destroyed = false; // functional state
     protected boolean built = false;
+    protected Set<BuildingAction> buildingActions;
 
     public Building(SpriteType type, BuildingContext context) {
         this.type = type;
@@ -34,7 +40,8 @@ public abstract class Building {
         this.player = context.player;
         this.x = context.x;
         this.y = context.y;
-        built = true; // TODO: For testing purposes, all buildings are built by default
+        this.buildingActions = new HashSet<>();
+        this.built = false;
     }
 
     public SpriteType getSpriteType() {
@@ -61,14 +68,18 @@ public abstract class Building {
         table.add("Owner: " + player.toString()).fillX().pad(10).row();
         table.add("Name: " + getClass().getSimpleName().replaceAll("Building", "")).fillX().pad(10).row();
 
-        Label idleLabel = new Label("Idle", skin) {
+        Label statusLabel = new Label("Constructing... (idktbh turn(s) left)", skin) {
             @Override
             public void act(float delta) {
-                setText(idle ? "Idle" : "Active");
+                if (built) {
+                    setText(idle ? "Idle" : "Active");
+                } else {
+                    setText("Constructing... ("+getConstructionTime()+" turn(s) left)");
+                }
                 super.act(delta);
             }
         };
-        table.add(idleLabel).fillX().pad(10).row();
+        table.add(statusLabel).growX().pad(10).row();
 
         return table;
     }
@@ -87,6 +98,39 @@ public abstract class Building {
 
     public Player getPlayer() {
         return player;
+    }
+
+    public void addBuildingAction(BuildingAction action) {
+        action.setBuilding(this);
+        buildingActions.add(action);
+    }
+
+    public void stepActions() {
+        LinkedList<BuildingAction> toRemove = new LinkedList<>();
+        for (BuildingAction action : buildingActions) {
+            boolean remove = action.step();
+            if (remove) {
+                toRemove.add(action);
+            }
+        }
+        while (!toRemove.isEmpty()) {
+            buildingActions.remove(toRemove.getLast());
+            toRemove.removeLast();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends BuildingAction> T findAction(Class<T> clazz) {
+        for (BuildingAction action : buildingActions) {
+            if (clazz.isInstance(action)) {
+                return (T) action;
+            }
+        }
+        return null;
+    }
+
+    public int getConstructionTime() {
+        return findAction(ConstructAction.class).getTurnsRemaining();
     }
 
     public boolean canFunction() {
@@ -183,14 +227,14 @@ public abstract class Building {
 
     // Buildings
 
-    public static class HeadquarterBuilding extends AbstractStorageBuilding {
+    public static class HeadquarterBuilding extends AbstractStorageBuilding implements ProductionBuilding {
         public HeadquarterBuilding(BuildingContext context) { super(SpriteType.HEADQUARTERS, context); }
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP, WorldFeature.FOREST, WorldFeature.CRYSTAL_VALLEY }; }
         @Override public Resource[] getAllowedStoreResources() {
             return Resource.values();
         }
-        @Override
-        public float getMaxAmount() { return 10; }
+        @Override public float getMaxAmount() { return 10; }
+        @Override public Map<Resource, Float> getProductionPerTurn() { return Resources.start().add(Resource.GOLD, 1f).add(Resource.SCIENCE, 5f).build(); }
     }
 
     public static class ExtractorBuilding extends Building implements ProductionBuilding {
@@ -245,7 +289,9 @@ public abstract class Building {
 
             return table;
         }
-        @Override public float getMaxAmount() { return 25; }
+        @Override public float getMaxAmount() {
+            return 25;
+        }
         @Override public Resource[] getAllowedStoreResources() {
             if (specifiedResource == null) {
                 return null;
@@ -405,13 +451,17 @@ public abstract class Building {
         }
     }
 
-    public static class StatueBuilding extends Building {
+    public static class StatueBuilding extends Building implements ProductionBuilding {
         public StatueBuilding(BuildingContext context) { super(SpriteType.STATUE, context); }
+        @Override public Map<Resource, Float> getProductionPerTurn() { return Resources.singleItem(Resource.SCIENCE, 3f); }
+        
     }
 
-    public static class ResearchLabBuilding extends Building {
+    public static class ResearchLabBuilding extends Building implements ConsumptionBuilding, ProductionBuilding {
         public ResearchLabBuilding(BuildingContext context) { super(SpriteType.RESEARCH_LAB, context); }
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP, WorldFeature.FOREST }; }
+        @Override public Map<Resource, Float> getProductionPerTurn() { return Resources.singleItem(Resource.SCIENCE, 15f); }
+        @Override public Map<Resource, Float> getConsumptionPerTurn() { return Resources.singleItem(Resource.SULFURIC_ACID, 2f); }
     }
 
     public static class ArcherTowerBuilding extends Building implements ConsumptionBuilding {

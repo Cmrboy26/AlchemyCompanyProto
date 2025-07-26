@@ -1,5 +1,9 @@
 package net.cmr.alchemycompany;
 
+import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
@@ -18,11 +22,13 @@ import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.actions.SequenceAction;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.TextTooltip;
 import com.badlogic.gdx.scenes.scene2d.ui.TooltipManager;
+import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
 import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
@@ -30,6 +36,8 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 
 import net.cmr.alchemycompany.Building.BuildingContext;
 import net.cmr.alchemycompany.Building.HeadquarterBuilding;
+import net.cmr.alchemycompany.BuildingAction.ConstructAction;
+import net.cmr.alchemycompany.ResearchManager.Technology;
 import net.cmr.alchemycompany.Resources.Resource;
 import net.cmr.alchemycompany.Shop.Cost;
 import net.cmr.alchemycompany.Shop.ShopOption;
@@ -48,8 +56,10 @@ public class GameScreen implements Screen {
     private Skin skin;
     private int TILE_SIZE = 100;
     private ButtonGroup<BuildingButton> buildingsGroup;
+    private ButtonGroup<TechnologyButton> techGroup;
     private Player player;
     private int turn = 1;
+    public TextButton researchButton;
 
     private int lastMouseX = -1;
     private int lastMouseY = -1;
@@ -163,23 +173,32 @@ public class GameScreen implements Screen {
                         boolean spotOccupied = world.getBuilding(x, y) != null;
 
                         boolean enoughResource = true;
-                        Cost cost = button.option.costFunction.apply(context);
-                        if (cost == null || cost.resources.isEmpty()) {
-                            enoughResource = true;
-                        } else {
-                            for (Resource resource : cost.resources.keySet()) {
-                                float amount = cost.resources.get(resource);
-                                if (player.displayStoredResources.getOrDefault(resource, 0f) < amount) {
-                                    enoughResource = false;
-                                    break;
+                        Cost cost = null;
+                        if (!Shop.EVERYTHING_FREE) {
+                            cost = button.option.costFunction.apply(context);
+                            if (cost == null || cost.resources.isEmpty()) {
+                                enoughResource = true;
+                            } else {
+                                for (Resource resource : cost.resources.keySet()) {
+                                    float amount = cost.resources.get(resource);
+                                    if (player.displayStoredResources.getOrDefault(resource, 0f) < amount) {
+                                        enoughResource = false;
+                                        break;
+                                    }
                                 }
                             }
+                            if (cost.requiredTechnology != null && !player.researchManager.isTechResearched(cost.requiredTechnology)) {
+                                enoughResource = false;
+                            }
                         }
+                        
 
                         if (featureExists && enoughResource && !spotOccupied) {
-                            for (Resource resource : cost.resources.keySet()) {
-                                float amount = cost.resources.get(resource);
-                                player.consumeResource(resource, amount);
+                            if (!Shop.EVERYTHING_FREE) {
+                                for (Resource resource : cost.resources.keySet()) {
+                                    float amount = cost.resources.get(resource);
+                                    player.consumeResource(resource, amount);
+                                }
                             }
                             world.addBuilding(building);
                             if (!Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
@@ -320,7 +339,7 @@ public class GameScreen implements Screen {
 
         TextButton buildingsButton = new TextButton("Buildings", skin, "toggle");
         TextButton troopsButton = new TextButton("Troops", skin, "toggle");
-        TextButton researchButton = new TextButton("Research", skin, "toggle");
+        researchButton = new TextButton("Research", skin, "toggle");
         optionsGroup.add(buildingsButton, troopsButton, researchButton);
 
         buttonsTable.add(buildingsButton).size(buttonSize, buttonSize / 2).pad(5).row();;
@@ -353,6 +372,7 @@ public class GameScreen implements Screen {
         rightBottomTable.pack();
 
         prepareBuildingMenu(buildingsButton);
+        prepareResearchMenu(researchButton);
 
         // Right top table for resource counters and other info
 
@@ -379,7 +399,12 @@ public class GameScreen implements Screen {
                         rpsString += "+";
                     }
                     rpsString += rps;
-                    setText(stored + " ("+rpsString+")");
+                    if (r == Resource.SCIENCE) {
+                        setText("("+rpsString+")");
+                    } else {
+                        setText(stored + " ("+rpsString+")");
+                    }
+
                     super.act(delta);
                 }
             };
@@ -460,13 +485,106 @@ public class GameScreen implements Screen {
                         Label resourceLabel = new Label(resource.name() + ": " + amount, skin);
                         costTable.add(resourceLabel).align(Align.left).pad(5).row();
                     }
-                    if (cost.sciencePoints > 0) {
-                        Label scienceLabel = new Label("Science: " + cost.sciencePoints, skin);
+                    if (cost.requiredTechnology != null && !player.researchManager.isTechResearched(cost.requiredTechnology)) {
+                        Label scienceLabel = new Label("Research: " + cost.requiredTechnology, skin);
                         costTable.add(scienceLabel).align(Align.left).pad(5).row();
                     }
                 }
             }
         })));
+
+    }
+
+    private void prepareResearchMenu(final TextButton researchButton) {
+        Table researchTable = new Table(skin);
+        researchTable.setFillParent(true);
+        researchTable.left();
+        stage.addActor(researchTable);
+
+        researchTable.addAction(Actions.forever(Actions.run(() -> {
+            if (researchButton.isChecked()) {
+                researchTable.setVisible(true);
+            } else {
+                researchTable.setVisible(false);
+            }
+        })));
+
+        Table backgroundTable = new Table(skin);
+        backgroundTable.setBackground("window");
+        backgroundTable.pad(10);
+        researchTable.add(backgroundTable).pad(10).row();
+
+        WidgetGroup techArea = new WidgetGroup();
+        techArea.setSize(200, 600);
+        final int xDist = 10, yDist = 10, sizeX = 150, sizeY = 50;
+
+        techGroup = new ButtonGroup<TechnologyButton>();
+        techGroup.setMinCheckCount(0);
+        techGroup.setMaxCheckCount(1);
+
+        List<Integer> currentX = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            currentX.add(0);
+        }
+        for (final Technology tech : Technology.values()) {
+            int x = currentX.get(tech.row);
+            currentX.set(tech.row, x + 1);
+            TechnologyButton button = new TechnologyButton(tech, skin);
+            button.addAction(Actions.forever(Actions.run(() -> {
+                boolean disable = false;
+                if (player.researchManager.isTechResearched(tech)) {
+                    disable = true;
+                    button.setColor(com.badlogic.gdx.graphics.Color.BLACK);
+                } else {
+                    for (Technology technology : ResearchManager.prerequisitesMap.get(tech)) {
+                        if (!player.researchManager.isTechResearched(technology)) {
+                            disable = true;
+                            button.setColor(com.badlogic.gdx.graphics.Color.WHITE);
+                            break;
+                        }
+                    }
+                }
+                button.setDisabled(disable);
+                if (disable) {
+                    button.setChecked(false);
+                } else {
+                    button.setColor(com.badlogic.gdx.graphics.Color.WHITE);
+                }
+                if (button.isChecked() && player.researchManager.getQueuedTechnology() != tech && !button.isDisabled()) {
+                    player.researchManager.queueTechnology(tech);
+                    System.out.println("Queuing "+tech.name());
+                } else if (!button.isChecked() && player.researchManager.getQueuedTechnology() == tech) {
+                    player.researchManager.cancelTechnology();
+                    System.out.println("Cancelling current tech");
+                }
+            })));
+            button.setChecked(player.researchManager.getQueuedTechnology() == tech);
+            techGroup.add(button);
+            techArea.addActor(button);
+            button.setPosition((sizeX + xDist) * x, (sizeY + yDist) * tech.row);
+            button.setSize(sizeX, sizeY);
+        }
+        techArea.pack();
+
+        ScrollPane scrollMenu = new ScrollPane(techArea, skin);
+        backgroundTable.add(scrollMenu).growY().width(sizeX * 5).height(600).row();
+
+        Label infoLabel = new Label("", skin);
+        infoLabel.addAction(Actions.forever(Actions.run(() -> {
+            if (player.researchManager.getQueuedTechnology() == null) {
+                infoLabel.setText("No research queued.");
+            } else {
+                Technology queuedTech = player.researchManager.getQueuedTechnology();
+                float progress = player.researchManager.getPercentCompletion();
+                float scienceNeeded = player.researchManager.getScienceRemaining();
+
+                infoLabel.setText((progress * 100f)+"% finished \""+queuedTech.name()+"\" ("+scienceNeeded+" science left)");
+            }
+        })));
+        backgroundTable.add(infoLabel).growY().fillX().row();
+
+        backgroundTable.pack();
+        researchTable.pack();
 
     }
 
@@ -489,9 +607,21 @@ public class GameScreen implements Screen {
         }
 
         public Building createBuilding(BuildingContext context) {
-            return option.constructor.apply(context);
+            Building building = option.constructor.apply(context);
+            building.addBuildingAction(new ConstructAction(option.turns));
+            return building;
         }
 
+    }
+
+    private class TechnologyButton extends TextButton {
+
+        public final Technology tech;
+
+        public TechnologyButton(Technology tech, Skin skin) {
+            super(tech.name() + "\n(" + (int) tech.cost + ")", skin, "toggle");
+            this.tech = tech;
+        }
     }
 
     private void setupInputProcessor() {
@@ -539,6 +669,7 @@ public class GameScreen implements Screen {
         // Initialize the world with a specific type.
         world = new World(World.WorldType.MEDIUM, System.currentTimeMillis());
         world.placeHeadquarters(player);
+        player.updateResourceDisplay();
     }
 
     private Vector2 getTileCoordinates(int screenX, int screenY) {
@@ -576,7 +707,7 @@ public class GameScreen implements Screen {
         // Tick down research, construction, unit production counters
         // Produce excess resources / turn if storage is available
         // Consume resources, store excess resources
-        player.nextTurn();
+        player.nextTurn(this);
     }
 
 }

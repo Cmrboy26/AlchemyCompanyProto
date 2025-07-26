@@ -1,8 +1,12 @@
 X Adding and removing structures
-- Turn Logic
+-- Turn Logic
 X Resource Production
-- Structure Cost
+X Structure Cost
 X Resource UI
 X Resource Manufacturing
-- Resource Storage
+X Resource Storage
+X Building Construction
 - Troops
+-X Tech Tree
+
+SOME COST TECHS ARENT WORKING, like the requirements arent showing up for some technologies
