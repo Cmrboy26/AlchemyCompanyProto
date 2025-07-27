@@ -10,7 +10,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
@@ -19,8 +18,8 @@ import net.cmr.alchemycompany.Building.AbstractStorageBuilding;
 import net.cmr.alchemycompany.Building.ConsumptionBuilding;
 import net.cmr.alchemycompany.Building.HeadquarterBuilding;
 import net.cmr.alchemycompany.Building.ProductionBuilding;
-import net.cmr.alchemycompany.Building.ResearchLabBuilding;
 import net.cmr.alchemycompany.Resources.Resource;
+import net.cmr.alchemycompany.troops.Troop;
 
 public class Player {
 
@@ -30,6 +29,7 @@ public class Player {
     Map<Resource, Float> calculatedResourcePerSecond;
     Map<Resource, Float> displayStoredResources;
     ResearchManager researchManager;
+    public Troop selectedTroop;
 
     public static final float MAX_SCIENCE_PER_SECOND = 100000;
 
@@ -147,11 +147,7 @@ public class Player {
     }
 
     public void nextTurn(GameScreen screen) {
-        // Tick down counters
-        for (Building building : buildings) {
-            building.stepActions();
-        }
-
+        // Consume and Produce
         Map<Resource, Float> storedResources = new HashMap<>();
         Map<Resource, Float> totalStorage = new HashMap<>();
 
@@ -161,11 +157,11 @@ public class Player {
             building.setActive();
         }
 
+        // Progress research
         float sciencePointsGained = storedResources.getOrDefault(Resource.SCIENCE, 0f);
         System.out.println("Gained +"+sciencePointsGained+" science this turn");
         boolean scienceResearched = researchManager.addScience(sciencePointsGained);
         if (scienceResearched) {
-            System.out.println("SCIENCE RESEARCHED!!!!!");
             screen.researchButton.clearActions();
             screen.researchButton.addAction(Actions.sequence(Actions.run(() -> {
                 screen.researchButton.setText("RESEARCH\nCOMPLETE");
@@ -191,18 +187,14 @@ public class Player {
                 }
             }
         }
-
-        // Science buildings that are active should give their science
-        /*for (Building building : toBeActive) {
-            if (building instanceof ScienceBuilding) {
-                ScienceBuilding scienceBuilding = (ScienceBuilding) building;
-                if (scienceBuilding.shouldGiveScience()) {
-                    sciencePoints += scienceBuilding.getSciencePerTurn();
-                }
-            }
-        }*/
         
         updateResourceDisplay();
+
+        // Move enemy troops (if applicable)
+        // Update buildings
+        for (Building building : buildings) {
+            building.onTurn();
+        }
     }
 
     /**

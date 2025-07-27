@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.Vector2;
 
 import net.cmr.alchemycompany.Building.BuildingContext;
 import net.cmr.alchemycompany.Building.HeadquarterBuilding;
+import net.cmr.alchemycompany.troops.Troop;
 
 public class World {
 
@@ -41,6 +42,7 @@ public class World {
     public final int height;
     private final WorldFeature[][] features;
     private final Building[][] buildings;
+    private final List<Troop> troops;
     private final long seed;
 
     public World(WorldType worldType, long seed) {
@@ -49,6 +51,7 @@ public class World {
         this.height = worldType.height;
         this.features = new WorldFeature[width][height];
         this.buildings = new Building[width][height];
+        this.troops = new ArrayList<>();
         this.seed = seed;
         generateWorld();
     }
@@ -167,6 +170,29 @@ public class World {
                 }
             }
         }
+    }
+
+    public List<Troop> getTroops() {
+        return troops;
+    }
+
+    public boolean placeTroop(Troop troop) {
+        for (Troop i : troops) {
+            if (troop.getX() == i.getX() && troop.getY() == i.getY()) {
+                return false;
+            }
+        }
+        troops.add(troop);
+        return true;
+    }
+
+    public Troop getTroopAt(int x, int y) {
+        for (Troop i : troops) {
+            if (i.getX() == x && i.getY() == y) {
+                return i;
+            }
+        }
+        return null;
     }
 
 }

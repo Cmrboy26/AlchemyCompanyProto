@@ -1,6 +1,5 @@
 package net.cmr.alchemycompany;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,6 +42,10 @@ import net.cmr.alchemycompany.Shop.Cost;
 import net.cmr.alchemycompany.Shop.ShopOption;
 import net.cmr.alchemycompany.Sprites.SpriteType;
 import net.cmr.alchemycompany.World.WorldFeature;
+import net.cmr.alchemycompany.troops.Scout;
+import net.cmr.alchemycompany.troops.Soldier;
+import net.cmr.alchemycompany.troops.Troop;
+import net.cmr.alchemycompany.troops.Troop.FightInformation;
 
 /**
  * First screen of the application. Displayed after the application is created.
@@ -54,7 +57,7 @@ public class GameScreen implements Screen {
     private Stage stage;
     private World world;
     private Skin skin;
-    private int TILE_SIZE = 100;
+    public static final int TILE_SIZE = 100;
     private ButtonGroup<BuildingButton> buildingsGroup;
     private ButtonGroup<TechnologyButton> techGroup;
     private Player player;
@@ -71,6 +74,15 @@ public class GameScreen implements Screen {
         prepareUI();
         setupInputProcessor();
         setupWorld();
+        
+        Troop troop1 = new Scout(player, world, 6, 8);
+        world.placeTroop(troop1);
+        Troop troop = new Soldier(player, world, 5, 5);
+        world.placeTroop(troop);
+        troop.moveTo(6, 8);
+        //troop.moveTo(9, 8);
+        //troop.moveTo(10, 8);
+        //troop.moveTo(15, 20);
     }
 
     @Override
@@ -208,7 +220,21 @@ public class GameScreen implements Screen {
                     }
                 } else {
                     Building buildingAt = world.getBuilding(x, y);
-                    if (buildingAt != null) {
+                    Troop troopAt = world.getTroopAt(x, y);
+                    Troop troopSelected = player.selectedTroop;
+
+                    if (troopAt != null) {
+                        if (troopAt.equals(troopSelected)) {
+                            player.selectedTroop = null;
+                            System.out.println("deslected");
+                        } else {
+                            player.selectedTroop = troopAt;
+                            System.err.println("selected");
+                        }
+                    }
+                    if (((troopSelected != null && troopSelected.getX() == x && troopSelected.getY() == y) || troopAt == null) && buildingAt != null) {
+                        player.selectedTroop = null;
+                        System.out.println("noo selected");
                         for (Actor actor : stage.getActors()) {
                             if (actor.getName() != null && actor.getName().equals("building_popup")) {
                                 actor.remove();
@@ -257,6 +283,32 @@ public class GameScreen implements Screen {
         if (Gdx.input.isButtonJustPressed(Input.Buttons.MIDDLE)) {
             focusOnTile(player.getHQPosition());
         }
+
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
+            Troop selectedTroop = player.selectedTroop;
+            if (selectedTroop != null && selectedTroop.getMovesRemaining() > 0) {
+                Vector2 tilePos = getTileCoordinates(Gdx.input.getX(), Gdx.input.getY());
+                int tileX = (int) tilePos.x;
+                int tileY = (int) tilePos.y;
+                boolean inRangeOfAttack = selectedTroop.inRangeOfAttack(tileX, tileY);
+                boolean actionDone = false;
+                if (inRangeOfAttack && !selectedTroop.hasAttacked()) {
+                    Troop troopAt = world.getTroopAt(tileX, tileY);
+                    if (troopAt != null) {
+                        FightInformation attack = selectedTroop.getAttack();
+                        FightInformation defense = troopAt.getDefense(attack);
+                        // TODO: simulate attack
+                        System.out.println("ATTACKIGN!!!");
+                        actionDone = true;
+                        selectedTroop.setAttacked(true);
+                        selectedTroop.setMoveCounter(0);
+                    }
+                }
+                if (!actionDone) {
+                    selectedTroop.moveTo(tileX, tileY);
+                }
+            }
+        }
     }
 
     private void renderWorld() {
@@ -302,6 +354,10 @@ public class GameScreen implements Screen {
                     building.renderTile(batch, TILE_SIZE);
                 }
             }
+        }
+
+        for (Troop troop : world.getTroops()) {
+            troop.render(batch);
         }
 
         batch.end();
@@ -485,10 +541,10 @@ public class GameScreen implements Screen {
                         Label resourceLabel = new Label(resource.name() + ": " + amount, skin);
                         costTable.add(resourceLabel).align(Align.left).pad(5).row();
                     }
-                    if (cost.requiredTechnology != null && !player.researchManager.isTechResearched(cost.requiredTechnology)) {
-                        Label scienceLabel = new Label("Research: " + cost.requiredTechnology, skin);
-                        costTable.add(scienceLabel).align(Align.left).pad(5).row();
-                    }
+                }
+                if (cost.requiredTechnology != null && !player.researchManager.isTechResearched(cost.requiredTechnology)) {
+                    Label scienceLabel = new Label("Research: " + cost.requiredTechnology, skin);
+                    costTable.add(scienceLabel).align(Align.left).pad(5).row();
                 }
             }
         })));
@@ -702,6 +758,17 @@ public class GameScreen implements Screen {
     public void nextTurn() {
         // Advance turn counter
         turn++;
+
+        
+        // Tick down counters
+        for (Building building : player.buildings) {
+            building.stepActions();
+        }
+        for (Troop troop : world.getTroops()) {
+            troop.resetMoves();
+        }
+
+
         // Check win/loss
         // Reset cooldowns
         // Tick down research, construction, unit production counters

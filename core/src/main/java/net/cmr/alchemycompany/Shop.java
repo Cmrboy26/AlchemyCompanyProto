@@ -60,6 +60,7 @@ public class Shop {
 
         public ResourceCostConstructor() {
             resources = new HashMap<>();
+            technology = null;
         }
 
         public static ResourceCostConstructor create() {

@@ -119,6 +119,10 @@ public abstract class Building {
         }
     }
 
+    public void onTurn() {
+        
+    }
+
     @SuppressWarnings("unchecked")
     public <T extends BuildingAction> T findAction(Class<T> clazz) {
         for (BuildingAction action : buildingActions) {

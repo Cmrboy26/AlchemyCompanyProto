@@ -7,6 +7,6 @@ X Resource Manufacturing
 X Resource Storage
 X Building Construction
 - Troops
--X Tech Tree
-
-SOME COST TECHS ARENT WORKING, like the requirements arent showing up for some technologies
+- Troop Equipment
+- Reaction Vessel
+X Tech Tree
