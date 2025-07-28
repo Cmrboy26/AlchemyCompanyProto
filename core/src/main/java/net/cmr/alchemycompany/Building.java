@@ -1,10 +1,13 @@
 package net.cmr.alchemycompany;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
@@ -20,6 +23,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Window;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 
 import net.cmr.alchemycompany.BuildingAction.ConstructAction;
+import net.cmr.alchemycompany.ResearchManager.Technology;
 import net.cmr.alchemycompany.Resources.Resource;
 import net.cmr.alchemycompany.Sprites.SpriteType;
 import net.cmr.alchemycompany.World.WorldFeature;
@@ -316,7 +320,7 @@ public abstract class Building implements HealthHolder {
             Map<Resource, Float> map = new HashMap<>();
             switch (featureBelow) {
                 case WATER:
-                    map.put(Resource.WATER, 5f);
+                    map.put(Resource.WATER, 2f);
                     break;
                 case SWAMP:
                     map.put(Resource.WITCH_EYE, 1f);
@@ -333,6 +337,16 @@ public abstract class Building implements HealthHolder {
                     break;
             }
             return map;
+        }
+
+        @Override public Table onClick(Skin skin) {
+            Table table = super.onClick(skin);
+            Map<Resource, Float> productionMap = getProductionPerTurn();
+            table.add("Produced Resources:").fillX().pad(5).row();
+            for (Entry<Resource, Float> entry : productionMap.entrySet()) {
+                table.add(entry.getValue() + " " + entry.getKey() + " per second").fillX().padLeft(5).row();
+            }
+            return table;
         }
     }
 
@@ -428,7 +442,18 @@ public abstract class Building implements HealthHolder {
         public Table onClick(Skin skin) {
             Table table = super.onClick(skin);
             SelectBox<FactoryRecipes> selectionBox = new SelectBox<>(skin);
-            selectionBox.setItems(FactoryRecipes.values());
+            List<FactoryRecipes> availableRecipes = new ArrayList<>();
+            for (FactoryRecipes recipe : FactoryRecipes.values()) {
+                if (recipe == FactoryRecipes.GOLD && !player.researchManager.isTechResearched(Technology.BASIC_ALCHEMY)) {
+                    continue;
+                }
+                if (recipe == FactoryRecipes.TRANSMUTATE_COPPER_TO_IRON && !player.researchManager.isTechResearched(Technology.MAGIC)) {
+                    continue;
+                }
+                availableRecipes.add(recipe);
+            }
+
+            selectionBox.setItems(availableRecipes.toArray(new FactoryRecipes[0]));
             selectionBox.setSelected(selectedRecipe);
             table.add(selectionBox).growX().row();
 
