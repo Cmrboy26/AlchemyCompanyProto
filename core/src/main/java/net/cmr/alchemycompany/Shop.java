@@ -29,7 +29,7 @@ public class Shop {
         BUILDINGS,
     }
 
-    public static boolean EVERYTHING_FREE = true;
+    public static boolean EVERYTHING_FREE = false;
 
     public static class Cost {
 

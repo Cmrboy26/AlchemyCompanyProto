@@ -2,6 +2,7 @@ package net.cmr.alchemycompany.troops;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
+import net.cmr.alchemycompany.Building.BuildingContext;
 import net.cmr.alchemycompany.GameScreen;
 import net.cmr.alchemycompany.Player;
 import net.cmr.alchemycompany.Sprites;
@@ -10,8 +11,8 @@ import net.cmr.alchemycompany.World;
 
 public class Scout extends Troop {
 
-    public Scout(Player player, World world, int x, int y) {
-        super(player, world, x, y);
+    public Scout(BuildingContext context) {
+        super(context);
     }
 
     @Override
@@ -33,13 +34,13 @@ public class Scout extends Troop {
     }
 
     @Override
-    public FightInformation getAttack() {
-        return new FightInformation(10, AttackType.NORMAL);
+    public FightInformation getAttack(HealthHolder defender) {
+        return modifyFightWithEquipment(new FightInformation(10, AttackType.NORMAL), defender, true);
     }
 
     @Override
-    public FightInformation getDefense(FightInformation attack) {
-        return new FightInformation(5, AttackType.NORMAL);
+    public FightInformation getDefense(FightInformation attack, HealthHolder attacker) {
+        return modifyFightWithEquipment(new FightInformation(5, AttackType.NORMAL), attacker, false);
     }
     
 }

@@ -5,6 +5,8 @@ import java.util.Map;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.Texture.TextureFilter;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 
 public class Sprites {
@@ -46,6 +48,7 @@ public class Sprites {
 
     public static void load() {
         skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
+        skin.get("font", BitmapFont.class).setUseIntegerPositions(false);
         initialized = true;
         textures = new HashMap<>();
         for (SpriteType type : SpriteType.values()) {

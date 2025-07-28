@@ -11,14 +11,14 @@ public class ResearchManager {
 
         MINING(5, 1),
         SCIENCE(5, 1),
-        MAGIC(20, 2),
-        MILITARY(20, 2),
-        FACTORY(20, 2),
-        RESEARCH_LAB(40, 2),
-        MAGICAL_WEAPONRY_I(40, 3),
-        CHEMISTRY_I(30, 3),
-        STORAGE(40, 3),
-        BASIC_ALCHEMY(100, 4)
+        MAGIC(25, 2),
+        MILITARY(25, 2),
+        FACTORY(25, 2),
+        RESEARCH_LAB(45, 2),
+        MAGICAL_WEAPONRY_I(45, 3),
+        CHEMISTRY_I(35, 3),
+        STORAGE(80, 3),
+        BASIC_ALCHEMY(150, 4)
         ;
 
         public final float cost;

@@ -2,6 +2,7 @@ package net.cmr.alchemycompany;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -22,6 +23,7 @@ import com.badlogic.gdx.scenes.scene2d.actions.SequenceAction;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
+import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -29,10 +31,13 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextTooltip;
 import com.badlogic.gdx.scenes.scene2d.ui.TooltipManager;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
 import com.badlogic.gdx.scenes.scene2d.ui.Window;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+import net.cmr.alchemycompany.Building.BarracksBuilding;
+import net.cmr.alchemycompany.Building.BarracksBuilding.BarracksRecipe;
 import net.cmr.alchemycompany.Building.BuildingContext;
 import net.cmr.alchemycompany.Building.HeadquarterBuilding;
 import net.cmr.alchemycompany.BuildingAction.ConstructAction;
@@ -42,6 +47,7 @@ import net.cmr.alchemycompany.Shop.Cost;
 import net.cmr.alchemycompany.Shop.ShopOption;
 import net.cmr.alchemycompany.Sprites.SpriteType;
 import net.cmr.alchemycompany.World.WorldFeature;
+import net.cmr.alchemycompany.troops.HealthHolder;
 import net.cmr.alchemycompany.troops.Scout;
 import net.cmr.alchemycompany.troops.Soldier;
 import net.cmr.alchemycompany.troops.Troop;
@@ -63,6 +69,7 @@ public class GameScreen implements Screen {
     private Player player;
     private int turn = 1;
     public TextButton researchButton;
+    private Label turnLabel;
 
     private int lastMouseX = -1;
     private int lastMouseY = -1;
@@ -74,15 +81,6 @@ public class GameScreen implements Screen {
         prepareUI();
         setupInputProcessor();
         setupWorld();
-        
-        Troop troop1 = new Scout(player, world, 6, 8);
-        world.placeTroop(troop1);
-        Troop troop = new Soldier(player, world, 5, 5);
-        world.placeTroop(troop);
-        troop.moveTo(6, 8);
-        //troop.moveTo(9, 8);
-        //troop.moveTo(10, 8);
-        //troop.moveTo(15, 20);
     }
 
     @Override
@@ -129,7 +127,7 @@ public class GameScreen implements Screen {
 
     private void update(float delta) {
         // Camera drag with right mouse button
-        if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
+        if (Gdx.input.isButtonPressed(Input.Buttons.LEFT) && Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
             // Store previous mouse position between frames
             if (lastMouseX == -1 && lastMouseY == -1) {
                 lastMouseX = Gdx.input.getX();
@@ -157,7 +155,7 @@ public class GameScreen implements Screen {
             lastMouseY = -1;
         }
 
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !isOverUI()) {
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !isOverUI() && !Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
             Vector2 tile = getTileCoordinates(Gdx.input.getX(), Gdx.input.getY());
             int x = (int) tile.x;
             int y = (int) tile.y;
@@ -220,21 +218,64 @@ public class GameScreen implements Screen {
                     }
                 } else {
                     Building buildingAt = world.getBuilding(x, y);
-                    Troop troopAt = world.getTroopAt(x, y);
+                    final Troop troopAt = world.getTroopAt(x, y);
                     Troop troopSelected = player.selectedTroop;
 
                     if (troopAt != null) {
                         if (troopAt.equals(troopSelected)) {
                             player.selectedTroop = null;
-                            System.out.println("deslected");
+
+                            for (Actor actor : stage.getActors()) {
+                                if (actor.getName() != null && actor.getName().equals("troop_popup")) {
+                                    actor.remove();
+                                }
+                            }
                         } else {
                             player.selectedTroop = troopAt;
-                            System.err.println("selected");
+                            
+                            for (Actor actor : stage.getActors()) {
+                                if (actor.getName() != null && actor.getName().equals("troop_popup")) {
+                                    actor.remove();
+                                }
+                            }
+
+                            Window popupTable = new Window("Troop", skin);
+                            popupTable.setName("troop_popup");
+                            popupTable.add(player.selectedTroop.onClick(skin)).fill().expand().padBottom(5).row();
+                            
+                            TextButton closeButton = new TextButton("Close", skin);
+                            closeButton.pad(0, 10, 0, 10);
+                            closeButton.addListener(new InputListener() {
+                                @Override
+                                public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                                    popupTable.addAction(new SequenceAction(Actions.delay(0.1f), Actions.removeActor()));
+                                    return true;
+                                }
+                            });
+                            popupTable.add(closeButton).align(Align.left).expand();
+
+                            TextButton removeButton = new TextButton("Destroy", skin);
+                            removeButton.pad(0, 10, 0, 10);
+                            removeButton.addListener(new InputListener() {
+                                @Override
+                                public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                                    popupTable.addAction(new SequenceAction(Actions.delay(0.1f), Actions.removeActor()));
+                                    world.getTroops().remove(troopAt);
+                                    return true;
+                                }
+                            });
+                            popupTable.add(removeButton).align(Align.right).expand();
+
+                            popupTable.pad(20);
+                            popupTable.pack();
+                            popupTable.setKeepWithinStage(true);
+                            popupTable.setOrigin(Align.center);
+                            popupTable.setPosition(stage.getWidth() / 2, stage.getHeight(), Align.top);
+                            stage.addActor(popupTable);
                         }
                     }
                     if (((troopSelected != null && troopSelected.getX() == x && troopSelected.getY() == y) || troopAt == null) && buildingAt != null) {
                         player.selectedTroop = null;
-                        System.out.println("noo selected");
                         for (Actor actor : stage.getActors()) {
                             if (actor.getName() != null && actor.getName().equals("building_popup")) {
                                 actor.remove();
@@ -273,7 +314,7 @@ public class GameScreen implements Screen {
                         popupTable.pack();
                         popupTable.setKeepWithinStage(true);
                         popupTable.setOrigin(Align.center);
-                        popupTable.setPosition(stage.getWidth() / 2, stage.getHeight() / 2, Align.center);
+                        popupTable.setPosition(stage.getWidth() * (11f / 16f), 0, Align.center);
                         stage.addActor(popupTable);
                     }
                 }
@@ -284,7 +325,12 @@ public class GameScreen implements Screen {
             focusOnTile(player.getHQPosition());
         }
 
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.CONTROL_LEFT)) {
+            nextTurn();
+            turnLabel.setText("Turn: "+turn);
+        }
+
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT) && !Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
             Troop selectedTroop = player.selectedTroop;
             if (selectedTroop != null && selectedTroop.getMovesRemaining() > 0) {
                 Vector2 tilePos = getTileCoordinates(Gdx.input.getX(), Gdx.input.getY());
@@ -293,12 +339,26 @@ public class GameScreen implements Screen {
                 boolean inRangeOfAttack = selectedTroop.inRangeOfAttack(tileX, tileY);
                 boolean actionDone = false;
                 if (inRangeOfAttack && !selectedTroop.hasAttacked()) {
+                    HealthHolder target = null;
                     Troop troopAt = world.getTroopAt(tileX, tileY);
-                    if (troopAt != null) {
-                        FightInformation attack = selectedTroop.getAttack();
-                        FightInformation defense = troopAt.getDefense(attack);
+                    Building buildingAt = world.getBuilding(tileX, tileY);
+
+                    if (troopAt != null && !troopAt.equals(selectedTroop)) {
+                        target = troopAt;
+                    } else if (buildingAt != null) {
+                        target = buildingAt;
+                    }
+
+                    if (target != null) {
+                        FightInformation attack = selectedTroop.getAttack(target);
+                        FightInformation defense = target.getDefense(attack, selectedTroop);
                         // TODO: simulate attack
-                        System.out.println("ATTACKIGN!!!");
+                        boolean attackedDied = target.processAttack(attack, selectedTroop);
+
+                        if (!attackedDied) {  
+                            selectedTroop.processAttack(defense, target);
+                        }
+
                         actionDone = true;
                         selectedTroop.setAttacked(true);
                         selectedTroop.setMoveCounter(0);
@@ -385,6 +445,88 @@ public class GameScreen implements Screen {
         rightBottomTable.right().bottom();
         stage.addActor(rightBottomTable);
 
+        Table fightSimulatorTable = new Table(skin);
+        fightSimulatorTable.setBackground("window");
+        fightSimulatorTable.pad(10);
+        rightBottomTable.add(fightSimulatorTable).fillX().pad(10).colspan(1).row();
+
+        Table attackerTable = new Table(skin);
+        fightSimulatorTable.add(attackerTable).colspan(1).grow();
+        Label attackerInfo = new Label("Name Here\n(100/100)", skin);
+        attackerTable.add(attackerInfo).center().padBottom(5).row();
+        attackerInfo.setAlignment(Align.center);
+        Label attackerStrength = new Label("Strength: Here\nType: CORROSION", skin);
+        attackerTable.add(attackerStrength).center().row();
+        attackerStrength.setAlignment(Align.center);
+
+        Label attackSymbol = new Label(">", skin);
+        fightSimulatorTable.add(attackSymbol).colspan(1).pad(8).grow();
+
+        Table defenderTable = new Table(skin);
+        fightSimulatorTable.add(defenderTable).colspan(1).grow();
+        Label defenderInfo = new Label("Name Here\n(100/100)", skin);
+        defenderInfo.setAlignment(Align.center);
+        defenderTable.add(defenderInfo).center().padBottom(8).row();
+        Label defenderStrength = new Label("Strength: Here\nType: CORROSION", skin);
+        defenderTable.add(defenderStrength).center().row();
+        defenderStrength.setAlignment(Align.center);
+
+        fightSimulatorTable.addAction(Actions.forever(Actions.run(() -> {
+            HealthHolder attacker = player.selectedTroop;
+            HealthHolder defender = null;
+
+            Vector2 tileVector = getTileCoordinates(Gdx.input.getX(), Gdx.input.getY());
+            int tileX = (int) tileVector.x;
+            int tileY = (int) tileVector.y;
+            if (!(tileX < 0 || tileX > world.width - 1 || tileY < 0 || tileY > world.height - 1)) {
+                Troop troopAt = world.getTroopAt(tileX, tileY);
+                Building buildingAt = world.getBuilding(tileX, tileY);
+                if (troopAt != null && !troopAt.equals(player.selectedTroop)) {
+                    defender = troopAt;
+                } else if (buildingAt != null) {
+                    defender = buildingAt;
+                }
+            }
+            // Attacker
+
+            if (attacker != null) {
+                attackerTable.setVisible(true);  
+                attackerInfo.setText(attacker.toString()+"\n("+attacker.getHealth()+"HP / "+attacker.getMaxHealth()+"HP)"); 
+            } else {
+                attackerTable.setVisible(false);
+            }
+
+            // Defender
+            
+
+            if (defender != null) {
+                defenderTable.setVisible(true);  
+                defenderInfo.setText(defender.toString()+"\n("+defender.getHealth()+"HP / "+defender.getMaxHealth()+"HP)"); 
+            } else {
+                defenderTable.setVisible(false);
+            }
+
+            if (defender != null && attacker != null) {
+                // simulate
+                
+                FightInformation attack = attacker.getAttack(defender);
+                FightInformation defense = defender.getDefense(attack, player.selectedTroop);
+
+                attackerStrength.setVisible(true);
+                attackerStrength.setText("Strength: "+attack.getStrength()+"\nType: "+attack.getAttackType()+"\n"+attacker.getHealth()+"HP -> "+Math.max(0, (attacker.getHealth() - defense.getStrength()))+"HP");
+                defenderStrength.setVisible(true);
+                defenderStrength.setText("Strength: "+defense.getStrength()+"\nType: "+defense.getAttackType()+"\n"+defender.getHealth()+"HP -> "+Math.max(0, (defender.getHealth() - attack.getStrength()))+"HP");
+            } else {
+                attackerStrength.setVisible(false);
+                defenderStrength.setVisible(false);
+            }
+            fightSimulatorTable.setVisible(attackerTable.isVisible());
+
+            
+        })));
+
+        Table belowTable = new Table();
+
         Table buttonsTable = new Table(skin);
         buttonsTable.setBackground("window");
         buttonsTable.pad(10);
@@ -397,17 +539,36 @@ public class GameScreen implements Screen {
         TextButton troopsButton = new TextButton("Troops", skin, "toggle");
         researchButton = new TextButton("Research", skin, "toggle");
         optionsGroup.add(buildingsButton, troopsButton, researchButton);
+        
+        buildingsButton.addListener(new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+                Gdx.input.setCursorCatched(false);
+            }
+        });
+        troopsButton.addListener(new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+                Gdx.input.setCursorCatched(false);
+            }
+        });
+        researchButton.addListener(new InputListener() {
+            @Override
+            public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+                Gdx.input.setCursorCatched(false);
+            }
+        });
 
         buttonsTable.add(buildingsButton).size(buttonSize, buttonSize / 2).pad(5).row();;
         buttonsTable.add(troopsButton).size(buttonSize, buttonSize / 2).pad(5).row();
         buttonsTable.add(researchButton).size(buttonSize, buttonSize / 2).pad(5).row();
-        rightBottomTable.add(buttonsTable).pad(10);
+        //rightBottomTable.add(buttonsTable).pad(10).colspan(1).right();
 
         Table turnTable = new Table(skin);
         turnTable.setBackground("window");
         turnTable.pad(10);
 
-        Label turnLabel = new Label("Turn: "+turn, skin);
+        turnLabel = new Label("Turn: "+turn, skin);
         turnLabel.setAlignment(Align.left);
         turnTable.add(turnLabel).growX().pad(5).row();
 
@@ -424,11 +585,14 @@ public class GameScreen implements Screen {
         });
         turnTable.add(nextTurnButton).size(100);
 
-        rightBottomTable.add(turnTable);
+        belowTable.add(buttonsTable).pad(5);
+        belowTable.add(turnTable).pad(5);
+        rightBottomTable.add(belowTable).right().colspan(1);
         rightBottomTable.pack();
 
         prepareBuildingMenu(buildingsButton);
         prepareResearchMenu(researchButton);
+        prepareTroopMenu(troopsButton);
 
         // Right top table for resource counters and other info
 
@@ -470,7 +634,6 @@ public class GameScreen implements Screen {
         }
 
         rightTopTable.add(resourcesTable);
-
         rightTopTable.pack();
     }
 
@@ -485,6 +648,7 @@ public class GameScreen implements Screen {
                 purchaseBuildingTable.setVisible(true);
             } else {
                 purchaseBuildingTable.setVisible(false);
+                buildingsGroup.uncheckAll();
             }
         })));
 
@@ -556,14 +720,6 @@ public class GameScreen implements Screen {
         researchTable.setFillParent(true);
         researchTable.left();
         stage.addActor(researchTable);
-
-        researchTable.addAction(Actions.forever(Actions.run(() -> {
-            if (researchButton.isChecked()) {
-                researchTable.setVisible(true);
-            } else {
-                researchTable.setVisible(false);
-            }
-        })));
 
         Table backgroundTable = new Table(skin);
         backgroundTable.setBackground("window");
@@ -637,11 +793,118 @@ public class GameScreen implements Screen {
                 infoLabel.setText((progress * 100f)+"% finished \""+queuedTech.name()+"\" ("+scienceNeeded+" science left)");
             }
         })));
+
+        researchTable.addAction(Actions.forever(Actions.run(() -> {
+            if (researchButton.isChecked()) {
+                researchTable.setVisible(true);
+            } else {
+                researchTable.setVisible(false);
+                //scrollMenu.cancelTouchFocus();
+            }
+        })));
         backgroundTable.add(infoLabel).growY().fillX().row();
 
         backgroundTable.pack();
         researchTable.pack();
 
+    }
+
+    private void prepareTroopMenu(final TextButton troopButton) {
+        Table troopTable = new Table(skin);
+        troopTable.setFillParent(true);
+        troopTable.left();
+        stage.addActor(troopTable);
+
+        Table backgroundTable = new Table(skin);
+        backgroundTable.setBackground("window");
+        backgroundTable.pad(10);
+        troopTable.add(backgroundTable).pad(10).row();
+
+        final Table scrollTable = new Table(skin);
+        scrollTable.pad(10);
+
+        ScrollPane scroll = new ScrollPane(scrollTable, skin);
+        scroll.setOverscroll(false, false);
+        scroll.setScrollBarPositions(true, false);
+        scroll.setScrollingDisabled(true, false);
+        Table table = new Table();
+        table.setFillParent(true);
+        table.add(scroll).grow();
+        backgroundTable.add(table).grow().height(600).row();
+
+        backgroundTable.pack();
+        troopTable.pack();
+
+        
+
+        troopButton.addListener(new InputListener() {
+            @Override
+            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                scrollTable.clear();
+                for (final Building building : player.buildings) {
+                    if (building instanceof BarracksBuilding) {
+                        BarracksBuilding barracks = (BarracksBuilding) building;
+                        TextButton focusButton = new TextButton(barracks.toString(), skin);
+                        focusButton.addListener(new InputListener() {
+                            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                                focusOnTile(building.getX(), building.getY());
+                                return true;
+                            };
+                        });
+
+                        SelectBox<BarracksRecipe> selectBox = new SelectBox<>(skin);
+                        selectBox.setItems(BarracksRecipe.values());
+                        selectBox.addAction(Actions.forever(Actions.run(() -> {
+                            selectBox.setDisabled(!barracks.canFunction());
+                            if (barracks.selectedRecipe != selectBox.getSelected()) {
+                                selectBox.setSelected(barracks.selectedRecipe);
+                            }
+                        })));
+
+                        Label turnsRemaining = new Label("Remaining Turns: "+barracks.getTroopConstructTime(), skin);
+                        turnsRemaining.addAction(Actions.forever(Actions.run(() -> {
+                            turnsRemaining.setText("Remaining Turns: "+barracks.getTroopConstructTime());
+                        })));
+
+                        Label costs = new Label("", skin);
+                        costs.setWrap(true);
+                        costs.addAction(Actions.forever(Actions.run(() -> {
+                            costs.setVisible(barracks.selectedRecipe != BarracksRecipe.NONE);
+                        })));
+
+                        selectBox.addListener(new ChangeListener() {
+                            @Override
+                            public void changed(ChangeEvent event, Actor actor) {
+                                barracks.queueTroop(selectBox.getSelected());
+                                String costLabel = "Cost Per Turn Queued:";
+                                for (Entry<Resource, Float> entry : barracks.getConsumptionPerTurn().entrySet()) {
+                                    Resource r = entry.getKey();
+                                    Float f = entry.getValue();
+                                    costLabel += "\n(-"+f+" "+r+")";
+                                }
+                                costs.setText(costLabel);
+                                player.updateResourceDisplay();
+                            }
+                        });
+
+                        scrollTable.add(focusButton).growX().pad(5);
+                        scrollTable.add(turnsRemaining).growX().pad(5).row();
+                        scrollTable.add(selectBox).growX().pad(5).colspan(2).padRight(50).row();
+                        scrollTable.add(costs).growX().pad(5).colspan(2).row();
+                    }
+                }
+                scrollTable.pack();
+                return false;
+            }
+        });
+
+        troopTable.addAction(Actions.forever(Actions.run(() -> {
+            if (troopButton.isChecked()) {
+                troopTable.setVisible(true);
+            } else {
+                troopTable.setVisible(false);
+            }
+        })));
     }
 
     private class BuildingButton extends TextButton {
@@ -682,8 +945,7 @@ public class GameScreen implements Screen {
 
     private void setupInputProcessor() {
         InputMultiplexer inputMultiplexer = new InputMultiplexer();
-        inputMultiplexer.addProcessor(stage);
-
+        
         inputMultiplexer.addProcessor(new InputAdapter() {
             @Override
             public boolean scrolled(float amountX, float amountY) {
@@ -717,6 +979,7 @@ public class GameScreen implements Screen {
                 return false;
             }
         });
+        inputMultiplexer.addProcessor(stage);
 
         Gdx.input.setInputProcessor(inputMultiplexer);
     }
@@ -775,6 +1038,40 @@ public class GameScreen implements Screen {
         // Produce excess resources / turn if storage is available
         // Consume resources, store excess resources
         player.nextTurn(this);
+
+        String winMessage = null;
+        if (player.displayStoredResources.getOrDefault(Resource.GOLD, 0f) >= 100 && player.researchManager.isTechResearched(Technology.BASIC_ALCHEMY)) {
+            winMessage = "YOU WON THE GAME!\n\nYou synthesized 100 gold\nand squashed the competition.";
+        }
+        if (player.getHQ().destroyed) {
+            winMessage = "YOU LOST...\n\nYou destroyed your headquarters\nin a singleplayer game and lost.\nNice job.";
+        }
+
+        if (winMessage != null) {
+            // WIN GAME!!!
+            System.out.println("Won the game!");
+            Table centerTable = new Table();
+            centerTable.center();
+            centerTable.setFillParent(true);
+            stage.addActor(centerTable);
+
+            Table winTable = new Table(skin);
+            winTable.setBackground("window");
+            winTable.add(winMessage).fill().pad(10).row();
+            winTable.pad(10);
+
+            TextButton replayButton = new TextButton("Restart", skin);
+            replayButton.addListener(new InputListener() {
+                @Override
+                public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                    AlchemyCompany.getInstance().setScreen(new GameScreen());     
+                    return true;
+                }
+            });
+            winTable.add(replayButton).growX();
+            
+            centerTable.add(winTable);
+        }
     }
 
 }

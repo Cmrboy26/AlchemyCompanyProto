@@ -1,6 +1,7 @@
 package net.cmr.alchemycompany;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.function.BiFunction;
@@ -126,7 +127,6 @@ public class World {
                     double iterateSize = size[index];
                     double distance = Math.sqrt(Math.pow(x - iteratePosition.x, 2) + Math.pow(y - iteratePosition.y, 2));
                     if (distance <= iterateSize) {
-                        //System.out.println(specialFeature[i]);
                         return specialFeature[i];
                     }
                     index++;
@@ -161,7 +161,6 @@ public class World {
         while (true) {
             int x = (int) (random.nextDouble() * width);
             int y = (int) (random.nextDouble() * height);
-            System.out.println(x + ", " + y);
             HeadquarterBuilding hq = new HeadquarterBuilding(new BuildingContext(this, player, x, y));
             for (WorldFeature feature : hq.getAllowedTiles()) {
                 if (feature == features[x][y]) {
@@ -193,6 +192,64 @@ public class World {
             }
         }
         return null;
+    }
+
+    public static int getSpiralRadius(final int radius) {
+        return (int) (Math.pow((radius) * 2 + 1, 2));
+    }
+    public static Iterator<Vector2> getSpiralIterator(final int ix, final int iy) {
+        return getSpiralIterator(ix, iy, 1000);
+    }
+    public static Iterator<Vector2> getSpiralIterator(final int ix, final int iy, final int maxPoints) {
+        return new Iterator<Vector2>() {
+            // (di, dj) is a vector - direction in which we move right now
+            int di = 1;
+            int dj = 0;
+            // length of current segment
+            int segment_length = 1;
+
+            // current position (i, j) and how much of current segment we passed
+            int i = 0;
+            int j = 0;
+            int k = 0;
+            int segment_passed = 0;
+
+            @Override
+            public boolean hasNext() {
+                return k <= maxPoints;
+            }
+
+            @Override
+            public Vector2 next() {
+                k++;
+                if (k == 1) {
+                    return new Vector2(ix, iy);
+                }
+
+                // make a step, add 'direction' vector (di, dj) to current position (i, j)
+                i += di;
+                j += dj;
+                ++segment_passed;
+
+                if (segment_passed == segment_length) {
+                    // done with current segment
+                    segment_passed = 0;
+
+                    // 'rotate' directions
+                    int buffer = di;
+                    di = -dj;
+                    dj = buffer;
+
+                    // increase segment length if necessary
+                    if (dj == 0) {
+                        segment_length++;
+                    }
+                }
+
+                return new Vector2(i + ix, j + iy);
+            }
+            
+        };
     }
 
 }

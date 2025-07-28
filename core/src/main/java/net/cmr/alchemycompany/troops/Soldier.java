@@ -2,6 +2,7 @@ package net.cmr.alchemycompany.troops;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
+import net.cmr.alchemycompany.Building.BuildingContext;
 import net.cmr.alchemycompany.GameScreen;
 import net.cmr.alchemycompany.Player;
 import net.cmr.alchemycompany.Sprites;
@@ -11,8 +12,10 @@ import net.cmr.alchemycompany.World;
 
 public class Soldier extends Troop implements EquipmentHolder {
 
-    public Soldier(Player player, World world, int x, int y) {
-        super(player, world, x, y);
+    Equipment equipment;
+
+    public Soldier(BuildingContext context) {
+        super(context);
     }
 
     @Override
@@ -34,13 +37,28 @@ public class Soldier extends Troop implements EquipmentHolder {
     }
 
     @Override
-    public FightInformation getAttack() {
-        return new FightInformation(20, AttackType.NORMAL);
+    public FightInformation getAttack(HealthHolder defender) {
+        return modifyFightWithEquipment(new FightInformation(20, AttackType.NORMAL), defender, true);
     }
 
     @Override
-    public FightInformation getDefense(FightInformation attack) {
-        return new FightInformation(15, AttackType.NORMAL);
+    public FightInformation getDefense(FightInformation attack, HealthHolder attacker) {
+        return modifyFightWithEquipment(new FightInformation(15, AttackType.NORMAL), attacker, false);
+    }
+
+    @Override
+    public void equip(Equipment e) {
+        this.equipment = e;
+    }
+
+    @Override
+    public void unequip() {
+        this.equipment = null;
+    }
+
+    @Override
+    public Equipment getEquipment() {
+        return equipment;
     }
     
 }

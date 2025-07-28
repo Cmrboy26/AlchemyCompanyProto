@@ -67,10 +67,8 @@ public class Player {
 
     public void removeBuilding(Building building) {
         if (building instanceof HeadquarterBuilding) {
-            // LOSE
             hq = null;
             buildings.remove(building);
-            System.out.println("YOU LOSE");
         } else {
             boolean successful = buildings.remove(building);
             updateResourceDisplay();
@@ -140,7 +138,6 @@ public class Player {
         for (Building building : toBeActive) {
             building.setActive();
         }
-        System.out.println("calculated update resource display");
 
         this.displayStoredResources = trueResourcesInStorage;
         this.calculatedResourcePerSecond = generationPerSecond;
@@ -159,7 +156,7 @@ public class Player {
 
         // Progress research
         float sciencePointsGained = storedResources.getOrDefault(Resource.SCIENCE, 0f);
-        System.out.println("Gained +"+sciencePointsGained+" science this turn");
+        //System.out.println("Gained +"+sciencePointsGained+" science this turn");
         boolean scienceResearched = researchManager.addScience(sciencePointsGained);
         if (scienceResearched) {
             screen.researchButton.clearActions();
@@ -187,14 +184,14 @@ public class Player {
                 }
             }
         }
-        
-        updateResourceDisplay();
 
         // Move enemy troops (if applicable)
         // Update buildings
         for (Building building : buildings) {
             building.onTurn();
         }
+        
+        updateResourceDisplay();
     }
 
     /**

@@ -33,7 +33,9 @@ public class BuildingAction {
     public static class ConstructAction extends BuildingAction {
         public ConstructAction(int turns) {
             super(turns, (b -> {
-                b.built = true;
+                if (!b.destroyed) {
+                    b.built = true;
+                }
             }));
         }
     }

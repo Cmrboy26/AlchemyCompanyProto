@@ -1,12 +1,14 @@
 X Adding and removing structures
--- Turn Logic
+X Turn Logic
 X Resource Production
 X Structure Cost
 X Resource UI
 X Resource Manufacturing
 X Resource Storage
 X Building Construction
-- Troops
-- Troop Equipment
-- Reaction Vessel
+X Troops
+X Troop Equipment
+X Reaction Vessel
+X Make archer tower work
+X Make barracks work
 X Tech Tree

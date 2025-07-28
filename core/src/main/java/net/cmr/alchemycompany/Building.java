@@ -2,14 +2,15 @@ package net.cmr.alchemycompany;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
@@ -22,13 +23,22 @@ import net.cmr.alchemycompany.BuildingAction.ConstructAction;
 import net.cmr.alchemycompany.Resources.Resource;
 import net.cmr.alchemycompany.Sprites.SpriteType;
 import net.cmr.alchemycompany.World.WorldFeature;
+import net.cmr.alchemycompany.troops.HealthHolder;
+import net.cmr.alchemycompany.troops.Scout;
+import net.cmr.alchemycompany.troops.Soldier;
+import net.cmr.alchemycompany.troops.Troop;
+import net.cmr.alchemycompany.troops.Troop.AttackType;
+import net.cmr.alchemycompany.troops.Troop.EquipmentHolder;
+import net.cmr.alchemycompany.troops.Troop.FightInformation;
+import net.cmr.alchemycompany.troops.Troop.TroopConstructorFunction;
 
-public abstract class Building {
+public abstract class Building implements HealthHolder {
 
     protected World world;
     private SpriteType type;
     protected Player player;
     private int x, y;
+    private float health;
     protected boolean idle = false; // purely a display state
     protected boolean destroyed = false; // functional state
     protected boolean built = false;
@@ -42,6 +52,7 @@ public abstract class Building {
         this.y = context.y;
         this.buildingActions = new HashSet<>();
         this.built = false;
+        this.health = getMaxHealth();
     }
 
     public SpriteType getSpriteType() {
@@ -68,10 +79,20 @@ public abstract class Building {
         table.add("Owner: " + player.toString()).fillX().pad(10).row();
         table.add("Name: " + getClass().getSimpleName().replaceAll("Building", "")).fillX().pad(10).row();
 
+        Label healthLabel = new Label("Health: "+health+"/"+getMaxHealth(), skin) {
+            @Override
+            public void act(float delta) {
+                setText("Health: "+health+"/"+getMaxHealth());
+                super.act(delta);
+            }
+        };
+        table.add(healthLabel).growX().pad(10).row();
         Label statusLabel = new Label("Constructing... (idktbh turn(s) left)", skin) {
             @Override
             public void act(float delta) {
-                if (built) {
+                if (destroyed) {
+                    setText("Destroyed");
+                } else if (built) {
                     setText(idle ? "Idle" : "Active");
                 } else {
                     setText("Constructing... ("+getConstructionTime()+" turn(s) left)");
@@ -120,7 +141,7 @@ public abstract class Building {
     }
 
     public void onTurn() {
-        
+
     }
 
     @SuppressWarnings("unchecked")
@@ -144,6 +165,46 @@ public abstract class Building {
     public void setActive() { idle = false; }
 
     @Override
+    public boolean processAttack(FightInformation attack, HealthHolder attacker) {
+        health -= attack.getStrength();
+        if (attacker instanceof EquipmentHolder) {
+            EquipmentHolder eqh = (EquipmentHolder) attacker;
+            eqh.useEquipment();
+        }
+        if (health <= 0) {
+            destroyed = true;
+            health = 0;
+            player.updateResourceDisplay();
+
+            if (this instanceof HeadquarterBuilding) {
+                // BUILDING DESTROYED, GAME OVER
+                System.out.println("GAME OVER! HQ DESTROYED.");
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public float getHealth() {
+        return health;
+    }
+
+    @Override
+    public FightInformation getDefense(FightInformation attack, HealthHolder attacker) {
+        return modifyFightWithEquipment(new FightInformation(0, AttackType.NORMAL), attacker, false);
+    }
+    @Override
+    public FightInformation getAttack(HealthHolder defender) {
+        return FightInformation.NO_ATTACK;
+    }
+
+    @Override
+    public float getMaxHealth() {
+        return 50;
+    }
+
+    @Override
     public int hashCode() {
         return Objects.hash(player, x, y, getClass().getSimpleName());
     }
@@ -159,6 +220,11 @@ public abstract class Building {
             }
         }
         return false;
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName().replaceAll("Building", "")+"#"+((hashCode()+"").substring(6));
     }
 
     @FunctionalInterface
@@ -472,11 +538,106 @@ public abstract class Building {
         public ArcherTowerBuilding(BuildingContext context) { super(SpriteType.ARCHER_TOWER, context); }
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP, WorldFeature.FOREST, WorldFeature.MOUNTAINS, WorldFeature.CRYSTAL_VALLEY }; }
         @Override public Map<Resource, Float> getConsumptionPerTurn() { return Resources.singleItem(Resource.IRON, 1f); }
+
+        @Override
+        public void onTurn() {
+            if (!idle) {
+                Iterator<Vector2> iterator = World.getSpiralIterator(getX(), getY(), World.getSpiralRadius(2));
+                while (iterator.hasNext()) {
+                    Vector2 next = iterator.next();
+                    int tileX = (int) next.x;
+                    int tileY = (int) next.y;
+                    Troop troopAround = world.getTroopAt(tileX, tileY);
+                    if (troopAround != null) {
+                        // ATTACK IT!!!!
+                        // Normally, check if the troop is from a different player
+                        System.out.println("Attack "+troopAround);
+                        FightInformation attack = getAttack(troopAround);
+                        troopAround.processAttack(attack, this);
+                    }
+                }
+            }
+        }
+
+        @Override
+        public FightInformation getAttack(HealthHolder defender) {
+            return new FightInformation(15, AttackType.NORMAL);
+        }
     }
 
-    public static class BarracksBuilding extends Building {
+    public static class BarracksBuilding extends Building implements ConsumptionBuilding {
+        BarracksRecipe selectedRecipe = BarracksRecipe.NONE;
+        public int troopConstructionTime = 0;
+
         public BarracksBuilding(BuildingContext context) { super(SpriteType.BARRACKS, context); }
         @Override public WorldFeature[] getAllowedTiles() { return new WorldFeature[]{ WorldFeature.PLAINS, WorldFeature.SWAMP, WorldFeature.FOREST }; }
+        @Override public Map<Resource, Float> getConsumptionPerTurn() {
+            Map<Resource, Float> cpt = new HashMap<>();
+            switch (selectedRecipe) {
+                case SCOUT:
+                    cpt.put(Resource.GOLD, 3f);
+                    break;
+                case SOLDIER:
+                    cpt.put(Resource.IRON, 2f);
+                    cpt.put(Resource.GOLD, 3f);
+                    break;
+                case NONE:
+                default:
+                    break;
+            }
+            return cpt;
+        }
+        
+        public int getTroopConstructTime() {
+            return troopConstructionTime;
+        }
+
+        public void queueTroop(BarracksRecipe recipe) {
+            this.selectedRecipe = recipe;
+            troopConstructionTime = recipe.time;
+        }
+
+        public enum BarracksRecipe {
+            NONE,
+            SCOUT(2, Scout::new),
+            SOLDIER(4, Soldier::new)
+            ;
+
+            public final int time;
+            public final TroopConstructorFunction tcf;
+            BarracksRecipe(int time, TroopConstructorFunction tcf) {
+                this.time = time;
+                this.tcf = tcf;
+            }
+            BarracksRecipe() {
+                this.time = 0;
+                this.tcf = null;
+            }
+        }
+
+        @Override
+        public void onTurn() {
+            if (selectedRecipe == BarracksRecipe.NONE) {
+                return;
+            }
+            if (canFunction() && !idle) {
+                troopConstructionTime--;
+            }
+            if (getTroopConstructTime() <= 0) {
+                Iterator<Vector2> iterator = World.getSpiralIterator(getX(), getY());
+                while (iterator.hasNext()) {
+                    Vector2 next = iterator.next();
+                    Troop troopAt = world.getTroopAt((int) next.x, (int) next.y);
+                    if (troopAt == null) {
+                        Troop troop = selectedRecipe.tcf.apply(new BuildingContext(world, player, (int) next.x, (int) next.y));
+                        world.placeTroop(troop);
+                        break;
+                    }
+                }
+
+                queueTroop(BarracksRecipe.NONE);
+            }
+        }
     }
 
 }
