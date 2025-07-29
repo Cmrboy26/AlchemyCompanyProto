@@ -942,8 +942,7 @@ public class GameScreen implements Screen {
             this.tech = tech;
         }
     }
-
-    private void setupInputProcessor() {
+private void setupInputProcessor() {
         InputMultiplexer inputMultiplexer = new InputMultiplexer();
         
         inputMultiplexer.addProcessor(new InputAdapter() {
@@ -983,6 +982,7 @@ public class GameScreen implements Screen {
 
         Gdx.input.setInputProcessor(inputMultiplexer);
     }
+    
 
     private void setupWorld() {
         // Initialize the world with a specific type.

@@ -4,6 +4,7 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector3;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class AlchemyCompany extends Game {
@@ -19,6 +20,8 @@ public class AlchemyCompany extends Game {
     public void create() {
         spriteBatch = new SpriteBatch();
         setScreen(new GameScreen());
+
+        System.out.println(2 & 0x0001);
     }
 
     public SpriteBatch batch() {
