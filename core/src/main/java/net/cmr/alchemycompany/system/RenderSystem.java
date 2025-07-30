@@ -1,6 +1,7 @@
 package net.cmr.alchemycompany.system;
 
-import java.util.Objects;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 import com.badlogic.gdx.graphics.Texture;
@@ -8,11 +9,15 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector3;
 
 import net.cmr.alchemycompany.IsometricHelper;
-import net.cmr.alchemycompany.OpenSimplexNoise;
 import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.Sprites.SpriteType;
+import net.cmr.alchemycompany.component.RenderComponent;
+import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Engine;
+import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
+import net.cmr.alchemycompany.ecs.Family;
+import net.cmr.alchemycompany.world.Tile;
 import net.cmr.alchemycompany.world.World;
 import net.cmr.alchemycompany.world.World.WorldFeature;
 
@@ -20,9 +25,11 @@ public class RenderSystem extends EntitySystem {
     public static float TILE_SIZE = 128;
 
     private World world;
+    private Family renderFamily;
 
     public RenderSystem(World world) {
         this.world = world;
+        this.renderFamily = Family.all(TilePositionComponent.class, RenderComponent.class);
     }
 
     public void render(SpriteBatch batch, float delta) {
@@ -33,11 +40,12 @@ public class RenderSystem extends EntitySystem {
             for (int x = 0; x <= sum; x++) {
                 int y = sum - x;
                 if (x < mapWidth && y < mapHeight) {
-                    Vector3 iso = IsometricHelper.standardToIsometric(x, y);
+                    Vector3 iso = IsometricHelper.project(x, y);
                     boolean invert = isInvert(x, y);
-                    Texture texture = getSprite(world.getFeature(x, y), x, y);
+                    Texture texture = getSprite(world.getTile(x, y), x, y);
                     if (texture != null) {
-                        batch.draw(texture, (iso.x - (invert ? -1 : 0))  * TILE_SIZE, iso.y * TILE_SIZE / 4f, TILE_SIZE * (invert ? -1 : 1), TILE_SIZE);
+                        batch.draw(texture, (iso.x - (invert ? -1 : 0) - 0.5f)  * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (invert ? -1 : 1), TILE_SIZE * 1.5f);
+                        //batch.draw(texture, iso.x * TILE_SIZE, iso.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                     }
                 }
             }
@@ -54,7 +62,8 @@ public class RenderSystem extends EntitySystem {
         return new Random(generateNoise(x, y)).nextInt((max- min) + 1) + min;
     }
 
-    private Texture getSprite(WorldFeature feature, int x, int y) {
+    private Texture getSprite(Tile tile, int x, int y) {
+        WorldFeature feature = tile.getFeature();
         SpriteType spriteType = null;
         switch (feature) {
             case WATER:
@@ -88,12 +97,12 @@ public class RenderSystem extends EntitySystem {
 
     @Override
     public void addedToEngine(Engine engine) {
-
+        super.addedToEngine(engine);
     }
 
     @Override
     public void removedFromEngine(Engine engine) {
-
+        super.removedFromEngine(engine);
     }
 
 }

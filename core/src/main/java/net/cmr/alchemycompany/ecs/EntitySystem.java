@@ -2,10 +2,16 @@ package net.cmr.alchemycompany.ecs;
 
 public abstract class EntitySystem {
     
+    protected Engine engine;
+
     public EntitySystem() {
 
     }
-    public abstract void addedToEngine(Engine engine);
-    public abstract void removedFromEngine(Engine engine);
+    public void addedToEngine(Engine engine) {
+        this.engine = engine;
+    }
+    public void removedFromEngine(Engine engine) {
+        
+    }
     
 }

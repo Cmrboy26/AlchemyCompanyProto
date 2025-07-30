@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public abstract class Engine {
     
@@ -38,6 +39,9 @@ public abstract class Engine {
     public void unregisterSystem(EntitySystem system) {
         systemMap.remove(system.getClass(), system);
         system.removedFromEngine(this);
+    }
+    public Set<Entity> getEntities(Family family) {
+        return entities.values().stream().filter(family::matches).collect(Collectors.toSet());
     }
     @SuppressWarnings("unchecked")
     public <T extends EntitySystem> T getSystem(Class<T> systemClass) {

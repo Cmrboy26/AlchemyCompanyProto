@@ -41,7 +41,7 @@ public class World {
     public final WorldType worldType;
     public final int width;
     public final int height;
-    private final WorldFeature[][] features;
+    private final Tile[][] tiles;
     private final long seed;
     public final OpenSimplexNoise noise;
 
@@ -49,7 +49,7 @@ public class World {
         this.worldType = worldType;
         this.width = worldType.width;
         this.height = worldType.height;
-        this.features = new WorldFeature[width][height];
+        this.tiles = new Tile[width][height];
         this.seed = seed;
         this.noise = new OpenSimplexNoise(seed);
         generateWorld();
@@ -61,20 +61,20 @@ public class World {
 
     private void generateWorld() {
         // General Land features
-        for (BiFunction<Integer, Integer, WorldFeature> generateFunction : getFeatureGenerators()) {
+        for (BiFunction<Integer, Integer, Tile> generateFunction : getFeatureGenerators()) {
             for (int x = 0; x < width; x++) {
                 for (int y = 0; y < height; y++) {
-                    WorldFeature feature = generateFunction.apply(x, y);
-                    if (feature != null) {
-                        features[x][y] = feature;
+                    Tile tile = generateFunction.apply(x, y);
+                    if (tile != null) {
+                        tiles[x][y] = tile;
                     }
                 }
             }
         }
     }
 
-    private List<BiFunction<Integer, Integer, WorldFeature>> getFeatureGenerators() {
-        List<BiFunction<Integer, Integer, WorldFeature>> worldFeatureList = new ArrayList<>();
+    private List<BiFunction<Integer, Integer, Tile>> getFeatureGenerators() {
+        List<BiFunction<Integer, Integer, Tile>> worldFeatureList = new ArrayList<>();
         worldFeatureList.add((Integer x, Integer y) -> {
             WorldFeature[] landFeature = new WorldFeature[] {
                 WorldFeature.PLAINS,
@@ -85,13 +85,13 @@ public class World {
             double scale = 0.5f;
             int landFeatureIndex = (int) ((noise.eval(x * scale, y * scale, 0) + 1) / 2 * landFeature.length);
             landFeatureIndex = Math.max(0, Math.min(landFeatureIndex, landFeature.length - 1));
-            return landFeature[landFeatureIndex];
+            return new Tile(landFeature[landFeatureIndex], x, y);
         });
         worldFeatureList.add((Integer x, Integer y) -> {
             double scale = 0.3f;
             double output = noise.eval(x * scale, y * scale, 5);
             if (output <= -.35) {
-                return WorldFeature.WATER;
+                return new Tile(WorldFeature.WATER, x, y);
             }
             return null;
         });
@@ -127,7 +127,7 @@ public class World {
                     double iterateSize = size[index];
                     double distance = Math.sqrt(Math.pow(x - iteratePosition.x, 2) + Math.pow(y - iteratePosition.y, 2));
                     if (distance <= iterateSize) {
-                        return specialFeature[i];
+                        return new Tile(specialFeature[i], x, y);
                     }
                     index++;
                 }
@@ -137,8 +137,12 @@ public class World {
 
         return worldFeatureList;
     }
-    public WorldFeature getFeature(int x, int y) {
-        return features[x][y];
+    public Tile getTile(int x, int y) {
+        return tiles[x][y];
+    }
+    public void setTileFeature(WorldFeature feature, int x, int y) {
+        // debug
+        tiles[x][y].feature = feature;
     }
     public static int getSpiralRadius(final int radius) {
         return (int) (Math.pow((radius) * 2 + 1, 2));

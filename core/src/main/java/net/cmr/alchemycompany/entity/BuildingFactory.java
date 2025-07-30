@@ -13,7 +13,7 @@ public class BuildingFactory {
     public static Entity createBuilding(BuildingType type, int x, int y) {
         Entity building = new Entity();
         building.addComponent(new TilePositionComponent(x, y), null);
-        building.addComponent(new BuildingComponent(), null);
+        building.addComponent(new BuildingComponent(BuildingType.FARM), null);
         switch (type) {
             case FARM:
                 break;

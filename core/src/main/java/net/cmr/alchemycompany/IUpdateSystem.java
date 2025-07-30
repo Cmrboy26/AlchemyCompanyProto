@@ -1,5 +1,5 @@
 package net.cmr.alchemycompany;
 
-public interface UpdateSystem {
+public interface IUpdateSystem {
     void update(float delta);
 }

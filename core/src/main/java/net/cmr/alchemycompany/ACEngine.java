@@ -16,7 +16,7 @@ public class ACEngine extends Engine {
 
     public void update(float delta) {
         for (EntitySystem system : updateSystems) {
-            ((UpdateSystem) system).update(delta);
+            ((IUpdateSystem) system).update(delta);
         }
     }
 
@@ -34,7 +34,7 @@ public class ACEngine extends Engine {
         if (system instanceof RenderSystem) {
             renderSystems.add(system);
         }
-        if (system instanceof UpdateSystem) {
+        if (system instanceof IUpdateSystem) {
             renderSystems.add(system);
         }
     }
@@ -45,7 +45,7 @@ public class ACEngine extends Engine {
         if (system instanceof RenderSystem) {
             renderSystems.remove(system);
         }
-        if (system instanceof UpdateSystem) {
+        if (system instanceof IUpdateSystem) {
             renderSystems.remove(system);
         }
     }

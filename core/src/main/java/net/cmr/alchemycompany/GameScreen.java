@@ -7,20 +7,19 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-import net.cmr.alchemycompany.Sprites.SpriteType;
-import net.cmr.alchemycompany.component.TilePositionComponent;
-import net.cmr.alchemycompany.ecs.Engine;
-import net.cmr.alchemycompany.ecs.Entity;
-import net.cmr.alchemycompany.entity.BuildingFactory;
 import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
 import net.cmr.alchemycompany.system.RenderSystem;
+import net.cmr.alchemycompany.world.Tile;
+import net.cmr.alchemycompany.world.TilePoint;
 import net.cmr.alchemycompany.world.World;
+import net.cmr.alchemycompany.world.World.WorldFeature;
 import net.cmr.alchemycompany.world.World.WorldType;
 
 public class GameScreen implements Screen {
@@ -31,14 +30,11 @@ public class GameScreen implements Screen {
     private Skin skin;
     private int lastMouseX, lastMouseY;
 
-    
-    private ACEngine gameEngine;
-    private World world;
+    private GameManager gameManager;
 
     @Override
     public void show() {
-        prepareEngine();
-        prepareWorld();
+        prepareGame();
         prepareUI();
         setupInputProcessor();
     }
@@ -47,12 +43,13 @@ public class GameScreen implements Screen {
     public void render(float delta) {
         // Camera drag with right mouse button
         processPanCameraInput();
-        gameEngine.update(delta);
+        updateInput();
+        gameManager.getEngine().update(delta);
 
         SpriteBatch batch = AlchemyCompany.getInstance().batch();
         worldViewport.apply();
         batch.setProjectionMatrix(worldViewport.getCamera().combined);
-        gameEngine.render(batch, delta);
+        gameManager.getEngine().render(batch, delta);
     }
     
     @Override
@@ -81,15 +78,17 @@ public class GameScreen implements Screen {
         stage.dispose();
     }
 
-    private void prepareEngine() {
-        gameEngine = new ACEngine();
-        Entity entity = new Entity() {};
-        entity.addComponent(new TilePositionComponent(0, 0), gameEngine);   
-    }
+    private void prepareGame() {
+        
+        ACEngine engine = new ACEngine();
+        World world = new World(WorldType.MEDIUM, System.currentTimeMillis());
+        engine.registerSystem(new RenderSystem(world));
 
-    private void prepareWorld() {
-        this.world = new World(WorldType.MEDIUM, System.currentTimeMillis());
-        gameEngine.registerSystem(new RenderSystem(world));
+        gameManager = new GameManager(true, engine, world);
+        System.out.println(gameManager.tryPlaceBuilding(null, BuildingType.FARM, 2, 2));
+        System.out.println(gameManager.tryPlaceBuilding(null, BuildingType.FARM, 2, 2));
+        // Entity entity = new Entity() {};
+        // entity.addComponent(new TilePositionComponent(0, 0), gameEngine);  
     }
 
     private void prepareUI() {
@@ -98,6 +97,15 @@ public class GameScreen implements Screen {
 
         skin = Sprites.getSkin();
         stage = new Stage(uiViewport, AlchemyCompany.getInstance().batch());
+    }
+
+    private void updateInput() {
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+            Vector3 screenCoords = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            Vector3 worldCoords = worldViewport.unproject(screenCoords);
+            TilePoint tileCoords = IsometricHelper.worldToIsometricTile(worldCoords, gameManager.getWorld());
+            gameManager.getWorld().setTileFeature(WorldFeature.MOUNTAINS, tileCoords.getX(), tileCoords.getY());
+        }
     }
 
     private void processPanCameraInput() {
@@ -129,7 +137,6 @@ public class GameScreen implements Screen {
             lastMouseY = -1;
         }
     }
-
 
     private void setupInputProcessor() {
         InputMultiplexer inputMultiplexer = new InputMultiplexer();
