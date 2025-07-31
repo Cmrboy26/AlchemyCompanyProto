@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 
 import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
 import net.cmr.alchemycompany.system.RenderSystem;
+import net.cmr.alchemycompany.system.ResourceSystem;
 import net.cmr.alchemycompany.world.Tile;
 import net.cmr.alchemycompany.world.TilePoint;
 import net.cmr.alchemycompany.world.World;
@@ -83,10 +84,10 @@ public class GameScreen implements Screen {
         ACEngine engine = new ACEngine();
         World world = new World(WorldType.MEDIUM, System.currentTimeMillis());
         engine.registerSystem(new RenderSystem(world));
+        engine.registerSystem(new ResourceSystem());
 
         gameManager = new GameManager(true, engine, world);
-        System.out.println(gameManager.tryPlaceBuilding(null, BuildingType.FARM, 2, 2));
-        System.out.println(gameManager.tryPlaceBuilding(null, BuildingType.FARM, 2, 2));
+        //System.out.println();
         // Entity entity = new Entity() {};
         // entity.addComponent(new TilePositionComponent(0, 0), gameEngine);  
     }
@@ -104,7 +105,13 @@ public class GameScreen implements Screen {
             Vector3 screenCoords = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
             Vector3 worldCoords = worldViewport.unproject(screenCoords);
             TilePoint tileCoords = IsometricHelper.worldToIsometricTile(worldCoords, gameManager.getWorld());
-            gameManager.getWorld().setTileFeature(WorldFeature.MOUNTAINS, tileCoords.getX(), tileCoords.getY());
+            if (tileCoords != null) {
+                BuildingType selectedType = Gdx.input.isKeyPressed(Input.Keys.SPACE) ? BuildingType.HEADQUARTERS : BuildingType.FARM;
+                gameManager.tryPlaceBuilding(null, selectedType, tileCoords.getX(), tileCoords.getY()); 
+                gameManager.getEngine().getSystem(ResourceSystem.class).calculateTurn();
+            }
+
+            //if (tileCoords != null) gameManager.getWorld().setTileFeature(WorldFeature.SWAMP, tileCoords.getX(), tileCoords.getY());
         }
     }
 

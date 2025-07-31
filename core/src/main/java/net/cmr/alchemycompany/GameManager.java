@@ -2,6 +2,7 @@ package net.cmr.alchemycompany;
 
 import java.util.UUID;
 
+import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.entity.BuildingFactory;
 import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
@@ -28,7 +29,9 @@ public class GameManager {
     public boolean tryPlaceBuilding(UUID playerID, BuildingType type, int x, int y) {
         Tile tile = world.getTile(x, y);
         if (tile == null || !tile.canPlaceBuilding()) return false;
-        Entity building = BuildingFactory.createBuilding(type, x, y);
+        Entity building = BuildingFactory.createBuilding(playerID, type, x, y);
+        BuildingComponent bc = building.getComponent(BuildingComponent.class);
+        if (!bc.validPlacement.contains(tile.getFeature())) return false;
         tile.setBuildingSlotID(building.getID()); // set tile occupied
         updateTile(x, y); // update clients
         engine.addEntity(building); // add entity

@@ -28,14 +28,8 @@ public class Sprites {
         CRYSTAL_VALLEY,
         PARTY_TILE,
 
-        HEADQUARTERS,
-        EXTRACTOR,
-        STORAGE,
-        FACTORY,
-        STATUE,
-        RESEARCH_LAB,
-        ARCHER_TOWER,
-        BARRACKS,
+        FARM,
+        HEADQUARTERS
         ;
 
         private final String fileName;

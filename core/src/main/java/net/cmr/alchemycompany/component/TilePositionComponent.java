@@ -8,7 +8,8 @@ public class TilePositionComponent extends Component {
     public int tileY = 0;
 
     public TilePositionComponent(int tileX, int tileY) {
-
+        this.tileX = tileX;
+        this.tileY = tileY;
     } 
 
 }

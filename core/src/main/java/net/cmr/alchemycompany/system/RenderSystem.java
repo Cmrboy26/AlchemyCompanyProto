@@ -1,8 +1,11 @@
 package net.cmr.alchemycompany.system;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -18,6 +21,7 @@ import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
 import net.cmr.alchemycompany.world.Tile;
+import net.cmr.alchemycompany.world.TilePoint;
 import net.cmr.alchemycompany.world.World;
 import net.cmr.alchemycompany.world.World.WorldFeature;
 
@@ -36,16 +40,38 @@ public class RenderSystem extends EntitySystem {
         int mapWidth = world.width;
         int mapHeight = world.height;
 
+        // List<Entity> lists = new ArrayList<>(engine.getEntities(renderFamily));
+        Set<Entity> renderEntities = engine.getEntities(renderFamily);
+        Map<TilePoint, List<Entity>> map = new HashMap<>(); 
+        for (Entity entity : renderEntities) {
+            TilePositionComponent tpc = entity.getComponent(TilePositionComponent.class);
+            //RenderComponent rc = entity.getComponent(RenderComponent.class);
+            TilePoint point = new TilePoint(tpc.tileX, tpc.tileY);
+            map.putIfAbsent(point, new ArrayList<>());
+            map.get(point).add(entity);
+        }
+
         for (int sum = mapWidth + mapHeight - 2; sum >= 0; sum--) {
             for (int x = 0; x <= sum; x++) {
                 int y = sum - x;
                 if (x < mapWidth && y < mapHeight) {
+                    TilePoint point = new TilePoint(x, y);
                     Vector3 iso = IsometricHelper.project(x, y);
                     boolean invert = isInvert(x, y);
                     Texture texture = getSprite(world.getTile(x, y), x, y);
+
                     if (texture != null) {
-                        batch.draw(texture, (iso.x - (invert ? -1 : 0) - 0.5f)  * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (invert ? -1 : 1), TILE_SIZE * 1.5f);
+                        batch.draw(texture, (iso.x - (invert ? -1.5f : 0) - 0.75f) * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (invert ? -1 : 1) * 1.5f, TILE_SIZE * 1.5f);
                         //batch.draw(texture, iso.x * TILE_SIZE, iso.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                    List<Entity> currentEntities = map.get(point);
+                    if (currentEntities != null) {
+                        for (Entity entity : currentEntities) {
+                            RenderComponent rc = entity.getComponent(RenderComponent.class);
+                            Texture entityTexture = Sprites.getTexture(rc.spriteType);
+                            boolean entityInvert = rc.invertable && invert;
+                            batch.draw(entityTexture, (iso.x - (entityInvert ? -1.5f : 0) - 0.75f) * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (entityInvert ? -1 : 1) * 1.5f, TILE_SIZE * 1.5f);
+                        }
                     }
                 }
             }
