@@ -1,16 +1,21 @@
 package net.cmr.alchemycompany.ecs;
 
-import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.Json.Serializable;
+import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.Null;
+
+import net.cmr.alchemycompany.component.Component;
 
 public class Entity implements Serializable, Cloneable {
     
-    private final Map<Class<? extends Component>, Component> componentMap;
-    private final UUID id; 
+    private HashMap<Class<? extends Component>, Component> componentMap;
+    private UUID id; 
 
     public Entity() {
         this.id = UUID.randomUUID();
@@ -50,4 +55,59 @@ public class Entity implements Serializable, Cloneable {
                 '}';
     }
 
+    @Override
+    public void read(Json json, JsonValue jsonData) {
+        id = UUID.fromString(jsonData.getString("id", UUID.randomUUID().toString()));
+        componentMap = new HashMap<>();
+        ArrayList<Component> componentSet = json.readValue("components", ArrayList.class, jsonData);
+        for (Component component : componentSet) {
+            componentMap.put(component.getClass(), component);
+        }
+    }
+
+    @Override
+    public void write(Json json) {
+        json.writeValue("id", id.toString());
+        ArrayList<Component> componentSet = new ArrayList<>(componentMap.values());
+        json.writeValue("components", componentSet);
+    }
+
+    /*@Override
+    public void read(Json json, JsonValue jsonData) {
+        JsonValue componentArray = jsonData.get("components");
+        this.componentMap = new HashMap<>();
+        if (componentArray != null) {
+            String componentPackage = Component.class.getPackage().getName();
+            for (JsonValue componentValue : componentArray) {
+                System.out.println(componentValue.toString());
+                // You need to know the actual class of the component to deserialize it properly.
+                // Assuming each component JSON has a "type" field with the class name:
+                try {
+                    Class<? extends Component> componentClass =
+                        (Class<? extends Component>) Class.forName(componentValue.getString("type"));
+                    componentMap.put(componentClass, componentObject);
+                } catch (ClassNotFoundException e) {
+                    throw new RuntimeException("Unknown component type", e);
+                } catch (InstantiationException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void write(Json json) {
+        json.writeValue("id", id.toString());
+        json.writeArrayStart("components");
+        for (Component component : componentMap.values()) {
+            // Write the class name for deserialization
+            json.writeObjectStart();
+            json.writeValue("type", component.getClass().getName());
+            json.writeValue("component", component);
+            json.writeObjectEnd();
+        }
+        json.writeArrayEnd();
+    }*/
 }

@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import net.cmr.alchemycompany.component.Component;
+
 public class Family {
     
     private final Set<Class<? extends Component>> familyComponents;

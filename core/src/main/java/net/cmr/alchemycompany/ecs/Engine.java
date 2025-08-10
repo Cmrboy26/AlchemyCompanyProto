@@ -8,6 +8,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import net.cmr.alchemycompany.component.Component;
+
 public abstract class Engine {
     
     private Map<UUID, Entity> entities;

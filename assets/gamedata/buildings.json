@@ -1,0 +1,58 @@
+{
+    "FARM": {
+        "components": [
+            {
+                "class": "net.cmr.alchemycompany.component.BuildingComponent",
+                "buildingType": "FARM",
+                "invalidPlacement": [
+                    "WATER"
+                ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.RenderComponent",
+                "spriteType": "FARM",
+                "invertable": true
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.ProducerComponent",
+                "production": {
+                    "CRYSTAL": 4.0
+                }
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.ResearchRequirementComponent",
+                "technologiesRequired": [
+                    "AGRICULTURE"
+                ]
+            }
+        ]
+    },
+    "HEADQUARTERS": {
+        "components": [
+            {
+                "class": "net.cmr.alchemycompany.component.BuildingComponent",
+                "buildingType": "FARM",
+                "invalidPlacement": [
+                    "WATER"
+                ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.RenderComponent",
+                "spriteType": "HEADQUARTERS",
+                "invertable": true
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.StorageComponent",
+                "maxStorage": 10
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.DefenseComponent",
+                "baseDefense": 10,
+                "typeMultipliers": {
+                    "NORMAL": 1.0,
+                    "CORROSION": 2.0
+                }
+            }
+        ]
+    }
+}

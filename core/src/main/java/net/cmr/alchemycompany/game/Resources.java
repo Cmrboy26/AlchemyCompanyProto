@@ -20,16 +20,21 @@ public class Resources {
         Resource() {
 
         }
+
+        @Override
+        public String toString() {
+            return "RESOURCE."+name();
+        }
     }
 
-    public static Map<Resource, Float> singleItem(Resource resource, Float amount) {
-        Map<Resource, Float> map = new HashMap<>();
+    public static HashMap<Resource, Float> singleItem(Resource resource, Float amount) {
+        HashMap<Resource, Float> map = new HashMap<>();
         map.put(resource, amount);
         return map;
     }
 
-    public static Map<Resource, Float> allItems(Float amount) {
-        Map<Resource, Float> map = new HashMap<>();
+    public static HashMap<Resource, Float> allItems(Float amount) {
+        HashMap<Resource, Float> map = new HashMap<>();
         for (Resource resource : Resource.values()) {
             map.put(resource, amount);
         }

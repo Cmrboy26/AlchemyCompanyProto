@@ -1,5 +1,8 @@
 package net.cmr.alchemycompany;
 
+import java.util.HashMap;
+import java.util.HashSet;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
@@ -7,20 +10,22 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+import net.cmr.alchemycompany.component.AvailableRecipesComponent;
+import net.cmr.alchemycompany.component.ProducerComponent;
+import net.cmr.alchemycompany.component.StorageComponent;
 import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
+import net.cmr.alchemycompany.game.Resources.Resource;
 import net.cmr.alchemycompany.system.RenderSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
-import net.cmr.alchemycompany.world.Tile;
 import net.cmr.alchemycompany.world.TilePoint;
 import net.cmr.alchemycompany.world.World;
-import net.cmr.alchemycompany.world.World.WorldFeature;
 import net.cmr.alchemycompany.world.World.WorldType;
 
 public class GameScreen implements Screen {
@@ -106,7 +111,7 @@ public class GameScreen implements Screen {
             Vector3 worldCoords = worldViewport.unproject(screenCoords);
             TilePoint tileCoords = IsometricHelper.worldToIsometricTile(worldCoords, gameManager.getWorld());
             if (tileCoords != null) {
-                BuildingType selectedType = Gdx.input.isKeyPressed(Input.Keys.SPACE) ? BuildingType.HEADQUARTERS : BuildingType.FARM;
+                BuildingType selectedType = Gdx.input.isKeyPressed(Input.Keys.SPACE) ? BuildingType.FARM : BuildingType.HEADQUARTERS;
                 gameManager.tryPlaceBuilding(null, selectedType, tileCoords.getX(), tileCoords.getY()); 
                 gameManager.getEngine().getSystem(ResourceSystem.class).calculateTurn();
             }
