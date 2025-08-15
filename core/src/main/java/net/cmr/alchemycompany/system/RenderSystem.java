@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector3;
@@ -36,7 +38,7 @@ public class RenderSystem extends EntitySystem {
         this.renderFamily = Family.all(TilePositionComponent.class, RenderComponent.class);
     }
 
-    public void render(SpriteBatch batch, float delta) {
+    public void render(UUID playerUUID, SpriteBatch batch, float delta) {
         int mapWidth = world.width;
         int mapHeight = world.height;
 
@@ -50,27 +52,40 @@ public class RenderSystem extends EntitySystem {
             map.putIfAbsent(point, new ArrayList<>());
             map.get(point).add(entity);
         }
+        VisibilitySystem visibilitySystem = engine.getSystem(VisibilitySystem.class);
 
         for (int sum = mapWidth + mapHeight - 2; sum >= 0; sum--) {
             for (int x = 0; x <= sum; x++) {
                 int y = sum - x;
                 if (x < mapWidth && y < mapHeight) {
                     TilePoint point = new TilePoint(x, y);
+                    if (visibilitySystem != null && !visibilitySystem.wasVisiblePreviously(playerUUID, x, y)) {
+                        continue;
+                    }
+                    boolean isVisibleCurrently = visibilitySystem.isVisibleCurrently(playerUUID, x, y);
+
                     Vector3 iso = IsometricHelper.project(x, y);
                     boolean invert = isInvert(x, y);
                     Texture texture = getSprite(world.getTile(x, y), x, y);
 
+                    if (!isVisibleCurrently) {
+                        batch.setColor(Color.GRAY);
+                    }
                     if (texture != null) {
                         batch.draw(texture, (iso.x - (invert ? -1.5f : 0) - 0.75f) * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (invert ? -1 : 1) * 1.5f, TILE_SIZE * 1.5f);
                         //batch.draw(texture, iso.x * TILE_SIZE, iso.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                     }
-                    List<Entity> currentEntities = map.get(point);
-                    if (currentEntities != null) {
-                        for (Entity entity : currentEntities) {
-                            RenderComponent rc = entity.getComponent(RenderComponent.class);
-                            Texture entityTexture = Sprites.getTexture(rc.spriteType);
-                            boolean entityInvert = rc.invertable && invert;
-                            batch.draw(entityTexture, (iso.x - (entityInvert ? -1.5f : 0) - 0.75f) * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (entityInvert ? -1 : 1) * 1.5f, TILE_SIZE * 1.5f);
+                    if (!isVisibleCurrently) {
+                        batch.setColor(Color.WHITE);
+                    } else {
+                        List<Entity> currentEntities = map.get(point);
+                        if (currentEntities != null) {
+                            for (Entity entity : currentEntities) {
+                                RenderComponent rc = entity.getComponent(RenderComponent.class);
+                                Texture entityTexture = Sprites.getTexture(rc.spriteType);
+                                boolean entityInvert = rc.invertable && invert;
+                                batch.draw(entityTexture, (iso.x - (entityInvert ? -1.5f : 0) - 0.75f) * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (entityInvert ? -1 : 1) * 1.5f, TILE_SIZE * 1.5f);
+                            }
                         }
                     }
                 }

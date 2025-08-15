@@ -35,7 +35,9 @@ public class TilePoint {
 
     @Override
     public int hashCode() {
-        return 31 * x + y;
+        int result = Integer.hashCode(x);
+        result = 31 * result + Integer.hashCode(y);
+        return result;
     }
 
     @Override

@@ -2,6 +2,8 @@ package net.cmr.alchemycompany;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Random;
+import java.util.UUID;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -18,12 +20,16 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import net.cmr.alchemycompany.component.AvailableRecipesComponent;
+import net.cmr.alchemycompany.component.Component;
+import net.cmr.alchemycompany.component.FogOfWarComponent;
 import net.cmr.alchemycompany.component.ProducerComponent;
 import net.cmr.alchemycompany.component.StorageComponent;
+import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
 import net.cmr.alchemycompany.game.Resources.Resource;
 import net.cmr.alchemycompany.system.RenderSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
+import net.cmr.alchemycompany.system.VisibilitySystem;
 import net.cmr.alchemycompany.world.TilePoint;
 import net.cmr.alchemycompany.world.World;
 import net.cmr.alchemycompany.world.World.WorldType;
@@ -35,6 +41,8 @@ public class GameScreen implements Screen {
     private Stage stage;
     private Skin skin;
     private int lastMouseX, lastMouseY;
+    private UUID playerUUID;
+    private int focusX = -1, focusY = -1;
 
     private GameManager gameManager;
 
@@ -48,6 +56,7 @@ public class GameScreen implements Screen {
     @Override
     public void render(float delta) {
         // Camera drag with right mouse button
+        processTileFocus();
         processPanCameraInput();
         updateInput();
         gameManager.getEngine().update(delta);
@@ -55,7 +64,7 @@ public class GameScreen implements Screen {
         SpriteBatch batch = AlchemyCompany.getInstance().batch();
         worldViewport.apply();
         batch.setProjectionMatrix(worldViewport.getCamera().combined);
-        gameManager.getEngine().render(batch, delta);
+        gameManager.getEngine().render(playerUUID, batch, delta);
     }
     
     @Override
@@ -85,16 +94,29 @@ public class GameScreen implements Screen {
     }
 
     private void prepareGame() {
-        
+        playerUUID = UUID.randomUUID();
+
         ACEngine engine = new ACEngine();
         World world = new World(WorldType.MEDIUM, System.currentTimeMillis());
         engine.registerSystem(new RenderSystem(world));
         engine.registerSystem(new ResourceSystem());
+        engine.registerSystem(new VisibilitySystem());
+        
+        Entity fogOfWarEntity = new Entity();
+        fogOfWarEntity.addComponent(new FogOfWarComponent(), engine);
+        engine.addEntity(fogOfWarEntity);
 
         gameManager = new GameManager(true, engine, world);
-        //System.out.println();
-        // Entity entity = new Entity() {};
-        // entity.addComponent(new TilePositionComponent(0, 0), gameEngine);  
+
+        while (true) {
+            int x = new Random().nextInt((int) (world.width));
+            int y = new Random().nextInt((int) (world.height));
+            boolean result = gameManager.tryPlaceBuilding(playerUUID, BuildingType.HEADQUARTERS, x, y, true);
+            focusOnTile(x, y);
+            if (result) {
+                break;
+            }
+        }
     }
 
     private void prepareUI() {
@@ -106,17 +128,18 @@ public class GameScreen implements Screen {
     }
 
     private void updateInput() {
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
-            Vector3 screenCoords = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
-            Vector3 worldCoords = worldViewport.unproject(screenCoords);
-            TilePoint tileCoords = IsometricHelper.worldToIsometricTile(worldCoords, gameManager.getWorld());
-            if (tileCoords != null) {
-                BuildingType selectedType = Gdx.input.isKeyPressed(Input.Keys.SPACE) ? BuildingType.FARM : BuildingType.HEADQUARTERS;
-                gameManager.tryPlaceBuilding(null, selectedType, tileCoords.getX(), tileCoords.getY()); 
-                gameManager.getEngine().getSystem(ResourceSystem.class).calculateTurn();
+        Vector3 screenCoords = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+        Vector3 worldCoords = worldViewport.unproject(screenCoords);
+        TilePoint tileCoords = IsometricHelper.worldToIsometricTile(worldCoords, gameManager.getWorld());
+        if (tileCoords != null) {
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+                //BuildingType selectedType = Gdx.input.isKeyPressed(Input.Keys.SPACE) ? BuildingType.FARM : BuildingType.HEADQUARTERS;
+                BuildingType selectedType = BuildingType.FARM;
+                gameManager.tryPlaceBuilding(playerUUID, selectedType, tileCoords.getX(), tileCoords.getY(), false);
             }
-
-            //if (tileCoords != null) gameManager.getWorld().setTileFeature(WorldFeature.SWAMP, tileCoords.getX(), tileCoords.getY());
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.MIDDLE)) {
+                gameManager.tryRemoveBuilding(playerUUID, tileCoords.getX(), tileCoords.getY());
+            }
         }
     }
 
@@ -189,6 +212,27 @@ public class GameScreen implements Screen {
         inputMultiplexer.addProcessor(stage);
 
         Gdx.input.setInputProcessor(inputMultiplexer);
+    }
+
+    public void focusOnTile(int x, int y) {
+        focusX = x;
+        focusY = y;
+    }
+
+    private void processTileFocus() {
+        if (focusX != -1 && focusY != -1) {
+            if (worldViewport.getCamera() instanceof OrthographicCamera) {
+                OrthographicCamera cam = (OrthographicCamera) worldViewport.getCamera();
+                float centerX = (focusX + 0.5f);
+                float centerY = (focusY + 0.5f);
+                
+                Vector3 iso = IsometricHelper.project(centerX, centerY);
+                cam.position.set((iso.x) * RenderSystem.TILE_SIZE, (iso.y / 4f) * RenderSystem.TILE_SIZE, cam.position.z); // Keep current z
+                cam.update();
+                focusX = -1;
+                focusY = -1;
+            }
+        }
     }
     
 }

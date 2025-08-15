@@ -3,6 +3,7 @@ package net.cmr.alchemycompany.ecs;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -34,6 +35,17 @@ public abstract class Engine {
             componentIndex.computeIfAbsent(componentClass, k -> new HashSet<>()).remove(entity);
         }
     }
+    public Entity getEntity(UUID id) {
+        return this.entities.get(id);
+    }
+    public Entity getSingletonEntity(Class<? extends Component> componentClass) {
+        Iterator<Entity> iterator = componentIndex.get(componentClass).iterator();
+        if (iterator.hasNext()) return iterator.next();
+        return null;
+    }
+    public <T extends Component> T getSingletonComponent(Class<T> componentClass) {
+        return getSingletonEntity(componentClass).getComponent(componentClass);
+    }
     public void registerSystem(EntitySystem system) {
         systemMap.put(system.getClass(), system);
         system.addedToEngine(this);
@@ -44,6 +56,16 @@ public abstract class Engine {
     }
     public Set<Entity> getEntities(Family family) {
         return entities.values().stream().filter(family::matches).collect(Collectors.toSet());
+    }
+    public Set<Entity> getEntitiesAny(Family...families) {
+        return entities.values().stream().filter((e) -> {
+            for (Family family : families) {
+                if (family.matches(e)) {
+                    return true;
+                }
+            }
+            return false;
+        }).collect(Collectors.toSet());
     }
     @SuppressWarnings("unchecked")
     public <T extends EntitySystem> T getSystem(Class<T> systemClass) {

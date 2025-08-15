@@ -2,6 +2,7 @@ package net.cmr.alchemycompany;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
@@ -20,10 +21,10 @@ public class ACEngine extends Engine {
         }
     }
 
-    public void render(SpriteBatch batch, float delta) {
+    public void render(UUID playerUUID, SpriteBatch batch, float delta) {
         batch.begin();
         for (EntitySystem system : renderSystems) {
-            ((RenderSystem) system).render(batch, delta);
+            ((RenderSystem) system).render(playerUUID, batch, delta);
         }
         batch.end();
     }

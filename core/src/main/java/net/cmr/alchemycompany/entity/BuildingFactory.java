@@ -1,5 +1,6 @@
 package net.cmr.alchemycompany.entity;
 
+import java.beans.Visibility;
 import java.util.UUID;
 
 import com.badlogic.gdx.Gdx;
@@ -12,8 +13,10 @@ import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.HealthComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
+import net.cmr.alchemycompany.component.SightComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
+import net.cmr.alchemycompany.system.VisibilitySystem;
 
 public class BuildingFactory {
     
@@ -28,6 +31,7 @@ public class BuildingFactory {
         building.addComponent(new OwnerComponent(playerID), null);
         building.addComponent(new HealthComponent(100), null);
         building.addComponent(new ConstructionComponent(5), null);
+        building.addComponent(new SightComponent(VisibilitySystem.DEFAULT_BUILDING_RADIUS), null);
         System.out.println(building);
         return building;
     }

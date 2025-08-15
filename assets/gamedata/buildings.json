@@ -31,7 +31,7 @@
         "components": [
             {
                 "class": "net.cmr.alchemycompany.component.BuildingComponent",
-                "buildingType": "FARM",
+                "buildingType": "HEADQUARTERS",
                 "invalidPlacement": [
                     "WATER"
                 ]
