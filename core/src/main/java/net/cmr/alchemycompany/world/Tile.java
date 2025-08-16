@@ -5,7 +5,7 @@ import java.util.UUID;
 
 import net.cmr.alchemycompany.world.World.WorldFeature;
 
-public class Tile implements Serializable {
+public class Tile implements Serializable, Cloneable {
 
     WorldFeature feature;
     int x, y;
@@ -45,5 +45,16 @@ public class Tile implements Serializable {
     public void setTroopSlotID(UUID id) {
         this.troopEntityID = id;
     }
-    
+
+    @Override
+    public Tile clone() {
+        try {
+            Tile cloned = (Tile) super.clone();
+            // UUIDs are immutable, so shallow copy is fine
+            return cloned;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
+
 }

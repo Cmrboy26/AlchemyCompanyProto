@@ -7,12 +7,16 @@ import com.badlogic.gdx.utils.JsonValue;
 
 public class OwnerComponent extends Component {
 
-    public UUID playerID;
+    public String playerID;
 
     public OwnerComponent() {}
 
     public OwnerComponent(UUID playerID) {
-        this.playerID = playerID;
+        this.playerID = playerID.toString();
+    }
+
+    public UUID getUUID() {
+        return UUID.fromString(playerID);
     }
 
     @Override
@@ -22,7 +26,7 @@ public class OwnerComponent extends Component {
 
     @Override
     public void read(Json json, JsonValue jsonData) {
-        this.playerID = json.readValue("playerID", UUID.class, jsonData);
+        this.playerID = json.readValue("playerID", String.class, jsonData);
     }
-    
+
 }

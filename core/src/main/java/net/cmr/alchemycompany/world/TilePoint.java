@@ -1,9 +1,13 @@
 package net.cmr.alchemycompany.world;
 
 public class TilePoint {
-    
+
     private int x, y;
 
+    public TilePoint() {
+        this.x = 0;
+        this.y = 0;
+    }
     public TilePoint(int x, int y) {
         this.x = x;
         this.y = y;

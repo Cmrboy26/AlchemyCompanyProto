@@ -11,7 +11,7 @@ import com.badlogic.gdx.math.Vector2;
 import net.cmr.alchemycompany.OpenSimplexNoise;
 import net.cmr.alchemycompany.Sprites.SpriteType;
 
-public class World {
+public class World implements Cloneable {
 
     public enum WorldFeature {
         WATER,
@@ -38,12 +38,12 @@ public class World {
         }
     }
 
-    public final WorldType worldType;
-    public final int width;
-    public final int height;
-    private final Tile[][] tiles;
-    private final long seed;
-    public final OpenSimplexNoise noise;
+    public WorldType worldType;
+    public int width;
+    public int height;
+    private Tile[][] tiles;
+    private long seed;
+    public transient OpenSimplexNoise noise;
 
     public World(WorldType worldType, long seed) {
         this.worldType = worldType;
@@ -75,6 +75,9 @@ public class World {
 
     private List<BiFunction<Integer, Integer, Tile>> getFeatureGenerators() {
         List<BiFunction<Integer, Integer, Tile>> worldFeatureList = new ArrayList<>();
+        if (noise == null) {
+            noise = new OpenSimplexNoise(seed);
+        }
         worldFeatureList.add((Integer x, Integer y) -> {
             WorldFeature[] landFeature = new WorldFeature[] {
                 WorldFeature.PLAINS,
@@ -198,8 +201,25 @@ public class World {
 
                 return new Vector2(i + ix, j + iy);
             }
-            
+
         };
+    }
+
+    @Override
+    public World clone() {
+        try {
+            World cloned = (World) super.clone();
+            cloned.tiles = new Tile[width][height];
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    cloned.tiles[x][y] = tiles[x][y] != null ? tiles[x][y].clone() : null;
+                }
+            }
+            cloned.noise = new OpenSimplexNoise(seed);
+            return cloned;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 
 }

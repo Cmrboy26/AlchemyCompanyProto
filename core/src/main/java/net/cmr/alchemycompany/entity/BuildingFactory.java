@@ -19,7 +19,7 @@ import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.system.VisibilitySystem;
 
 public class BuildingFactory {
-    
+
     public enum BuildingType {
         HEADQUARTERS,
         FARM,
@@ -42,7 +42,6 @@ public class BuildingFactory {
         JsonValue values = reader.parse(Gdx.files.internal("assets/gamedata/buildings.json"));
 
         JsonValue building = values.get(type.name());
-        System.out.println(building.toJson(OutputType.json));
         Entity entity = json.fromJson(Entity.class, building.toJson(OutputType.json));
 
         return entity;
@@ -50,7 +49,7 @@ public class BuildingFactory {
         /*boolean read = true;
 
         if (read) {
-            Entity building = new Json().fromJson(Entity.class, 
+            Entity building = new Json().fromJson(Entity.class,
             "{\"id\":\"4dcee4bf-b235-4710-8684-4ad738cbac0e\",\"components\":[{\"type\":\"net.cmr.alchemycompany.component.ResearchRequirementComponent\",\"component\":{\"technologiesRequired\":[\"AGRICULTURE\"]}},{\"type\":\"net.cmr.alchemycompany.component.ProducerComponent\",\"component\":{\"production\":{\"IRON\":1}}},{\"type\":\"net.cmr.alchemycompany.component.BuildingComponent\",\"component\":{\"buildingType\":\"FARM\",\"validPlacement\":[\"PLAINS\"]}},{\"type\":\"net.cmr.alchemycompany.component.RenderComponent\",\"component\":{\"spriteType\":\"FARM\"}}]}"
             );
 
@@ -85,7 +84,7 @@ public class BuildingFactory {
             Json json = new Json(OutputType.json);
             System.out.println(json.toJson(building).toString());
             System.out.println(json.prettyPrint(building));
-            
+
             return building;
         }*/
     }

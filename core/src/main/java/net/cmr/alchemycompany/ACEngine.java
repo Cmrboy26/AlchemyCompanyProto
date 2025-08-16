@@ -9,11 +9,17 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.system.RenderSystem;
+import net.cmr.alchemycompany.world.World;
 
 public class ACEngine extends Engine {
-    
+
     List<EntitySystem> renderSystems = new ArrayList<>();
     List<EntitySystem> updateSystems = new ArrayList<>();
+    private World world;
+
+    public void setWorld(World world) {
+        this.world = world;
+    }
 
     public void update(float delta) {
         for (EntitySystem system : updateSystems) {
@@ -36,7 +42,7 @@ public class ACEngine extends Engine {
             renderSystems.add(system);
         }
         if (system instanceof IUpdateSystem) {
-            renderSystems.add(system);
+            updateSystems.add(system);
         }
     }
 
@@ -47,8 +53,12 @@ public class ACEngine extends Engine {
             renderSystems.remove(system);
         }
         if (system instanceof IUpdateSystem) {
-            renderSystems.remove(system);
+            updateSystems.remove(system);
         }
+    }
+
+    public World getWorld() {
+        return world;
     }
 
 }

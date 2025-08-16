@@ -8,7 +8,7 @@ import com.badlogic.gdx.utils.Json.Serializable;
 import com.badlogic.gdx.utils.JsonValue;
 
 public abstract class Component implements Serializable {
-    
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

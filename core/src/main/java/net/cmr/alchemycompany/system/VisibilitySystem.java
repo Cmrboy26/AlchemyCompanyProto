@@ -62,6 +62,7 @@ public class VisibilitySystem extends EntitySystem {
             }
         }
         previousVisibleCoordinates.addAll(visibleTileCoordinates);
+        engine.changedEntity(engine.getSingletonEntity(FogOfWarComponent.class));
     }
 
 }

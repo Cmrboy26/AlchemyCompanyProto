@@ -13,15 +13,15 @@ import com.badlogic.gdx.utils.Null;
 import net.cmr.alchemycompany.component.Component;
 
 public class Entity implements Serializable, Cloneable {
-    
+
     private HashMap<Class<? extends Component>, Component> componentMap;
-    private UUID id; 
+    private UUID id;
 
     public Entity() {
         this.id = UUID.randomUUID();
         this.componentMap = new HashMap<>();
     }
-    
+
     public Map<Class<? extends Component>, Component> getComponents() {
         return componentMap;
     }
@@ -70,6 +70,21 @@ public class Entity implements Serializable, Cloneable {
         json.writeValue("id", id.toString());
         ArrayList<Component> componentSet = new ArrayList<>(componentMap.values());
         json.writeValue("components", componentSet);
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        Json json = new Json();
+        String jsonString = json.toJson(this);
+        return json.fromJson(Entity.class, jsonString);
+    }
+
+    public Entity cloneEntity() {
+        try {
+            return (Entity) clone();
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Cloning not supported", e);
+        }
     }
 
     /*@Override

@@ -44,7 +44,7 @@ public class RenderSystem extends EntitySystem {
 
         // List<Entity> lists = new ArrayList<>(engine.getEntities(renderFamily));
         Set<Entity> renderEntities = engine.getEntities(renderFamily);
-        Map<TilePoint, List<Entity>> map = new HashMap<>(); 
+        Map<TilePoint, List<Entity>> map = new HashMap<>();
         for (Entity entity : renderEntities) {
             TilePositionComponent tpc = entity.getComponent(TilePositionComponent.class);
             //RenderComponent rc = entity.getComponent(RenderComponent.class);

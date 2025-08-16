@@ -1,8 +1,8 @@
 package net.cmr.alchemycompany;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Random;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import com.badlogic.gdx.Gdx;
@@ -15,24 +15,24 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-import net.cmr.alchemycompany.component.AvailableRecipesComponent;
-import net.cmr.alchemycompany.component.Component;
-import net.cmr.alchemycompany.component.FogOfWarComponent;
-import net.cmr.alchemycompany.component.ProducerComponent;
-import net.cmr.alchemycompany.component.StorageComponent;
+import net.cmr.alchemycompany.component.actions.BuildingActionComponent;
+import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
-import net.cmr.alchemycompany.game.Resources.Resource;
+import net.cmr.alchemycompany.network.GameServer;
+import net.cmr.alchemycompany.network.LocalStream;
+import net.cmr.alchemycompany.network.Stream;
+import net.cmr.alchemycompany.network.Stream.StreamState;
+import net.cmr.alchemycompany.network.packet.EntityPacket;
+import net.cmr.alchemycompany.network.packet.Packet;
+import net.cmr.alchemycompany.network.packet.UUIDPacket;
+import net.cmr.alchemycompany.network.packet.WorldPacket;
 import net.cmr.alchemycompany.system.RenderSystem;
-import net.cmr.alchemycompany.system.ResourceSystem;
-import net.cmr.alchemycompany.system.VisibilitySystem;
 import net.cmr.alchemycompany.world.TilePoint;
 import net.cmr.alchemycompany.world.World;
-import net.cmr.alchemycompany.world.World.WorldType;
 
 public class GameScreen implements Screen {
 
@@ -45,6 +45,7 @@ public class GameScreen implements Screen {
     private int focusX = -1, focusY = -1;
 
     private GameManager gameManager;
+    private Stream stream;
 
     @Override
     public void show() {
@@ -60,13 +61,26 @@ public class GameScreen implements Screen {
         processPanCameraInput();
         updateInput();
         gameManager.getEngine().update(delta);
+        List<Packet> polledPackets = stream.pollAllPackets();
+        for (Packet packet : polledPackets) {
+            if (packet instanceof EntityPacket) {
+                EntityPacket ep = (EntityPacket) packet;
+                Entity entity = ep.entity;
+                boolean added = ep.added;
+                if (added) {
+                    gameManager.getEngine().addEntity(entity);
+                } else {
+                    gameManager.getEngine().removeEntity(entity);
+                }
+            }
+        }
 
         SpriteBatch batch = AlchemyCompany.getInstance().batch();
         worldViewport.apply();
         batch.setProjectionMatrix(worldViewport.getCamera().combined);
         gameManager.getEngine().render(playerUUID, batch, delta);
     }
-    
+
     @Override
     public void resize(int width, int height) {
         worldViewport.update(width, height);
@@ -94,29 +108,49 @@ public class GameScreen implements Screen {
     }
 
     private void prepareGame() {
-        playerUUID = UUID.randomUUID();
+        final GameServer server = new GameServer();
+        Thread serverThread = new Thread(() -> {
+            while (true) {
+                server.update();
+            }
+        });
+        serverThread.setDaemon(true);
+        serverThread.start();
 
-        ACEngine engine = new ACEngine();
-        World world = new World(WorldType.MEDIUM, System.currentTimeMillis());
-        engine.registerSystem(new RenderSystem(world));
-        engine.registerSystem(new ResourceSystem());
-        engine.registerSystem(new VisibilitySystem());
-        
-        Entity fogOfWarEntity = new Entity();
-        fogOfWarEntity.addComponent(new FogOfWarComponent(), engine);
-        engine.addEntity(fogOfWarEntity);
+        stream = new LocalStream(server, true);
+        server.addClientStream((LocalStream) stream);
 
-        gameManager = new GameManager(true, engine, world);
-
-        while (true) {
-            int x = new Random().nextInt((int) (world.width));
-            int y = new Random().nextInt((int) (world.height));
-            boolean result = gameManager.tryPlaceBuilding(playerUUID, BuildingType.HEADQUARTERS, x, y, true);
-            focusOnTile(x, y);
-            if (result) {
-                break;
+        while (stream.getState() != StreamState.PLAYING) {
+            try {
+                stream.updateStream();
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new RuntimeException("Forcibly disconnected.");
             }
         }
+
+        // Connected. Process packets.
+        List<Packet> polledPackets = stream.pollAllPackets();
+        List<Entity> entityList = new ArrayList<>();
+        World world = null;
+        for (Packet packet : polledPackets) {
+            if (packet instanceof WorldPacket) {
+                world = ((WorldPacket) packet).world;
+            }
+            if (packet instanceof UUIDPacket) {
+                playerUUID = ((UUIDPacket) packet).id;
+            }
+            if (packet instanceof EntityPacket) {
+                entityList.add(((EntityPacket) packet).entity);
+                System.out.println("Recieved entity: "+((EntityPacket) packet).entity);
+            }
+        }
+
+        ACEngine engine = GameManager.createClientEngine(world);
+        for (Entity entity : entityList) {
+            engine.addEntity(entity);
+        }
+        gameManager = new GameManager(true, engine, world);
     }
 
     private void prepareUI() {
@@ -133,9 +167,14 @@ public class GameScreen implements Screen {
         TilePoint tileCoords = IsometricHelper.worldToIsometricTile(worldCoords, gameManager.getWorld());
         if (tileCoords != null) {
             if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
-                //BuildingType selectedType = Gdx.input.isKeyPressed(Input.Keys.SPACE) ? BuildingType.FARM : BuildingType.HEADQUARTERS;
                 BuildingType selectedType = BuildingType.FARM;
-                gameManager.tryPlaceBuilding(playerUUID, selectedType, tileCoords.getX(), tileCoords.getY(), false);
+                //gameManager.tryPlaceBuilding(playerUUID, selectedType, tileCoords.getX(), tileCoords.getY(), false);
+                // TEMPORARY
+                Entity buildAction = new Entity();
+                buildAction.addComponent(new PlayerActionComponent(playerUUID), gameManager.getEngine());
+                buildAction.addComponent(new BuildingActionComponent(selectedType, tileCoords.getX(), tileCoords.getY()), gameManager.getEngine());
+                //gameManager.getEngine().addEntity(buildAction);
+                stream.sendPacket(new EntityPacket(buildAction, true));
             }
             if (Gdx.input.isButtonJustPressed(Input.Buttons.MIDDLE)) {
                 gameManager.tryRemoveBuilding(playerUUID, tileCoords.getX(), tileCoords.getY());
@@ -175,7 +214,7 @@ public class GameScreen implements Screen {
 
     private void setupInputProcessor() {
         InputMultiplexer inputMultiplexer = new InputMultiplexer();
-        
+
         inputMultiplexer.addProcessor(new InputAdapter() {
             @Override
             public boolean scrolled(float amountX, float amountY) {
@@ -225,7 +264,7 @@ public class GameScreen implements Screen {
                 OrthographicCamera cam = (OrthographicCamera) worldViewport.getCamera();
                 float centerX = (focusX + 0.5f);
                 float centerY = (focusY + 0.5f);
-                
+
                 Vector3 iso = IsometricHelper.project(centerX, centerY);
                 cam.position.set((iso.x) * RenderSystem.TILE_SIZE, (iso.y / 4f) * RenderSystem.TILE_SIZE, cam.position.z); // Keep current z
                 cam.update();
@@ -234,5 +273,5 @@ public class GameScreen implements Screen {
             }
         }
     }
-    
+
 }

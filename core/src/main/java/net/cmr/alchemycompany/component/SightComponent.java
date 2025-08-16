@@ -14,12 +14,12 @@ public class SightComponent extends Component {
 
     @Override
     public void write(Json json) {
-        json.writeValue(radius);
+        json.writeField(this, "radius");
     }
 
     @Override
     public void read(Json json, JsonValue jsonData) {
-        radius = json.readValue(Integer.class, jsonData);
+        json.readField(this, "radius", jsonData);
     }
-    
+
 }

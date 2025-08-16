@@ -46,8 +46,9 @@ public class ResourceSystem extends EntitySystem {
             generationPerSecond.put(resource, rps);
         }
 
+        System.out.println("Resource system calculating");
         for (Resource resource : generationPerSecond.keySet()) {
-            System.out.println(resource + ", "+generationPerSecond.get(resource));
+            //System.out.println(resource + ", "+generationPerSecond.get(resource));
         }
     }
 
