@@ -32,7 +32,6 @@ public class BuildingFactory {
         building.addComponent(new HealthComponent(100), null);
         building.addComponent(new ConstructionComponent(5), null);
         building.addComponent(new SightComponent(VisibilitySystem.DEFAULT_BUILDING_RADIUS), null);
-        System.out.println(building);
         return building;
     }
 

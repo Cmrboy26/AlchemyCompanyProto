@@ -11,12 +11,15 @@ import net.cmr.alchemycompany.network.packet.WorldPacket;
 public class LocalStream extends Stream {
 
     protected LocalStream otherStream;
+    protected GameServer server;
 
-    public LocalStream(GameServer networkingManager, boolean isClient) {
+    public LocalStream(GameServer server, boolean isClient) {
         super(isClient);
+        this.server = server;
     }
-    public LocalStream(GameServer networkingManager, boolean isClient, LocalStream otherStream) {
+    public LocalStream(GameServer server, boolean isClient, LocalStream otherStream) {
         super(isClient);
+        this.server = server;
         this.otherStream = otherStream;
     }
 
@@ -43,11 +46,11 @@ public class LocalStream extends Stream {
         if (isClient()) {
             waitUntilPacketRecieved(WorldPacket.class);
         } else {
-            for (Entity entity : getServer().getGameManager().getEngine().getEntities()) {
+            for (Entity entity : getServer().getEngine().getEntities()) {
                 EntityPacket entityPacket = new EntityPacket(entity, true);
                 sendPacket(entityPacket);
             }
-            WorldPacket packet = new WorldPacket(serverObject.getGameManager().getWorld());
+            WorldPacket packet = new WorldPacket(server.getWorld());
             sendPacket(packet);
         }
     }
@@ -70,6 +73,17 @@ public class LocalStream extends Stream {
         synchronized (otherStream.incomingPacketLock) {
             otherStream.incomingPackets.add(packet);
         }
+    }
+
+    public void setServerObject(GameServer server) {
+        this.server = server;
+    }
+
+    protected GameServer getServer() {
+        if (isClient() || server == null) {
+            throw new RuntimeException("Server object is null.");
+        }
+        return server;
     }
 
 }

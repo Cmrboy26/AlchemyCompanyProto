@@ -38,39 +38,60 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
             int y = bac.y;
             BuildingType type = bac.type;
 
-            System.out.println("WE RECIEVED AN ENTITY!!!");
-            System.out.println(pac);
-            System.out.println(bac);
+            System.out.println("BuildManagementSystem recieved action "+pac+"\n"+bac);
 
-
-            Tile tile = engine.as(ACEngine.class).getWorld().getTile(x, y);
-            if (tile == null || !tile.canPlaceBuilding()) {
-                engine.removeEntity(entity);
-                continue;
+            if (type != null) {
+                if (tryPlaceBuilding(playerID, type, x, y, false, engine.as(ACEngine.class))) {
+                    onBuildingChange(playerID, x, y, engine);
+                }
+            } else {
+                if (tryRemoveBuilding(playerID, x, y, engine.as(ACEngine.class))) {
+                    onBuildingChange(playerID, x, y, engine);
+                }
             }
-            VisibilitySystem visibilitySystem = engine.getSystem(VisibilitySystem.class);
-            if (visibilitySystem != null && !visibilitySystem.isVisibleCurrently(playerID, x, y)) {
-                engine.removeEntity(entity);
-                continue;
-            }
-            Entity building = BuildingFactory.createBuilding(playerID, type, x, y);
-            BuildingComponent bc = building.getComponent(BuildingComponent.class);
-            if (!bc.validPlacement.contains(tile.getFeature())) {
-                engine.removeEntity(entity);
-                continue;
-            }
-            tile.setBuildingSlotID(building.getID()); // set tile occupied
-            //updateTile(x, y); // update clients
-            engine.addEntity(building);
-            onBuildingChange(playerID, x, y);
 
             engine.removeEntity(entity);
         }
     }
 
-    public void onBuildingChange(UUID buildingPlayerID, int x, int y) {
+    public static void onBuildingChange(UUID buildingPlayerID, int x, int y, Engine engine) {
         engine.getSystem(VisibilitySystem.class).updateVisibility(buildingPlayerID);
         engine.getSystem(ResourceSystem.class).calculateTurn();
+    }
+
+    public static boolean tryRemoveBuilding(UUID playerID, int x, int y, ACEngine engine) {
+        Tile tile = engine.as(ACEngine.class).getWorld().getTile(x, y);
+        if (tile != null && !tile.canPlaceBuilding()) {
+            // Remove tile at location if it is the players
+            Entity building = engine.getEntity(tile.getBuildingSlotID());
+            BuildingComponent bc = building.getComponent(BuildingComponent.class);
+            if (bc.buildingType != BuildingType.HEADQUARTERS) {
+                UUID buildingOwner = building.getComponent(OwnerComponent.class).getUUID();
+                if (playerID.equals(buildingOwner)) {
+                    tile.setBuildingSlotID(null); // set tile unoccupied
+                    engine.removeEntity(building);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean tryPlaceBuilding(UUID playerID, BuildingType type, int x, int y, boolean overrideVisibility, ACEngine engine) {
+        Tile tile = engine.as(ACEngine.class).getWorld().getTile(x, y);
+        if (tile != null && tile.canPlaceBuilding()) {
+            VisibilitySystem visibilitySystem = engine.getSystem(VisibilitySystem.class);
+            if (overrideVisibility || visibilitySystem == null || (visibilitySystem != null && visibilitySystem.isVisibleCurrently(playerID, x, y))) {
+                Entity building = BuildingFactory.createBuilding(playerID, type, x, y);
+                BuildingComponent bc = building.getComponent(BuildingComponent.class);
+                if (bc.validPlacement.contains(tile.getFeature())) {
+                    tile.setBuildingSlotID(building.getID()); // set tile occupied
+                    engine.addEntity(building);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 }

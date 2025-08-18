@@ -55,6 +55,10 @@ public class Entity implements Serializable, Cloneable {
                 '}';
     }
 
+    public String toShortString() {
+        return toString().substring(0, Math.min(200, toString().length()))+"...";
+    }
+
     @Override
     public void read(Json json, JsonValue jsonData) {
         id = UUID.fromString(jsonData.getString("id", UUID.randomUUID().toString()));

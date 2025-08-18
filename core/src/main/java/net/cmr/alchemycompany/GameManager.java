@@ -2,12 +2,17 @@ package net.cmr.alchemycompany;
 
 import java.util.UUID;
 
+import com.badlogic.gdx.utils.Null;
+
 import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.FogOfWarComponent;
-import net.cmr.alchemycompany.component.OwnerComponent;
+import net.cmr.alchemycompany.component.actions.BuildingActionComponent;
+import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.entity.BuildingFactory;
 import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
+import net.cmr.alchemycompany.network.Stream;
+import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.system.BuildingManagementSystem;
 import net.cmr.alchemycompany.system.RenderSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
@@ -21,17 +26,18 @@ import net.cmr.alchemycompany.world.World;
 public class GameManager {
 
     private ACEngine engine;
-    private final boolean isClient;
+    private final Stream clientStream;
+    public static final String CLIENT_ONLY_MESSAGE = "Method should only be called on the client side.";
 
-    public GameManager(final boolean isClient, ACEngine engine, World world) {
-        this.isClient = isClient;
+    public GameManager(@Null final Stream clientStream, ACEngine engine, World world) {
+        this.clientStream = clientStream;
         this.engine = engine;
         this.engine.setWorld(world);
     }
 
     @BroadcastUpdate
     public void updateTile(int x, int y) {
-        if (isClient) return;
+        if (isClient()) return;
     }
 
     /*
@@ -39,43 +45,33 @@ public class GameManager {
      */
 
     public boolean tryPlaceBuilding(UUID playerID, BuildingType type, int x, int y, boolean ignoreVisibility) {
-        Tile tile = getWorld().getTile(x, y);
-        if (tile == null || !tile.canPlaceBuilding()) return false;
-        VisibilitySystem visibilitySystem = engine.getSystem(VisibilitySystem.class);
-        if (!ignoreVisibility && visibilitySystem != null && !visibilitySystem.isVisibleCurrently(playerID, x, y)) return false;
-        Entity building = BuildingFactory.createBuilding(playerID, type, x, y);
-        BuildingComponent bc = building.getComponent(BuildingComponent.class);
-        if (!bc.validPlacement.contains(tile.getFeature())) return false;
-        tile.setBuildingSlotID(building.getID()); // set tile occupied
-        updateTile(x, y); // update clients
-        engine.addEntity(building);
-        onBuildingChange(playerID, x, y);
-        return true;
+        if (isClient()) {
+            Entity buildAction = new Entity();
+            buildAction.addComponent(new PlayerActionComponent(playerID), getEngine());
+            buildAction.addComponent(new BuildingActionComponent(type, x, y), getEngine());
+            clientStream.sendPacket(new EntityPacket(buildAction, true));
+            return true;
+        } else {
+            boolean result = BuildingManagementSystem.tryPlaceBuilding(playerID, type, x, y, ignoreVisibility, engine);
+            return result;
+        }
     }
 
     public boolean tryRemoveBuilding(UUID playerID, int x, int y) {
-        Tile tile = getWorld().getTile(x, y);
-        if (tile == null || tile.isBuildingSlotEmpty()) return false;
-        Entity building = engine.getEntity(tile.getBuildingSlotID());
-        BuildingComponent bc = building.getComponent(BuildingComponent.class);
-        if (bc.buildingType == BuildingType.HEADQUARTERS) return false;
-        System.out.println(bc.buildingType);
-        UUID buildingOwner = building.getComponent(OwnerComponent.class).getUUID();
-        if (!playerID.equals(buildingOwner)) return false;
-        tile.setBuildingSlotID(null); // set tile unoccupied
-        updateTile(x, y);
-        engine.removeEntity(building);
-        onBuildingChange(buildingOwner, x, y);
-        return true;
-    }
-
-    public void onBuildingChange(UUID buildingPlayerID, int x, int y) {
-        engine.getSystem(VisibilitySystem.class).updateVisibility(buildingPlayerID);
-        engine.getSystem(ResourceSystem.class).calculateTurn();
+        if (isClient()) {
+            Entity buildAction = new Entity();
+            buildAction.addComponent(new PlayerActionComponent(playerID), getEngine());
+            buildAction.addComponent(new BuildingActionComponent(null, x, y), getEngine());
+            clientStream.sendPacket(new EntityPacket(buildAction, true));
+            return true;
+        } else {
+            boolean result = BuildingManagementSystem.tryRemoveBuilding(playerID, x, y, engine);
+            return result;
+        }
     }
 
     public boolean isClient() {
-        return isClient;
+        return clientStream != null;
     }
     public ACEngine getEngine() {
         return engine;

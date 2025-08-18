@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
+import com.badlogic.gdx.utils.Array;
+
 import net.cmr.alchemycompany.ACEngine;
 import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.component.Component;
@@ -19,6 +21,7 @@ import net.cmr.alchemycompany.network.Stream.StreamState;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.network.packet.Packet;
 import net.cmr.alchemycompany.network.packet.UUIDPacket;
+import net.cmr.alchemycompany.system.BuildingManagementSystem;
 import net.cmr.alchemycompany.world.World;
 import net.cmr.alchemycompany.world.World.WorldType;
 
@@ -26,8 +29,9 @@ public class GameServer {
 
     private Object streamLock = new Object(), broadcastLock = new Object();
     private Map<UUID, Stream> playerStreams; // player is assigned randomly selected uuid
-    private GameManager gameManager;
+    private ACEngine engine;
     private List<Packet> queuedBroadcasts;
+    private GameManager gameManager;
 
     public GameServer() {
         playerStreams = new HashMap<>();
@@ -35,7 +39,8 @@ public class GameServer {
 
         World world = new World(WorldType.MEDIUM, System.currentTimeMillis());
         ACEngine engine = GameManager.createServerEngine(world);
-        gameManager = new GameManager(false, engine, world);
+        this.engine = engine;
+        this.engine.setWorld(world);
         engine.addEntityChangeListener((entity, added) -> {
             if (entity.hasComponent(PlayerActionComponent.class)) {
                 // Don't broadcast player actions.
@@ -46,6 +51,7 @@ public class GameServer {
                 queuedBroadcasts.add(packet);
             }
         });
+        gameManager = new GameManager(null, engine, getWorld());
     }
 
     private volatile long lastUpdate = System.nanoTime();
@@ -53,17 +59,20 @@ public class GameServer {
     public void update() {
         // Look for new streams
         searchForOnlineStreams();
+        List<Packet> packetQueue = new ArrayList<>();
+        synchronized (broadcastLock) {
+            packetQueue.addAll(queuedBroadcasts);
+            queuedBroadcasts.clear();
+        }
         synchronized (streamLock) {
-            synchronized (broadcastLock) {
-                for (Packet packet : queuedBroadcasts) {
-                    for (UUID playerID : playerStreams.keySet()) {
-                        Stream stream = playerStreams.get(playerID);
-                        System.out.println("SENDING PACKET: "+packet);
-                        stream.sendPacket(packet);
-                    }
+            for (Packet packet : packetQueue) {
+                for (UUID playerID : playerStreams.keySet()) {
+                    Stream stream = playerStreams.get(playerID);
+                    stream.sendPacket(packet);
+                    System.out.println("[DEBUG] Sent packet "+packet);
                 }
-                queuedBroadcasts.clear();
             }
+
             List<UUID> removeStreams = new ArrayList<>();
             for (UUID playerID : playerStreams.keySet()) {
                 Stream stream = playerStreams.get(playerID);
@@ -103,7 +112,7 @@ public class GameServer {
         long now = System.nanoTime();
         float delta = (now - lastUpdate) / 1_000_000_000f;
         lastUpdate = now;
-        gameManager.getEngine().update(delta);
+        engine.update(delta);
     }
 
     private void searchForOnlineStreams() {
@@ -119,15 +128,15 @@ public class GameServer {
             UUID playerUUID = UUID.randomUUID();
             playerStreams.put(playerUUID, serverStream);
             serverStream.sendPacket(new UUIDPacket(playerUUID));
-            System.out.println("Server recieved client stream");
 
-            World world = gameManager.getWorld();
+            World world = engine.getWorld();
             while (true) {
                 int x = new Random().nextInt((int) (world.width / 10f));
                 int y = new Random().nextInt((int) (world.height / 10f));
                 boolean result = gameManager.tryPlaceBuilding(playerUUID, BuildingType.HEADQUARTERS, x, y, true);
                 //focusOnTile(x, y);
                 if (result) {
+                    BuildingManagementSystem.onBuildingChange(playerUUID, x, y, engine);
                     break;
                 }
             }
@@ -135,7 +144,7 @@ public class GameServer {
     }
 
     public void processPacket(UUID playerID, Stream stream, Packet packet) {
-        System.out.println("NEW PACKET: "+packet.toString());
+        System.out.println("Server processing packet: "+packet.toString());
         if (packet instanceof EntityPacket) {
             EntityPacket entityPacket = (EntityPacket) packet;
             Entity entity = entityPacket.entity;
@@ -150,21 +159,24 @@ public class GameServer {
                         return;
                     }
                 }
-                getGameManager().getEngine().addEntity(entity);
+                getEngine().addEntity(entity);
             } else {
                 // DO NOTHING: they sent over a non-action component.
             }
         }
     }
 
-    public GameManager getGameManager() {
-        return gameManager;
-    }
-
     protected void broadcastPacket(Packet packet) {
         synchronized (broadcastLock) {
             queuedBroadcasts.add(packet);
         }
+    }
+
+    public ACEngine getEngine() {
+        return engine;
+    }
+    public World getWorld() {
+        return engine.getWorld();
     }
 
 }

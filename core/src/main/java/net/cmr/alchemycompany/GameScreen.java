@@ -67,6 +67,7 @@ public class GameScreen implements Screen {
                 EntityPacket ep = (EntityPacket) packet;
                 Entity entity = ep.entity;
                 boolean added = ep.added;
+                System.out.println("[DEBUG] Client recieved "+entity.toShortString());
                 if (added) {
                     gameManager.getEngine().addEntity(entity);
                 } else {
@@ -142,7 +143,7 @@ public class GameScreen implements Screen {
             }
             if (packet instanceof EntityPacket) {
                 entityList.add(((EntityPacket) packet).entity);
-                System.out.println("Recieved entity: "+((EntityPacket) packet).entity);
+                //System.out.println("Recieved entity: "+((EntityPacket) packet).entity);
             }
         }
 
@@ -150,7 +151,7 @@ public class GameScreen implements Screen {
         for (Entity entity : entityList) {
             engine.addEntity(entity);
         }
-        gameManager = new GameManager(true, engine, world);
+        gameManager = new GameManager(stream, engine, world);
     }
 
     private void prepareUI() {
@@ -168,13 +169,8 @@ public class GameScreen implements Screen {
         if (tileCoords != null) {
             if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
                 BuildingType selectedType = BuildingType.FARM;
-                //gameManager.tryPlaceBuilding(playerUUID, selectedType, tileCoords.getX(), tileCoords.getY(), false);
+                gameManager.tryPlaceBuilding(playerUUID, selectedType, tileCoords.getX(), tileCoords.getY(), false);
                 // TEMPORARY
-                Entity buildAction = new Entity();
-                buildAction.addComponent(new PlayerActionComponent(playerUUID), gameManager.getEngine());
-                buildAction.addComponent(new BuildingActionComponent(selectedType, tileCoords.getX(), tileCoords.getY()), gameManager.getEngine());
-                //gameManager.getEngine().addEntity(buildAction);
-                stream.sendPacket(new EntityPacket(buildAction, true));
             }
             if (Gdx.input.isButtonJustPressed(Input.Buttons.MIDDLE)) {
                 gameManager.tryRemoveBuilding(playerUUID, tileCoords.getX(), tileCoords.getY());
@@ -273,5 +269,9 @@ public class GameScreen implements Screen {
             }
         }
     }
+
+    // Helper methods
+
+    
 
 }

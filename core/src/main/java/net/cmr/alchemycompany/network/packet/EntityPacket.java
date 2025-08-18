@@ -16,7 +16,7 @@ public class EntityPacket extends Packet {
     @Override
     public String toString() {
         return "EntityPacket{" +
-            "entity=" + entity +
+            "entity=" + entity.toShortString() +
             ", added=" + added +
             '}';
     }

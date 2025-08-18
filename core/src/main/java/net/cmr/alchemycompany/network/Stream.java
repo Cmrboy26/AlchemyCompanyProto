@@ -26,7 +26,6 @@ public abstract class Stream {
     protected Queue<Packet> incomingPackets;
     private StreamState state;
     private boolean isClient;
-    protected GameServer serverObject;
 
     public enum StreamState {
         CONNECTING,
@@ -41,17 +40,6 @@ public abstract class Stream {
         this.isClient = isClient;
         this.state = StreamState.CONNECTING;
         this.incomingPackets = new LinkedList<>();
-    }
-
-    public void setServerObject(GameServer server) {
-        this.serverObject = server;
-    }
-
-    protected GameServer getServer() {
-        if (isClient || serverObject == null) {
-            throw new RuntimeException("Server object is null.");
-        }
-        return serverObject;
     }
 
     /**
