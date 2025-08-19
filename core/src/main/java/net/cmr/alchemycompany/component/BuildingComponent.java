@@ -10,13 +10,13 @@ import net.cmr.alchemycompany.world.World.WorldFeature;
 
 public class BuildingComponent extends Component {
 
-    public BuildingType buildingType;
+    public String buildingId;
     public HashSet<WorldFeature> validPlacement;
 
     public BuildingComponent() {}
 
-    public BuildingComponent(BuildingType buildingType, HashSet<WorldFeature> validPlacement) {
-        this.buildingType = buildingType;
+    public BuildingComponent(String buildingId, HashSet<WorldFeature> validPlacement) {
+        this.buildingId = buildingId;
         this.validPlacement = validPlacement;
     }
 
@@ -47,13 +47,13 @@ public class BuildingComponent extends Component {
 
     @Override
     public void write(Json json) {
-        json.writeField(this, "buildingType");
+        json.writeField(this, "buildingId");
         json.writeField(this, "validPlacement");
     }
 
     @Override
     public void read(Json json, JsonValue jsonData) {
-        this.buildingType = json.readValue("buildingType", BuildingType.class, jsonData);
+        this.buildingId = json.readValue("buildingId", String.class, jsonData);
         HashSet<WorldFeature> validFeatures = json.readValue(HashSet.class, WorldFeature.class, null, jsonData.get("validPlacement"));
         HashSet<WorldFeature> invalidFeatures = json.readValue(HashSet.class, WorldFeature.class, null, jsonData.get("invalidPlacement"));
         if (validFeatures != null) {

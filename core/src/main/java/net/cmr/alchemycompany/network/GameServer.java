@@ -37,7 +37,7 @@ public class GameServer {
         playerStreams = new HashMap<>();
         queuedBroadcasts = new ArrayList<>();
 
-        World world = new World(WorldType.MEDIUM, System.currentTimeMillis());
+        World world = new World(WorldType.SMALL, System.currentTimeMillis());
         ACEngine engine = GameManager.createServerEngine(world);
         this.engine = engine;
         this.engine.setWorld(world);
@@ -103,7 +103,7 @@ public class GameServer {
                 removeStreams.remove(0);
             }
             try {
-                Thread.sleep(10);
+                Thread.sleep(1);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -136,7 +136,7 @@ public class GameServer {
                 boolean result = gameManager.tryPlaceBuilding(playerUUID, BuildingType.HEADQUARTERS, x, y, true);
                 //focusOnTile(x, y);
                 if (result) {
-                    BuildingManagementSystem.onBuildingChange(playerUUID, x, y, engine);
+                    GameManager.onBuildingChange(playerUUID, x, y, engine);
                     break;
                 }
             }

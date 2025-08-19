@@ -5,15 +5,13 @@ import java.util.HashMap;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 
-import net.cmr.alchemycompany.game.Resources.Resource;
-
 public class ConsumerComponent extends Component {
 
-    public HashMap<Resource, Float> consumption;
+    public HashMap<String, Float> consumption;
 
     public ConsumerComponent() {}
     
-    public ConsumerComponent(HashMap<Resource, Float> consumption) {
+    public ConsumerComponent(HashMap<String, Float> consumption) {
         this.consumption = consumption;
     }
 
@@ -24,7 +22,8 @@ public class ConsumerComponent extends Component {
 
     @Override
     public void read(Json json, JsonValue jsonData) {
-        this.consumption = Component.readMap(Resource.class, Float.class, jsonData.get("consumption"), json);
+        json.readField(this, "consumption", jsonData);
+        //this.consumption = Component.readMap(String.class, Float.class, jsonData.get("consumption"), json);
     }
 
 }

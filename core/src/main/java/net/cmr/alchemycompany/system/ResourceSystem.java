@@ -14,8 +14,9 @@ import net.cmr.alchemycompany.component.StorageComponent;
 import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
-import net.cmr.alchemycompany.ecs.Family;
-import net.cmr.alchemycompany.game.Resources.Resource;
+import net.cmr.alchemycompany.game.Registry;
+import net.cmr.alchemycompany.game.Resource;
+import net.cmr.alchemycompany.game.Registry.ResourceFilter;
 
 public class ResourceSystem extends EntitySystem {
 
@@ -29,27 +30,34 @@ public class ResourceSystem extends EntitySystem {
     }
 
     public void calculateTurn() {
-        Map<Resource, Float> generationPerSecond = new HashMap<>();
-        Map<Resource, Float> trueResourcesInStorage = new HashMap<>();
-        Map<Resource, Float> calculatedStoredResources = new HashMap<>();
-        Map<Resource, Float> calculatedTotalStorageCapacity = new HashMap<>();
+        Map<String, Float> generationPerSecond = new HashMap<>();
+        Map<String, Float> trueResourcesInStorage = new HashMap<>();
+        Map<String, Float> calculatedStoredResources = new HashMap<>();
+        Map<String, Float> calculatedTotalStorageCapacity = new HashMap<>();
 
         calculateBuildingOutput(trueResourcesInStorage, calculatedStoredResources, calculatedTotalStorageCapacity);
 
-        for (Resource resource : Resource.values()) {
-            float inStorage = trueResourcesInStorage.getOrDefault(resource, 0f);
-            float afterTurn = calculatedStoredResources.getOrDefault(resource, 0f);
-            if (resource != Resource.SCIENCE) {
-                afterTurn = Math.min(afterTurn, calculatedTotalStorageCapacity.getOrDefault(resource, 0f));
-            }
+        for (Resource resource : Registry.getResourceValues(ResourceFilter.OMIT_PER_TURN).values()) {
+            float inStorage = trueResourcesInStorage.getOrDefault(resource.getId(), 0f);
+            float afterTurn = calculatedStoredResources.getOrDefault(resource.getId(), 0f);
+            afterTurn = Math.min(afterTurn, calculatedTotalStorageCapacity.getOrDefault(resource.getId(), 0f));
             float rps = afterTurn - inStorage;
-            generationPerSecond.put(resource, rps);
+            generationPerSecond.put(resource.getId(), rps);
+        }
+        for (Resource resource : Registry.getResourceValues(ResourceFilter.PER_TURN).values()) {
+            float inStorage = trueResourcesInStorage.getOrDefault(resource.getId(), 0f);
+            float afterTurn = calculatedStoredResources.getOrDefault(resource.getId(), 0f);
+            float rps = afterTurn - inStorage;
+            generationPerSecond.put(resource.getId(), rps);
         }
 
         System.out.println("Resource system calculating");
-        for (Resource resource : generationPerSecond.keySet()) {
-            //System.out.println(resource + ", "+generationPerSecond.get(resource));
-        }
+        generationPerSecond.keySet().stream()
+            .sorted()
+            .forEach(resourceId -> 
+            System.out.print(resourceId + ", " + generationPerSecond.get(resourceId) + "\t")
+            );
+        System.out.println();
     }
 
     /**
@@ -58,7 +66,7 @@ public class ResourceSystem extends EntitySystem {
      * @param totalStorageCapacityOutput total amount of storage capacity (max holdable resources)
      * @return list of buildings that should be converted to active instead of idle
      */
-    public List<Entity> calculateBuildingOutput(final Map<Resource, Float> resourcesInStorageOutput, final Map<Resource, Float> storedResourcesOutput, final Map<Resource, Float> totalStorageCapacityOutput) {
+    public List<Entity> calculateBuildingOutput(final Map<String, Float> resourcesInStorageOutput, final Map<String, Float> storedResourcesOutput, final Map<String, Float> totalStorageCapacityOutput) {
         // Produce and consume all resources
         List<Entity> buildingsToProcess = new ArrayList<>();
         // Use a set to avoid duplicates
@@ -82,7 +90,7 @@ public class ResourceSystem extends EntitySystem {
             }
             return true;
         };
-        BiConsumer<Resource, Float> addResource = (r, f) -> {
+        BiConsumer<String, Float> addResource = (r, f) -> {
             storedResourcesOutput.put(r, storedResourcesOutput.getOrDefault(r, 0f) + f);
         };
         try {
@@ -118,10 +126,10 @@ public class ResourceSystem extends EntitySystem {
 
                         if (isConsumptionBuilding) {
                             ConsumerComponent cc = building.getComponent(ConsumerComponent.class);
-                            Map<Resource, Float> consumedResources = cc.consumption;
-                            for (Resource resource : consumedResources.keySet()) {
-                                Float amount = consumedResources.get(resource);
-                                if (storedResourcesOutput.getOrDefault(resource, 0f) < amount) {
+                            Map<String, Float> consumedResources = cc.consumption;
+                            for (String resourceId : consumedResources.keySet()) {
+                                Float amount = consumedResources.get(resourceId);
+                                if (storedResourcesOutput.getOrDefault(resourceId, 0f) < amount) {
                                     needMoreResource = true;
                                     break;
                                 }
@@ -130,15 +138,16 @@ public class ResourceSystem extends EntitySystem {
 
                         if (isProductionBuilding) {
                             ProducerComponent pp = (ProducerComponent) building.getComponent(ProducerComponent.class);
-                            Map<Resource, Float> producedResources = pp.production;
-                            for (Resource resource : producedResources.keySet()) {
-                                if (resource == Resource.SCIENCE) {
+                            Map<String, Float> producedResources = pp.production;
+                            for (String resourceId : producedResources.keySet()) {
+                                // System.out.println(Registry.getResourceRegistry().get(resourceId));
+                                if (Registry.getResourceRegistry().get(resourceId).isPerTurnResource()) {
                                     spaceAvailable = true;
                                     break;
                                 }
-                                float totalResourcesAfter = storedResourcesOutput.getOrDefault(resource, 0f) + producedResources.getOrDefault(resource, 0f);
+                                float totalResourcesAfter = storedResourcesOutput.getOrDefault(resourceId, 0f) + producedResources.getOrDefault(resourceId, 0f);
                                 // If there is enough space for one "craft", allow the resource to be crafted
-                                if (totalResourcesAfter <= totalStorageCapacityOutput.getOrDefault(resource, 0f)) {
+                                if (totalResourcesAfter <= totalStorageCapacityOutput.getOrDefault(resourceId, 0f)) {
                                     spaceAvailable = true;
                                     break;
                                 }
@@ -148,19 +157,19 @@ public class ResourceSystem extends EntitySystem {
                         if (!((isConsumptionBuilding && needMoreResource) || (isProductionBuilding && !spaceAvailable)) || (isProductionBuilding && !isConsumptionBuilding)) {
                             if (isConsumptionBuilding) {
                                 ConsumerComponent cc = building.getComponent(ConsumerComponent.class);
-                                Map<Resource, Float> consumedResources = cc.consumption;
-                                for (Resource resource : consumedResources.keySet()) {
-                                    Float amount = consumedResources.get(resource);
-                                    addResource.accept(resource, -amount);
+                                Map<String, Float> consumedResources = cc.consumption;
+                                for (String resourceId : consumedResources.keySet()) {
+                                    Float amount = consumedResources.get(resourceId);
+                                    addResource.accept(resourceId, -amount);
                                 }
                             }
 
                             if (isProductionBuilding) {
                                 ProducerComponent pp = (ProducerComponent) building.getComponent(ProducerComponent.class);
-                                Map<Resource, Float> producedResources = pp.production;
-                                for (Resource resource : producedResources.keySet()) {
-                                    Float amount = producedResources.get(resource);
-                                    addResource.accept(resource, amount);
+                                Map<String, Float> producedResources = pp.production;
+                                for (String resourceId : producedResources.keySet()) {
+                                    Float amount = producedResources.get(resourceId);
+                                    addResource.accept(resourceId, amount);
                                 }
                             }
 
@@ -174,11 +183,11 @@ public class ResourceSystem extends EntitySystem {
                             buildingsProcessed[i] = true;
                             continue;
                         }
-                        for (Resource resource : sc.maxStorage.keySet()) {
-                            Float amount = sc.storage.getOrDefault(resource, 0f);
-                            addResource.accept(resource, amount);
-                            totalStorageCapacityOutput.put(resource, totalStorageCapacityOutput.getOrDefault(resource, 0f) + sc.maxStorage.getOrDefault(resource, 0f));
-                            resourcesInStorageOutput.put(resource, resourcesInStorageOutput.getOrDefault(resource, 0f) + amount);
+                        for (String resourceId : sc.maxStorage.keySet()) {
+                            Float amount = sc.storage.getOrDefault(resourceId, 0f);
+                            addResource.accept(resourceId, amount);
+                            totalStorageCapacityOutput.put(resourceId, totalStorageCapacityOutput.getOrDefault(resourceId, 0f) + sc.maxStorage.getOrDefault(resourceId, 0f));
+                            resourcesInStorageOutput.put(resourceId, resourcesInStorageOutput.getOrDefault(resourceId, 0f) + amount);
                         }
                         processed = true;
                     }

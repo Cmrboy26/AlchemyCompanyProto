@@ -1,0 +1,108 @@
+{
+    "registry": [
+        {
+            "id": "EXTRACT_QUARTZ",
+            "name": "Mine Quartz",
+            "description": "Mine quartz.",
+            "icon": "QUARTZ_ICON",
+            "input": {},
+            "output": {
+                "QUARTZ": 1.0
+            }
+        },
+        {
+            "id": "EXTRACT_COAL",
+            "name": "Mine Coal",
+            "description": "Mine coal.",
+            "icon": "COAL_ICON",
+            "input": {},
+            "output": {
+                "COAL": 1.0
+            }
+        },
+        {
+            "id": "EXTRACT_IRON_ORE",
+            "name": "Mine Iron Ore",
+            "description": "Mine iron ore.",
+            "icon": "IRON_ORE_ICON",
+            "input": {},
+            "output": {
+                "IRON_ORE": 1.0
+            }
+        },
+        {
+            "id": "EXTRACT_COPPER_ORE",
+            "name": "Mine Copper Ore",
+            "description": "Mine copper ore.",
+            "icon": "COPPER_ORE_ICON",
+            "input": {},
+            "output": {
+                "COPPER_ORE": 1.0
+            }
+        },
+        {
+            "id": "EXTRACT_SULFUR",
+            "name": "Mine Sulfur",
+            "description": "Mine sulfur.",
+            "icon": "SULFUR_ICON",
+            "input": {},
+            "output": {
+                "SULFUR": 1.0
+            },
+            "requiredTechnologies": ["ADVANCED_EXTRACTION"]
+        },
+        {
+            "id": "EXTRACT_TITANIUM_ORE",
+            "name": "Mine Titanium Ore",
+            "description": "Mine titanium ore.",
+            "icon": "TITANIUM_ORE_ICON",
+            "input": {},
+            "output": {
+                "TITANIUM_ORE": 1.0
+            },
+            "requiredTechnologies": ["ADVANCED_EXTRACTION"]
+        },
+        {
+            "id": "EXTRACT_CRYSTAL",
+            "name": "Mine Crystal",
+            "description": "Mine crystal.",
+            "icon": "CRYSTAL_ICON",
+            "input": {},
+            "output": {
+                "CRYSTAL": 1.0
+            },
+            "requiredTechnologies": ["MAGIC"]
+        },
+        {
+            "id": "EXTRACT_MYTHRIL",
+            "name": "Mine Mythril",
+            "description": "Mine mythril.",
+            "icon": "MYTHRIL_ICON",
+            "input": {},
+            "output": {
+                "MYTHRIL": 1.0
+            },
+            "requiredTechnologies": ["ADVANCED_MAGIC", "ADVANCED_EXTRACTION"]
+        },
+        {
+            "id": "EXTRACT_CORN",
+            "name": "Harvest Corn",
+            "description": "Harvest corn.",
+            "icon": "CORN_ICON",
+            "input": {},
+            "output": {
+                "CORN": 1.0
+            }
+        },
+        {
+            "id": "EXTRACT_STARDUST",
+            "name": "Collect Stardust",
+            "description": "Collect stardust.",
+            "icon": "STARDUST_ICON",
+            "input": {},
+            "output": {
+                "STARDUST": 1.0
+            }
+        }
+    ]
+}

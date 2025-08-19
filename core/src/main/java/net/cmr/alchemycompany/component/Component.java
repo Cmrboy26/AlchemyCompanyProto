@@ -29,7 +29,7 @@ public abstract class Component implements Serializable {
         return sb.toString();
     }
 
-    public static <K extends Enum<K>, V> HashMap<K, V> readMap(Class<K> keyClass, Class<V> valueClass, JsonValue jsonData, Json json) {
+    public static <K, V> HashMap<K, V> readMap(Class<K> keyClass, Class<V> valueClass, JsonValue jsonData, Json json) {
         HashMap<K, V> result = readMap(keyClass, valueClass, null, jsonData, json);
         if (result == null) {
             throw new RuntimeException("No value found.");
@@ -37,13 +37,13 @@ public abstract class Component implements Serializable {
         return result;
     }
 
-    public static <K extends Enum<K>, V> HashMap<K, V> readMap(Class<K> keyClass, Class<V> valueClass, HashMap<K, V> defaultValue, JsonValue jsonData, Json json) {
+    public static <K, V> HashMap<K, V> readMap(Class<K> keyClass, Class<V> valueClass, HashMap<K, V> defaultValue, JsonValue jsonData, Json json) {
         HashMap<K, V> result = new HashMap<>();
         if (jsonData == null || jsonData.size == 0) {
             return defaultValue;
         }
         for (JsonValue child = jsonData.child; child != null; child = child.next) {
-            K key = Enum.valueOf(keyClass, child.name);
+            K key = json.readValue(child.name(), keyClass, child);
             V value = json.readValue(valueClass, child);
             result.put(key, value);
         }

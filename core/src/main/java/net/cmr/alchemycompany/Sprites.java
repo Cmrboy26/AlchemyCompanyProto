@@ -12,6 +12,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 public class Sprites {
 
     public enum SpriteType {
+        MISSING_TEXTURE,
+        
         SCOUT,
         SOLDIER,
         HIGHLIGHTED_TROOP,
@@ -29,7 +31,7 @@ public class Sprites {
         PARTY_TILE,
 
         FARM,
-        HEADQUARTERS
+        HEADQUARTERS,
         ;
 
         private final String fileName;
@@ -38,6 +40,13 @@ public class Sprites {
         }
         SpriteType(String fileName) {
             this.fileName = fileName;
+        }
+        public static SpriteType safeValueOf(String string) {
+            try {
+                return valueOf(string);
+            } catch (IllegalArgumentException e) {
+                return MISSING_TEXTURE;
+            }
         }
     }
 

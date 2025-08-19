@@ -5,38 +5,18 @@ import java.util.Map;
 
 public class Resources {
 
-    public enum Resource {
-        GOLD(),
-        SCIENCE(),
-        WATER(),
-        COPPER(),
-        IRON(),
-        SULFUR(),
-        SULFURIC_ACID(),
-        CRYSTAL(),
-        WITCH_EYE(),
-        ;
-
-        Resource() {
-
-        }
-
-        @Override
-        public String toString() {
-            return "RESOURCE."+name();
-        }
-    }
-
-    public static HashMap<Resource, Float> singleItem(Resource resource, Float amount) {
-        HashMap<Resource, Float> map = new HashMap<>();
-        map.put(resource, amount);
+    public static HashMap<String, Float> singleItem(String resourceId, Float amount) {
+        HashMap<String, Float> map = new HashMap<>();
+        map.put(resourceId, amount);
         return map;
     }
 
-    public static HashMap<Resource, Float> allItems(Float amount) {
-        HashMap<Resource, Float> map = new HashMap<>();
-        for (Resource resource : Resource.values()) {
-            map.put(resource, amount);
+    public static HashMap<String, Float> allItems(Float amount, boolean includePerTurn) {
+        HashMap<String, Float> map = new HashMap<>();
+        for (Resource resource : Registry.getInstance().getRegistry(Resource.class).values()) {
+            if (includePerTurn || !resource.isPerTurnResource()) {
+                map.put(resource.getId(), amount);
+            }
         }
         return map;
     }

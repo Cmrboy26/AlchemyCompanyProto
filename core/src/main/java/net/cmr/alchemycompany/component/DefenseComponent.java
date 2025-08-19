@@ -6,7 +6,6 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 
 import net.cmr.alchemycompany.game.Effects.AttackType;
-import net.cmr.alchemycompany.game.Resources.Resource;
 
 public class DefenseComponent extends Component {
     

@@ -1,0 +1,186 @@
+{
+    "registry": [
+        {
+            "id": "GOLD",
+            "name": "Gold",
+            "description": "A valuable currency used for trading and construction.",
+            "icon": "GOLD_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "SCIENCE",
+            "name": "Science",
+            "description": "Knowledge points used to unlock new technologies.",
+            "icon": "SCIENCE_ICON",
+            "perTurnResource": true
+        },
+        {
+            "id": "WATER",
+            "name": "Water",
+            "description": "Essential for life and many industrial processes.",
+            "icon": "WATER_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "SALTS",
+            "name": "Salts",
+            "description": "A mixture of sodium chloride and magnesium chloride, useful in chemical processes.",
+            "icon": "SALTS_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "COAL",
+            "name": "Coal",
+            "description": "A combustible black rock used as fuel and in industrial processes.",
+            "icon": "COAL_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "IRON_ORE",
+            "name": "Iron Ore",
+            "description": "Raw ore containing iron, used for smelting into iron.",
+            "icon": "IRON_ORE_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "IRON",
+            "name": "Iron",
+            "description": "A strong metal used in construction and manufacturing.",
+            "icon": "IRON_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "COPPER_ORE",
+            "name": "Copper Ore",
+            "description": "Raw ore containing copper, used for smelting into copper.",
+            "icon": "COPPER_ORE_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "COPPER",
+            "name": "Copper",
+            "description": "A malleable metal used in wiring and machinery.",
+            "icon": "COPPER_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "QUARTZ",
+            "name": "Quartz",
+            "description": "A crystalline mineral used in glassmaking and electronics.",
+            "icon": "QUARTZ_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "CRYSTAL",
+            "name": "Crystal",
+            "description": "A shard of quartz imbued with mystical properties.",
+            "icon": "CRYSTAL_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "GLASS",
+            "name": "Glass",
+            "description": "A transparent material made from quartz, used in construction and containers.",
+            "icon": "GLASS_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "TITANIUM_ORE",
+            "name": "Titanium Ore",
+            "description": "Raw ore containing titanium, used for smelting into titanium.",
+            "icon": "TITANIUM_ORE_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "TITANIUM",
+            "name": "Titanium",
+            "description": "A strong, lightweight metal used in advanced manufacturing.",
+            "icon": "TITANIUM_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "SILICON",
+            "name": "Silicon",
+            "description": "A metalloid used in electronics and glassmaking.",
+            "icon": "SILICON_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "MAGNESIUM",
+            "name": "Magnesium",
+            "description": "A lightweight metal used in alloys and chemical processes.",
+            "icon": "MAGNESIUM_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "SULFUR",
+            "name": "Sulfur",
+            "description": "A yellow element used in chemical manufacturing and fertilizers.",
+            "icon": "SULFUR_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "SULFURIC_ACID",
+            "name": "Sulfuric Acid",
+            "description": "A strong acid used in industrial and chemical processes.",
+            "icon": "SULFURIC_ACID_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "BATTERY",
+            "name": "Battery",
+            "description": "A device for storing and providing electrical energy.",
+            "icon": "BATTERY_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "LYE",
+            "name": "Lye",
+            "description": "A caustic solution used in soap making and chemical processes.",
+            "icon": "LYE_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "CORN",
+            "name": "Corn",
+            "description": "A versatile crop used for food and industrial products.",
+            "icon": "CORN_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "OIL",
+            "name": "Oil",
+            "description": "A viscous liquid used as fuel and in chemical manufacturing.",
+            "icon": "OIL_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "STARDUST",
+            "name": "Stardust",
+            "description": "A rare and mystical material with unknown properties.",
+            "icon": "STARDUST_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "SUNSTONE",
+            "name": "Sunstone",
+            "description": "A radiant gem imbued with solar energy.",
+            "icon": "SUNSTONE_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "MOONSTONE",
+            "name": "Moonstone",
+            "description": "A luminous gem with mysterious lunar properties.",
+            "icon": "MOONSTONE_ICON",
+            "perTurnResource": false
+        },
+        {
+            "id": "MYTHRIL",
+            "name": "Mythril",
+            "description": "A legendary, lightweight, and incredibly strong metal prized by master craftsmen.",
+            "icon": "MYTHRIL_ICON",
+            "perTurnResource": false
+        }
+    ]
+}

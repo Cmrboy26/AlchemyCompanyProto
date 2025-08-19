@@ -3,7 +3,7 @@
         "components": [
             {
                 "class": "net.cmr.alchemycompany.component.BuildingComponent",
-                "buildingType": "FARM",
+                "buildingId": "FARM",
                 "invalidPlacement": [
                     "WATER"
                 ]
@@ -14,15 +14,22 @@
                 "invertable": true
             },
             {
-                "class": "net.cmr.alchemycompany.component.ProducerComponent",
-                "production": {
-                    "CRYSTAL": 4.0
-                }
-            },
-            {
                 "class": "net.cmr.alchemycompany.component.ResearchRequirementComponent",
                 "technologiesRequired": [
                     "AGRICULTURE"
+                ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",
+                "availableRecipes": [
+                    "EXTRACT_QUARTZ",
+                    "EXTRACT_COAL",
+                    "EXTRACT_IRON_ORE",
+                    "EXTRACT_COPPER_ORE",
+                    "EXTRACT_SULFUR",
+                    "EXTRACT_TITANIUM_ORE",
+                    "EXTRACT_CRYSTAL",
+                    "EXTRACT_MYTHRIL"
                 ]
             }
         ]
@@ -31,7 +38,7 @@
         "components": [
             {
                 "class": "net.cmr.alchemycompany.component.BuildingComponent",
-                "buildingType": "HEADQUARTERS",
+                "buildingId": "HEADQUARTERS",
                 "invalidPlacement": [
                     "WATER"
                 ]

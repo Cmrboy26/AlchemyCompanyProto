@@ -4,6 +4,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import net.cmr.alchemycompany.ACEngine;
+import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.IUpdateSystem;
 import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
@@ -42,21 +43,16 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
 
             if (type != null) {
                 if (tryPlaceBuilding(playerID, type, x, y, false, engine.as(ACEngine.class))) {
-                    onBuildingChange(playerID, x, y, engine);
+                    GameManager.onBuildingChange(playerID, x, y, engine);
                 }
             } else {
                 if (tryRemoveBuilding(playerID, x, y, engine.as(ACEngine.class))) {
-                    onBuildingChange(playerID, x, y, engine);
+                    GameManager.onBuildingChange(playerID, x, y, engine);
                 }
             }
 
             engine.removeEntity(entity);
         }
-    }
-
-    public static void onBuildingChange(UUID buildingPlayerID, int x, int y, Engine engine) {
-        engine.getSystem(VisibilitySystem.class).updateVisibility(buildingPlayerID);
-        engine.getSystem(ResourceSystem.class).calculateTurn();
     }
 
     public static boolean tryRemoveBuilding(UUID playerID, int x, int y, ACEngine engine) {
@@ -65,7 +61,7 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
             // Remove tile at location if it is the players
             Entity building = engine.getEntity(tile.getBuildingSlotID());
             BuildingComponent bc = building.getComponent(BuildingComponent.class);
-            if (bc.buildingType != BuildingType.HEADQUARTERS) {
+            if (bc.buildingId != "HEADQUARTERS") {
                 UUID buildingOwner = building.getComponent(OwnerComponent.class).getUUID();
                 if (playerID.equals(buildingOwner)) {
                     tile.setBuildingSlotID(null); // set tile unoccupied

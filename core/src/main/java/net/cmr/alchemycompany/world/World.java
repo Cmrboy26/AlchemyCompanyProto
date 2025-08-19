@@ -15,11 +15,15 @@ public class World implements Cloneable {
 
     public enum WorldFeature {
         WATER,
+        FORBIDDEN_WATER,
         PLAINS,
-        FOREST,
-        MOUNTAINS,
-        SWAMP,
         CRYSTAL_VALLEY,
+        FOREST,
+        ENCHANTED_FOREST,
+        MOUNTAINS,
+        DWARVEN_MOUNTAINS,
+        SWAMP,
+        DRAGONS_DEN,
         ;
     }
 

@@ -5,16 +5,16 @@ import java.util.HashSet;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 
-import net.cmr.alchemycompany.game.Recipes.Recipe;
+import net.cmr.alchemycompany.game.Recipe;
 
 public class AvailableRecipesComponent extends Component {
     
-    public HashSet<Recipe> availableRecipes;
+    public HashSet<String> availableRecipes;
 
     public AvailableRecipesComponent() {}
 
-    public AvailableRecipesComponent(HashSet<Recipe> availableRecipies) {
-        this.availableRecipes = availableRecipies;
+    public AvailableRecipesComponent(HashSet<String> availableRecipes) {
+        this.availableRecipes = availableRecipes;
     }
 
     @Override
@@ -23,10 +23,11 @@ public class AvailableRecipesComponent extends Component {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void read(Json json, JsonValue jsonData) {
         availableRecipes = json.readValue(
             HashSet.class,
-            Recipe.class,
+            String.class,
             jsonData.get("availableRecipes")
         );
     }

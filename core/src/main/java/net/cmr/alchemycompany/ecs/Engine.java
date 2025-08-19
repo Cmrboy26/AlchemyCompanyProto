@@ -97,6 +97,9 @@ public abstract class Engine {
     }
 
     protected void onRemoveComponent(Entity entity, Component component) {
+        if (component == null) {
+            return;
+        }
         Set<Entity> indexed = getComponentIndex().get(component.getClass());
         if (indexed != null) {
             indexed.remove(entity);

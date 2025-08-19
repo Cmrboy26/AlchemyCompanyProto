@@ -2,6 +2,7 @@ package net.cmr.alchemycompany;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,13 +16,20 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-import net.cmr.alchemycompany.component.actions.BuildingActionComponent;
-import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
+import net.cmr.alchemycompany.Sprites.SpriteType;
+import net.cmr.alchemycompany.component.AvailableRecipesComponent;
+import net.cmr.alchemycompany.component.BuildingComponent;
+import net.cmr.alchemycompany.component.SelectedRecipeComponent;
+import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
+import net.cmr.alchemycompany.ecs.Family;
 import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
+import net.cmr.alchemycompany.game.Recipe;
+import net.cmr.alchemycompany.game.Resources;
 import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.network.LocalStream;
 import net.cmr.alchemycompany.network.Stream;
@@ -49,6 +57,9 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
+        Json json = new Json();
+
+
         prepareGame();
         prepareUI();
         setupInputProcessor();
@@ -174,6 +185,40 @@ public class GameScreen implements Screen {
             }
             if (Gdx.input.isButtonJustPressed(Input.Buttons.MIDDLE)) {
                 gameManager.tryRemoveBuilding(playerUUID, tileCoords.getX(), tileCoords.getY());
+            }
+
+            Entity buildingAt = null;
+            Family family = Family.all(TilePositionComponent.class, BuildingComponent.class);
+            for (Entity entity : gameManager.getEngine().getEntities(family)) {
+                TilePositionComponent pos = entity.getComponent(TilePositionComponent.class);
+                if (pos != null && pos.tileX == tileCoords.getX() && pos.tileY == tileCoords.getY()) {
+                    buildingAt = entity;
+                    break;
+                }
+            }
+            if (buildingAt != null) {
+                if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+                    if (buildingAt.hasComponent(AvailableRecipesComponent.class)) {
+                        AvailableRecipesComponent arc = buildingAt.getComponent(AvailableRecipesComponent.class);
+                        List<String> recipeList = new ArrayList<>();
+                        for (String recipe : arc.availableRecipes) {
+                            recipeList.add(recipe);
+                        }
+
+                        int index = 0;
+                        System.out.println(buildingAt.hasComponent(SelectedRecipeComponent.class));
+                        if (buildingAt.hasComponent(SelectedRecipeComponent.class)) {
+                            SelectedRecipeComponent src = buildingAt.getComponent(SelectedRecipeComponent.class);
+                            index = (recipeList.indexOf(src.selectedRecipe) + 1) % recipeList.size();
+                        }
+                        if (index == -1) {
+                            index = 0;
+                        }
+
+                        String selectedRecipe = recipeList.get(index);
+                        gameManager.trySelectRecipe(playerUUID, selectedRecipe, buildingAt.getID());
+                    }
+                }
             }
         }
     }
