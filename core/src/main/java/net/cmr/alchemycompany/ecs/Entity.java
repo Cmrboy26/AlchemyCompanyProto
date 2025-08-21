@@ -91,6 +91,23 @@ public class Entity implements Serializable, Cloneable {
         }
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Entity)) {
+            return false;
+        }
+        Entity entity = (Entity) obj;
+        if (entity.getID().equals(this.getID())) {
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return getID().hashCode();
+    }
+
     /*@Override
     public void read(Json json, JsonValue jsonData) {
         JsonValue componentArray = jsonData.get("components");

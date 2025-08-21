@@ -2,7 +2,6 @@ package net.cmr.alchemycompany;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,21 +14,25 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.actions.Actions;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-import net.cmr.alchemycompany.Sprites.SpriteType;
 import net.cmr.alchemycompany.component.AvailableRecipesComponent;
 import net.cmr.alchemycompany.component.BuildingComponent;
+import net.cmr.alchemycompany.component.ConsumerComponent;
+import net.cmr.alchemycompany.component.ProducerComponent;
 import net.cmr.alchemycompany.component.SelectedRecipeComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.Family;
 import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
-import net.cmr.alchemycompany.game.Recipe;
-import net.cmr.alchemycompany.game.Resources;
+import net.cmr.alchemycompany.game.Registry;
+import net.cmr.alchemycompany.game.Resource;
 import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.network.LocalStream;
 import net.cmr.alchemycompany.network.Stream;
@@ -39,13 +42,13 @@ import net.cmr.alchemycompany.network.packet.Packet;
 import net.cmr.alchemycompany.network.packet.UUIDPacket;
 import net.cmr.alchemycompany.network.packet.WorldPacket;
 import net.cmr.alchemycompany.system.RenderSystem;
+import net.cmr.alchemycompany.system.ResourceSystem;
 import net.cmr.alchemycompany.world.TilePoint;
 import net.cmr.alchemycompany.world.World;
 
 public class GameScreen implements Screen {
 
-    private Viewport uiViewport;
-    private Viewport worldViewport;
+    private Viewport uiViewport, worldViewport;
     private Stage stage;
     private Skin skin;
     private int lastMouseX, lastMouseY;
@@ -57,9 +60,6 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
-        Json json = new Json();
-
-
         prepareGame();
         prepareUI();
         setupInputProcessor();
@@ -78,7 +78,7 @@ public class GameScreen implements Screen {
                 EntityPacket ep = (EntityPacket) packet;
                 Entity entity = ep.entity;
                 boolean added = ep.added;
-                System.out.println("[DEBUG] Client recieved "+entity.toShortString());
+                //System.out.println("[DEBUG] Client recieved "+entity.toShortString());
                 if (added) {
                     gameManager.getEngine().addEntity(entity);
                 } else {
@@ -91,12 +91,20 @@ public class GameScreen implements Screen {
         worldViewport.apply();
         batch.setProjectionMatrix(worldViewport.getCamera().combined);
         gameManager.getEngine().render(playerUUID, batch, delta);
+
+        batch.setProjectionMatrix(uiViewport.getCamera().combined);
+        uiViewport.apply();
+        stage.act(delta);
+        stage.draw();
     }
 
     @Override
     public void resize(int width, int height) {
-        worldViewport.update(width, height);
-        uiViewport.update(width, height);
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+        worldViewport.update(width, height, true);
+        uiViewport.update(width, height, true);
     }
 
     @Override
@@ -143,7 +151,7 @@ public class GameScreen implements Screen {
 
         // Connected. Process packets.
         List<Packet> polledPackets = stream.pollAllPackets();
-        List<Entity> entityList = new ArrayList<>();
+        List<EntityPacket> entityList = new ArrayList<>();
         World world = null;
         for (Packet packet : polledPackets) {
             if (packet instanceof WorldPacket) {
@@ -153,14 +161,22 @@ public class GameScreen implements Screen {
                 playerUUID = ((UUIDPacket) packet).id;
             }
             if (packet instanceof EntityPacket) {
-                entityList.add(((EntityPacket) packet).entity);
+                entityList.add((EntityPacket) packet);
                 //System.out.println("Recieved entity: "+((EntityPacket) packet).entity);
             }
         }
 
         ACEngine engine = GameManager.createClientEngine(world);
-        for (Entity entity : entityList) {
-            engine.addEntity(entity);
+        engine.addEntityChangeListener((e, added) -> {
+            engine.getSystem(ResourceSystem.class).calculateTurn();
+        });
+        for (EntityPacket entityPacket : entityList) {
+            if (entityPacket.added) {
+                engine.addEntity(entityPacket.entity);
+            } else {
+                engine.removeEntity(entityPacket.entity);
+                System.out.println("------------------------------ Removing entity");
+            }
         }
         gameManager = new GameManager(stream, engine, world);
     }
@@ -171,6 +187,8 @@ public class GameScreen implements Screen {
 
         skin = Sprites.getSkin();
         stage = new Stage(uiViewport, AlchemyCompany.getInstance().batch());
+
+        prepareMenus();
     }
 
     private void updateInput() {
@@ -315,8 +333,39 @@ public class GameScreen implements Screen {
         }
     }
 
+    private void prepareMenus() {
+
+        Table rightTop = new Table();
+        rightTop.setFillParent(true);
+        rightTop.right().top().pad(10);
+        Table resourceTable = new Table(skin);
+        resourceTable.scaleBy(.5f);
+        resourceTable.setOrigin(Align.topRight);
+        resourceTable.setBackground(skin.getDrawable("window"));
+        resourceTable.pad(10);
+
+        resourceTable.addAction(Actions.forever(Actions.run(() -> {
+            resourceTable.clearChildren();
+            for (Resource resource : Registry.getResourceRegistry().values()) {
+                Table resourceInfoTable = new Table(skin);
+                resourceInfoTable.add(new Image(Sprites.getTexture(resource.getIcon()))).size(16).pad(2);
+                float productionAmount = gameManager.getEngine().getSystem(ResourceSystem.class).getDisplayResourcePerSecond().getOrDefault(resource.getId(), 0f);
+                //System.out.println(productionAmount + ": "+resource.getName());
+                if (productionAmount == 0) {
+                    continue;
+                }
+                resourceInfoTable.add("0 : "+productionAmount);
+                resourceTable.add(resourceInfoTable).row();
+            }
+        })));
+
+        rightTop.add(resourceTable).top().right().expand().space(10);
+        stage.addActor(rightTop);
+
+    }
+
     // Helper methods
 
-    
+
 
 }

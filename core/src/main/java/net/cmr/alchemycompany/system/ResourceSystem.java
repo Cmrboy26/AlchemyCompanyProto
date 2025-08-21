@@ -20,6 +20,8 @@ import net.cmr.alchemycompany.game.Registry.ResourceFilter;
 
 public class ResourceSystem extends EntitySystem {
 
+    private Map<String, Float> displayGenerationPerSecond = new HashMap<>();
+
     @Override
     public void addedToEngine(Engine engine) {
         super.addedToEngine(engine);
@@ -54,10 +56,12 @@ public class ResourceSystem extends EntitySystem {
         System.out.println("Resource system calculating");
         generationPerSecond.keySet().stream()
             .sorted()
-            .forEach(resourceId -> 
+            .filter((rid) -> { return generationPerSecond.get(rid) != 0; })
+            .forEach(resourceId ->
             System.out.print(resourceId + ", " + generationPerSecond.get(resourceId) + "\t")
             );
         System.out.println();
+        displayGenerationPerSecond = new HashMap<>(generationPerSecond);
     }
 
     /**
@@ -212,6 +216,10 @@ public class ResourceSystem extends EntitySystem {
         }
 
         return toBeActive;
+    }
+
+    public Map<String, Float> getDisplayResourcePerSecond() {
+        return displayGenerationPerSecond;
     }
 
 }

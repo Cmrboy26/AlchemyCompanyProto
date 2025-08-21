@@ -100,7 +100,7 @@ public class RecipeSystem extends EntitySystem implements IUpdateSystem {
         engine.changedEntity(buildingEntity);
         return true;
     }
-    
-    
+
+
 
 }

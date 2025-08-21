@@ -28,18 +28,25 @@ public abstract class Engine {
 
     public void addEntity(Entity entity) {
         if (this.entities.containsKey(entity.getID())) {
-            removeEntity(entities.get(entity.getID()));
+            Entity at = entities.get(entity.getID());
+            for (Class<? extends Component> componentClass : at.getComponents().keySet()) {
+                componentIndex.computeIfAbsent(componentClass, k -> new HashSet<>());
+                componentIndex.get(componentClass).remove(at);
+            }
         }
+
         this.entities.put(entity.getID(), entity);
         for (Class<? extends Component> componentClass : entity.getComponents().keySet()) {
-            componentIndex.computeIfAbsent(componentClass, k -> new HashSet<>()).add(entity);
+            componentIndex.computeIfAbsent(componentClass, k -> new HashSet<>());
+            componentIndex.get(componentClass).add(entity);
         }
         onEntityAdded(entity);
     }
     public void removeEntity(Entity entity) {
         this.entities.remove(entity.getID());
         for (Class<? extends Component> componentClass : entity.getComponents().keySet()) {
-            componentIndex.computeIfAbsent(componentClass, k -> new HashSet<>()).remove(entity);
+            componentIndex.computeIfAbsent(componentClass, k -> new HashSet<>());
+            componentIndex.get(componentClass).remove(entity);
         }
         onEntityRemoved(entity);
     }

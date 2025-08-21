@@ -69,7 +69,7 @@ public class GameServer {
                 for (UUID playerID : playerStreams.keySet()) {
                     Stream stream = playerStreams.get(playerID);
                     stream.sendPacket(packet);
-                    System.out.println("[DEBUG] Sent packet "+packet);
+                    //System.out.println("[DEBUG] Sent packet "+packet);
                 }
             }
 

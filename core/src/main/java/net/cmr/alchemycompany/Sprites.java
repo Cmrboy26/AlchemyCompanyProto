@@ -13,7 +13,7 @@ public class Sprites {
 
     public enum SpriteType {
         MISSING_TEXTURE,
-        
+
         SCOUT,
         SOLDIER,
         HIGHLIGHTED_TROOP,
@@ -32,6 +32,13 @@ public class Sprites {
 
         FARM,
         HEADQUARTERS,
+
+        QUARTZ_ICON,
+        COAL_ICON,
+        IRON_ORE_ICON,
+        IRON_ICON,
+        COPPER_ORE_ICON,
+        COPPER_ICON,
         ;
 
         private final String fileName;
@@ -39,7 +46,7 @@ public class Sprites {
             this.fileName = "sprites/" + name().toLowerCase() + ".png";
         }
         SpriteType(String fileName) {
-            this.fileName = fileName;
+            this.fileName = "sprites/" + fileName;
         }
         public static SpriteType safeValueOf(String string) {
             try {

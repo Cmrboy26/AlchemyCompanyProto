@@ -9,6 +9,12 @@
                 ]
             },
             {
+                "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
+                "resourceCost": {
+                    "GOLD": 1.0
+                }
+            },
+            {
                 "class": "net.cmr.alchemycompany.component.RenderComponent",
                 "spriteType": "FARM",
                 "invertable": true

@@ -1,8 +1,8 @@
 X Make PlayerActionComponent (player uuid)
 X Make BuildingActionComponent (building type, build or remove as boolean, x, y)
-- Make MoveUnitActionComponent (unit uuid, x, y)
+X Make MoveUnitActionComponent (unit uuid, x, y)
 - Make ResearchActionComponent (currently selected technology)
-- Make RecipeActionComponent (selected recipe)
+X Make RecipeActionComponent (selected recipe)
 - Player sends action entity to server (also processes on their end optionally for faster response),
   server processes the actions and sends world and engine changes clients if processed
 
