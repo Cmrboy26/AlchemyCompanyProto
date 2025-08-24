@@ -5,71 +5,39 @@ import java.util.Map;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.Texture.TextureFilter;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.NinePatch;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 
 public class Sprites {
 
-    public enum SpriteType {
-        MISSING_TEXTURE,
-
-        SCOUT,
-        SOLDIER,
-        HIGHLIGHTED_TROOP,
-
-        WATER,
-        PLAINS,
-        FOREST,
-        MOUNTAINS,
-        SWAMP1,
-        SWAMP2,
-        SWAMP3,
-        SWAMP4,
-        SWAMP5,
-        CRYSTAL_VALLEY,
-        PARTY_TILE,
-
-        FARM,
-        HEADQUARTERS,
-
-        QUARTZ_ICON,
-        COAL_ICON,
-        IRON_ORE_ICON,
-        IRON_ICON,
-        COPPER_ORE_ICON,
-        COPPER_ICON,
-        ;
-
-        private final String fileName;
-        SpriteType() {
-            this.fileName = "sprites/" + name().toLowerCase() + ".png";
-        }
-        SpriteType(String fileName) {
-            this.fileName = "sprites/" + fileName;
-        }
-        public static SpriteType safeValueOf(String string) {
-            try {
-                return valueOf(string);
-            } catch (IllegalArgumentException e) {
-                return MISSING_TEXTURE;
-            }
-        }
-    }
-
     private static boolean initialized = false;
     private static Skin skin;
-    private static Map<SpriteType, Texture> textures = new HashMap<>();
+    private static Map<String, Sprite> spritesMap = new HashMap<>();
+    private static Map<String, NinePatch> patchMap = new HashMap<>();
+    private static Map<String, Animation<TextureRegion>> animationMap = new HashMap<>();
+
+    private static TextureAtlas spriteAtlas, animationAtlas, patchAtlas;
 
     public static void load() {
         skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         skin.get("font", BitmapFont.class).setUseIntegerPositions(false);
         initialized = true;
-        textures = new HashMap<>();
-        for (SpriteType type : SpriteType.values()) {
-            Texture texture = new Texture(Gdx.files.internal(type.fileName));
-            textures.put(type, texture);
-            System.out.println("Loaded sprite: " + type.name() + " from " + type.fileName);
+
+        spriteAtlas = new TextureAtlas(Gdx.files.internal("game_sprites.atlas"));
+        //animationAtlas = new TextureAtlas(Gdx.files.internal("game_animations.atlas"));
+        //patchAtlas = new TextureAtlas(Gdx.files.internal("game_patches.atlas"));
+
+        for (AtlasRegion region : spriteAtlas.getRegions()) {
+            Sprite sprite = spriteAtlas.createSprite(region.name);
+            spritesMap.put(region.name.toUpperCase(), sprite);
+            System.out.println("Loaded sprite: " + region.name + " from sprites atlas");
         }
     }
 
@@ -80,19 +48,28 @@ public class Sprites {
         return skin;
     }
 
-    public static Texture getTexture(SpriteType type) {
+    public static Sprite getSprite(String type) {
         if (!initialized) {
             load();
         }
-        return textures.get(type);
+        return spritesMap.getOrDefault(type, spritesMap.get("MISSING_TEXTURE"));
+    }
+
+    public static TextureRegionDrawable getDrawable(String type) {
+        return new TextureRegionDrawable(getSprite(type));
     }
 
     public static void dispose() {
         if (!initialized) return;
-        for (Texture texture : textures.values()) {
-            texture.dispose();
-        }
-        textures.clear();
+
+        spriteAtlas.dispose();
+        //animationAtlas.dispose();
+        //patchAtlas.dispose();
+
+        spritesMap.clear();
+        animationMap.clear();
+        patchMap.clear();
+
         skin.dispose();
         initialized = false;
     }

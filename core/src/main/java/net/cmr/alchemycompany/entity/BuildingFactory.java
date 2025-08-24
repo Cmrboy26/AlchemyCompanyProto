@@ -20,27 +20,21 @@ import net.cmr.alchemycompany.system.VisibilitySystem;
 
 public class BuildingFactory {
 
-    public enum BuildingType {
-        HEADQUARTERS,
-        FARM,
-    }
-
-    public static Entity createBuilding(UUID playerID, BuildingType type, int x, int y) {
-        Entity building = createEmptyBuilding(type);
+    public static Entity createBuilding(UUID playerID, String buildingId, int x, int y) {
+        Entity building = createEmptyBuilding(buildingId);
         building.addComponent(new TilePositionComponent(x, y), null);
         building.addComponent(new OwnerComponent(playerID), null);
         building.addComponent(new HealthComponent(100), null);
-        building.addComponent(new ConstructionComponent(5), null);
         building.addComponent(new SightComponent(VisibilitySystem.DEFAULT_BUILDING_RADIUS), null);
         return building;
     }
 
-    public static Entity createEmptyBuilding(BuildingType type) {
+    public static Entity createEmptyBuilding(String buildingId) {
         Json json = new Json();
         JsonReader reader = new JsonReader();
         JsonValue values = reader.parse(Gdx.files.internal("assets/gamedata/buildings.json"));
 
-        JsonValue building = values.get(type.name());
+        JsonValue building = values.get(buildingId);
         Entity entity = json.fromJson(Entity.class, building.toJson(OutputType.json));
 
         return entity;

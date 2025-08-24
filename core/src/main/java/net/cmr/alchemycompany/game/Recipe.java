@@ -7,14 +7,12 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.Json.Serializable;
 import com.badlogic.gdx.utils.JsonValue;
 
-import net.cmr.alchemycompany.Sprites.SpriteType;
-
 public class Recipe implements Serializable {
     
     private String id;
     private String name;
     private String description;
-    private SpriteType icon;
+    private String icon;
     private HashMap<String, Float> input, output;
     private HashSet<String> requiredTechnologies;
     private int turns;
@@ -22,7 +20,7 @@ public class Recipe implements Serializable {
     // Required for JSON deserialization
     public Recipe() {}
     
-    public Recipe(String id, String name, String description, SpriteType icon, HashMap<String, Float> input, HashMap<String, Float> output, int turns) {
+    public Recipe(String id, String name, String description, String icon, HashMap<String, Float> input, HashMap<String, Float> output, int turns) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -33,7 +31,7 @@ public class Recipe implements Serializable {
         this.requiredTechnologies = new HashSet<>();
     }
 
-    public Recipe(String id, String name, String description, SpriteType icon, HashMap<String, Float> input, HashMap<String, Float> output, int turns, String...technologies) {
+    public Recipe(String id, String name, String description, String icon, HashMap<String, Float> input, HashMap<String, Float> output, int turns, String...technologies) {
         this(id, name, description, icon, input, output, turns);
         this.requiredTechnologies = new HashSet<>();
         if (technologies != null) {
@@ -47,7 +45,7 @@ public class Recipe implements Serializable {
     public String getId() { return id; }
     public String getName() { return name; }
     public String getDescription() { return description; }
-    public SpriteType getIcon() { return icon; }
+    public String getIcon() { return icon; }
     public int getTurns() { return turns; }
     public HashMap<String, Float> getInputs() { return new HashMap<>(input); }
     public HashMap<String, Float> getOutputs() { return new HashMap<>(output); }
@@ -93,8 +91,7 @@ public class Recipe implements Serializable {
         this.id = json.readValue("id", String.class, jsonData);
         this.name = json.readValue("name", String.class, jsonData);
         this.description = json.readValue("description", String.class, jsonData);
-        String iconString = json.readValue("icon", String.class, jsonData);
-        this.icon = SpriteType.safeValueOf(iconString);
+        this.icon = json.readValue("icon", String.class, jsonData);
         
         // Read input and output manually to avoid type information issues
         this.input = new HashMap<>();
@@ -102,6 +99,11 @@ public class Recipe implements Serializable {
         if (inputData != null) {
             for (JsonValue entry = inputData.child; entry != null; entry = entry.next) {
                 String key = entry.name;
+                
+                if (Registry.getResourceRegistry().get(key) == null) {
+                    throw new RuntimeException("Resource "+key+" does not exist");
+                }
+
                 Float value = entry.asFloat();
                 this.input.put(key, value);
             }
@@ -112,6 +114,11 @@ public class Recipe implements Serializable {
         if (outputData != null) {
             for (JsonValue entry = outputData.child; entry != null; entry = entry.next) {
                 String key = entry.name;
+
+                if (Registry.getResourceRegistry().get(key) == null) {
+                    throw new RuntimeException("Resource "+key+" does not exist");
+                }
+
                 Float value = entry.asFloat();
                 this.output.put(key, value);
             }

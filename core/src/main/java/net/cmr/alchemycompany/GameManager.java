@@ -13,13 +13,13 @@ import net.cmr.alchemycompany.component.actions.SelectRecipeActionComponent;
 import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.entity.BuildingFactory;
-import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
 import net.cmr.alchemycompany.network.Stream;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.system.BuildingManagementSystem;
 import net.cmr.alchemycompany.system.RecipeSystem;
 import net.cmr.alchemycompany.system.RenderSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
+import net.cmr.alchemycompany.system.SelectionSystem;
 import net.cmr.alchemycompany.system.VisibilitySystem;
 import net.cmr.alchemycompany.world.Tile;
 import net.cmr.alchemycompany.world.World;
@@ -48,7 +48,7 @@ public class GameManager {
      * When the player attempts to perform an action, send it to the server. The server will give a response if it is possible.
      */
 
-    public boolean tryPlaceBuilding(UUID playerId, BuildingType type, int x, int y, boolean ignoreVisibility) {
+    public boolean tryPlaceBuilding(UUID playerId, String type, int x, int y, boolean ignoreVisibility) {
         if (isClient()) {
             Entity buildAction = new Entity();
             buildAction.addComponent(new PlayerActionComponent(playerId), getEngine());
@@ -122,6 +122,7 @@ public class GameManager {
     public static ACEngine createClientEngine(World world) {
         ACEngine engine = new ACEngine();
         engine.registerSystem(new RenderSystem(world));
+        engine.registerSystem(new SelectionSystem());
 
         addSharedSystems(engine, world);
         return engine;

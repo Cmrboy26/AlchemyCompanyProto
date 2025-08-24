@@ -16,7 +16,6 @@ import net.cmr.alchemycompany.component.Component;
 import net.cmr.alchemycompany.component.actions.IActionComponent;
 import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
-import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
 import net.cmr.alchemycompany.network.Stream.StreamState;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.network.packet.Packet;
@@ -131,9 +130,9 @@ public class GameServer {
 
             World world = engine.getWorld();
             while (true) {
-                int x = new Random().nextInt((int) (world.width / 10f));
-                int y = new Random().nextInt((int) (world.height / 10f));
-                boolean result = gameManager.tryPlaceBuilding(playerUUID, BuildingType.HEADQUARTERS, x, y, true);
+                int x = new Random().nextInt((int) (world.width));
+                int y = new Random().nextInt((int) (world.height));
+                boolean result = gameManager.tryPlaceBuilding(playerUUID, "HEADQUARTERS", x, y, true);
                 //focusOnTile(x, y);
                 if (result) {
                     GameManager.onBuildingChange(playerUUID, x, y, engine);

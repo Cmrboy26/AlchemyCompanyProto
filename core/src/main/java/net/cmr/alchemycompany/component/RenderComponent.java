@@ -3,19 +3,17 @@ package net.cmr.alchemycompany.component;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 
-import net.cmr.alchemycompany.Sprites.SpriteType;
-
 public class RenderComponent extends Component {
     
-    public SpriteType spriteType;
+    public String spriteType;
     public boolean invertable = false;
 
     public RenderComponent() {}
 
-    public RenderComponent(SpriteType spriteType) {
+    public RenderComponent(String spriteType) {
         this.spriteType = spriteType;
     }
-    public RenderComponent(SpriteType spriteType, boolean invertable) {
+    public RenderComponent(String spriteType, boolean invertable) {
         this.spriteType = spriteType;
         this.invertable = invertable;
     }
@@ -28,7 +26,7 @@ public class RenderComponent extends Component {
 
     @Override
     public void read(Json json, JsonValue jsonData) {
-        this.spriteType = json.readValue("spriteType", SpriteType.class, jsonData);
+        this.spriteType = json.readValue("spriteType", String.class, jsonData);
         this.invertable = json.readValue("invertable", Boolean.class, false, jsonData);
     }
 

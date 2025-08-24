@@ -4,10 +4,6 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.Json.Serializable;
 import com.badlogic.gdx.utils.JsonValue;
 
-import net.cmr.alchemycompany.Sprites.SpriteType;
-
-
-
 /**
  * Stores global information about a resource for use in certain logic systems.
  */
@@ -16,7 +12,7 @@ public class Resource implements Serializable {
     private String id;
     private String name;
     private String description;
-    private SpriteType icon;
+    private String icon;
     /**
      * Resources where this is true aren't stored in the world. They are immediately used whenever a building or system needs it, and excess is discarded.
      * Example resources are science and, in other 4X games, culture.
@@ -26,7 +22,7 @@ public class Resource implements Serializable {
     // Required for JSON deserialization
     public Resource() {}
     
-    public Resource(String id, String name, String description, SpriteType icon, boolean perTurnResource) {
+    public Resource(String id, String name, String description, String icon, boolean perTurnResource) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -38,7 +34,7 @@ public class Resource implements Serializable {
     public String getId() { return id; }
     public String getName() { return name; }
     public String getDescription() { return description; }
-    public SpriteType getIcon() { return icon; }
+    public String getIcon() { return icon; }
     public boolean isPerTurnResource() { return perTurnResource; }
     
     @Override
@@ -55,8 +51,7 @@ public class Resource implements Serializable {
         this.id = json.readValue("id", String.class, jsonData);
         this.name = json.readValue("name", String.class, jsonData);
         this.description = json.readValue("description", String.class, jsonData);
-        String iconString = json.readValue("icon", String.class, jsonData);
-        this.icon = SpriteType.safeValueOf(iconString);
+        this.icon = json.readValue("icon", String.class, jsonData);
         this.perTurnResource = json.readValue("perTurnResource", Boolean.class, false, jsonData);
     }
     

@@ -15,7 +15,6 @@ import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
 import net.cmr.alchemycompany.entity.BuildingFactory;
-import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
 import net.cmr.alchemycompany.world.Tile;
 
 public class BuildingManagementSystem extends EntitySystem implements IUpdateSystem {
@@ -37,7 +36,7 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
             UUID playerID = pac.playerUUID;
             int x = bac.x;
             int y = bac.y;
-            BuildingType type = bac.type;
+            String type = bac.type;
 
             System.out.println("BuildManagementSystem recieved action "+pac+"\n"+bac);
 
@@ -73,7 +72,7 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
         return false;
     }
 
-    public static boolean tryPlaceBuilding(UUID playerID, BuildingType type, int x, int y, boolean overrideVisibility, ACEngine engine) {
+    public static boolean tryPlaceBuilding(UUID playerID, String type, int x, int y, boolean overrideVisibility, ACEngine engine) {
         Tile tile = engine.as(ACEngine.class).getWorld().getTile(x, y);
         if (tile != null && tile.canPlaceBuilding()) {
             VisibilitySystem visibilitySystem = engine.getSystem(VisibilitySystem.class);

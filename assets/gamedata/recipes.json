@@ -7,7 +7,7 @@
             "icon": "QUARTZ_ICON",
             "input": {},
             "output": {
-                "QUARTZ": 1.0
+                "QUARTZ": 3.0
             }
         },
         {
@@ -103,6 +103,100 @@
             "output": {
                 "STARDUST": 1.0
             }
+        },
+        {
+            "id": "REFINE_IRON",
+            "name": "Refine Iron",
+            "description": "Smelt iron ore into iron ingots.",
+            "icon": "IRON_INGOT_ICON",
+            "input": {
+                "IRON_ORE": 1.0,
+                "COAL": 0.5
+            },
+            "output": {
+                "IRON": 1.0
+            },
+            "requiredTechnologies": ["PROCESSING"]
+        },
+        {
+            "id": "REFINE_COPPER",
+            "name": "Refine Copper",
+            "description": "Smelt copper ore into copper ingots.",
+            "icon": "COPPER_INGOT_ICON",
+            "input": {
+                "COPPER_ORE": 1.0,
+                "COAL": 0.5
+            },
+            "output": {
+                "COPPER": 1.0
+            },
+            "requiredTechnologies": ["PROCESSING"]
+        },
+        {
+            "id": "REFINE_TITANIUM",
+            "name": "Refine Titanium",
+            "description": "Smelt titanium ore into titanium ingots.",
+            "icon": "TITANIUM_INGOT_ICON",
+            "input": {
+                "TITANIUM_ORE": 1.0,
+                "COAL": 1.0
+            },
+            "output": {
+                "TITANIUM": 1.0
+            },
+            "requiredTechnologies": ["ADVANCED_PROCESSING"]
+        },
+        {
+            "id": "REFINE_SILICON",
+            "name": "Refine Silicon",
+            "description": "Refine quartz into silicon.",
+            "icon": "SILICON_ICON",
+            "input": {
+                "QUARTZ": 2.0
+            },
+            "output": {
+                "SILICON": 1.0
+            },
+            "requiredTechnologies": ["ADVANCED_PROCESSING"]
+        },
+        {
+            "id": "STARDUST_TO_SUNSTONE",
+            "name": "Transmute Stardust to Sunstone",
+            "description": "Transmute stardust into sunstone.",
+            "icon": "SUNSTONE_ICON",
+            "input": {
+                "STARDUST": 5.0
+            },
+            "output": {
+                "SUNSTONE": 1.0
+            },
+            "requiredTechnologies": ["MAGIC"]
+        },
+        {
+            "id": "STARDUST_TO_MOONSTONE",
+            "name": "Transmute Stardust to Moonstone",
+            "description": "Transmute stardust into moonstone.",
+            "icon": "MOONSTONE_ICON",
+            "input": {
+                "STARDUST": 5.0
+            },
+            "output": {
+                "MOONSTONE": 1.0
+            },
+            "requiredTechnologies": ["MAGIC"]
+        },
+        {
+            "id": "REFINE_GLASS",
+            "name": "Produce Glass",
+            "description": "Refine quartz into glass.",
+            "icon": "GLASS_ICON",
+            "input": {
+                "QUARTZ": 2.0
+            },
+            "output": {
+                "GLASS": 1.0
+            },
+            "requiredTechnologies": ["PROCESSING"]
         }
     ]
 }

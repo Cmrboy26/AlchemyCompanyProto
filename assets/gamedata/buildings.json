@@ -1,45 +1,4 @@
 {
-    "FARM": {
-        "components": [
-            {
-                "class": "net.cmr.alchemycompany.component.BuildingComponent",
-                "buildingId": "FARM",
-                "invalidPlacement": [
-                    "WATER"
-                ]
-            },
-            {
-                "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
-                "resourceCost": {
-                    "GOLD": 1.0
-                }
-            },
-            {
-                "class": "net.cmr.alchemycompany.component.RenderComponent",
-                "spriteType": "FARM",
-                "invertable": true
-            },
-            {
-                "class": "net.cmr.alchemycompany.component.ResearchRequirementComponent",
-                "technologiesRequired": [
-                    "AGRICULTURE"
-                ]
-            },
-            {
-                "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",
-                "availableRecipes": [
-                    "EXTRACT_QUARTZ",
-                    "EXTRACT_COAL",
-                    "EXTRACT_IRON_ORE",
-                    "EXTRACT_COPPER_ORE",
-                    "EXTRACT_SULFUR",
-                    "EXTRACT_TITANIUM_ORE",
-                    "EXTRACT_CRYSTAL",
-                    "EXTRACT_MYTHRIL"
-                ]
-            }
-        ]
-    },
     "HEADQUARTERS": {
         "components": [
             {
@@ -48,6 +7,14 @@
                 "invalidPlacement": [
                     "WATER"
                 ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.LabelComponent",
+                "name": "Headquarters",
+                "description": "The central hub of your operations. Protect at all costs."
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.SelectableComponent"
             },
             {
                 "class": "net.cmr.alchemycompany.component.RenderComponent",
@@ -59,12 +26,168 @@
                 "maxStorage": 10
             },
             {
+                "class": "net.cmr.alchemycompany.component.ProducerComponent",
+                "production": {
+                    "GOLD": 3.0,
+                    "SCIENCE": 1.0
+                }
+            },
+            {
                 "class": "net.cmr.alchemycompany.component.DefenseComponent",
                 "baseDefense": 10,
                 "typeMultipliers": {
                     "NORMAL": 1.0,
                     "CORROSION": 2.0
                 }
+            }
+        ]
+    },
+    "MINES": {
+        "components": [
+            {
+                "class": "net.cmr.alchemycompany.component.BuildingComponent",
+                "buildingId": "MINES",
+                "validPlacement": [
+                    "MOUNTAINS"
+                ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.LabelComponent",
+                "name": "Mines",
+                "description": "A place to extract minerals and gather resources."
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.SelectableComponent"
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.RenderComponent",
+                "spriteType": "MINES",
+                "invertable": true
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.ConstructionComponent",
+                "turns": 0
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
+                "resourceCost": {
+                    "GOLD": 5.0
+                }
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.ResearchRequirementComponent",
+                "technologiesRequired": [
+                    "EXTRACTION"
+                ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",
+                "availableRecipes": [
+                    "EXTRACT_QUARTZ",
+                    "EXTRACT_COAL",
+                    "EXTRACT_IRON_ORE",
+                    "EXTRACT_COPPER_ORE",
+                    "EXTRACT_SULFUR",
+                    "EXTRACT_TITANIUM_ORE"
+                ]
+            }
+        ]
+    },
+    "REFINERY": {
+        "components": [
+            {
+                "class": "net.cmr.alchemycompany.component.BuildingComponent",
+                "buildingId": "REFINERY",
+                "validPlacement": [
+                    "PLAINS",
+                    "FOREST"
+                ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.LabelComponent",
+                "name": "Refinery",
+                "description": "A place to refine raw materials and gather resources."
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.SelectableComponent"
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.RenderComponent",
+                "spriteType": "REFINERY",
+                "invertable": false
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.ConstructionComponent",
+                "turns": 0
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
+                "resourceCost": {
+                    "GOLD": 3.0
+                }
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.ResearchRequirementComponent",
+                "technologiesRequired": [
+                    "PROCESSING"
+                ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",
+                "availableRecipes": [
+                    "REFINE_IRON",
+                    "REFINE_COPPER",
+                    "REFINE_GLASS",
+                    "REFINE_TITANIUM",
+                    "REFINE_SILICON",
+                    "STARDUST_TO_SUNSTONE",
+                    "STARDUST_TO_MOONSTONE"
+                ]
+            }
+        ]
+    },
+    "FARM": {
+        "components": [
+            {
+                "class": "net.cmr.alchemycompany.component.BuildingComponent",
+                "buildingId": "FARM",
+                "invalidPlacement": [
+                    "WATER"
+                ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.LabelComponent",
+                "name": "Farm",
+                "description": "A place to grow crops and gather resources."
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.SelectableComponent"
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.RenderComponent",
+                "spriteType": "FARM",
+                "invertable": true
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.ConstructionComponent",
+                "turns": 0
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
+                "resourceCost": {
+                    "GOLD": 1.0
+                }
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",
+                "availableRecipes": [
+                    "EXTRACT_QUARTZ",
+                    "EXTRACT_COAL",
+                    "EXTRACT_IRON_ORE",
+                    "EXTRACT_COPPER_ORE",
+                    "EXTRACT_SULFUR",
+                    "EXTRACT_TITANIUM_ORE"
+                ]
             }
         ]
     }

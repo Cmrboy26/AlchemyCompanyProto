@@ -3,6 +3,7 @@ package net.cmr.alchemycompany;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import com.badlogic.gdx.Gdx;
@@ -10,29 +11,43 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
+import com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import net.cmr.alchemycompany.component.AvailableRecipesComponent;
 import net.cmr.alchemycompany.component.BuildingComponent;
+import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.ConsumerComponent;
+import net.cmr.alchemycompany.component.LabelComponent;
 import net.cmr.alchemycompany.component.ProducerComponent;
 import net.cmr.alchemycompany.component.SelectedRecipeComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.Family;
-import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
+import net.cmr.alchemycompany.entity.EntityUtils;
+import net.cmr.alchemycompany.game.Recipe;
 import net.cmr.alchemycompany.game.Registry;
 import net.cmr.alchemycompany.game.Resource;
+import net.cmr.alchemycompany.helper.InputHelper;
+import net.cmr.alchemycompany.helper.MenuHelper;
 import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.network.LocalStream;
 import net.cmr.alchemycompany.network.Stream;
@@ -43,6 +58,7 @@ import net.cmr.alchemycompany.network.packet.UUIDPacket;
 import net.cmr.alchemycompany.network.packet.WorldPacket;
 import net.cmr.alchemycompany.system.RenderSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
+import net.cmr.alchemycompany.system.SelectionSystem;
 import net.cmr.alchemycompany.world.TilePoint;
 import net.cmr.alchemycompany.world.World;
 
@@ -54,6 +70,8 @@ public class GameScreen implements Screen {
     private int lastMouseX, lastMouseY;
     private UUID playerUUID;
     private int focusX = -1, focusY = -1;
+    public MenuHelper menuHelper;
+    public InputHelper inputHelper;
 
     private GameManager gameManager;
     private Stream stream;
@@ -69,7 +87,6 @@ public class GameScreen implements Screen {
     public void render(float delta) {
         // Camera drag with right mouse button
         processTileFocus();
-        processPanCameraInput();
         updateInput();
         gameManager.getEngine().update(delta);
         List<Packet> polledPackets = stream.pollAllPackets();
@@ -90,6 +107,7 @@ public class GameScreen implements Screen {
         SpriteBatch batch = AlchemyCompany.getInstance().batch();
         worldViewport.apply();
         batch.setProjectionMatrix(worldViewport.getCamera().combined);
+        batch.setColor(Color.WHITE);
         gameManager.getEngine().render(playerUUID, batch, delta);
 
         batch.setProjectionMatrix(uiViewport.getCamera().combined);
@@ -173,9 +191,13 @@ public class GameScreen implements Screen {
         for (EntityPacket entityPacket : entityList) {
             if (entityPacket.added) {
                 engine.addEntity(entityPacket.entity);
+                BuildingComponent bc = entityPacket.entity.getComponent(BuildingComponent.class);
+                if (bc != null && bc.buildingId.equals("HEADQUARTERS")) {
+                    TilePositionComponent tpc = entityPacket.entity.getComponent(TilePositionComponent.class);
+                    focusOnTile(tpc.tileX, tpc.tileY);
+                }
             } else {
                 engine.removeEntity(entityPacket.entity);
-                System.out.println("------------------------------ Removing entity");
             }
         }
         gameManager = new GameManager(stream, engine, world);
@@ -188,128 +210,12 @@ public class GameScreen implements Screen {
         skin = Sprites.getSkin();
         stage = new Stage(uiViewport, AlchemyCompany.getInstance().batch());
 
-        prepareMenus();
+        setupMenus();
     }
 
     private void updateInput() {
-        Vector3 screenCoords = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
-        Vector3 worldCoords = worldViewport.unproject(screenCoords);
-        TilePoint tileCoords = IsometricHelper.worldToIsometricTile(worldCoords, gameManager.getWorld());
-        if (tileCoords != null) {
-            if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
-                BuildingType selectedType = BuildingType.FARM;
-                gameManager.tryPlaceBuilding(playerUUID, selectedType, tileCoords.getX(), tileCoords.getY(), false);
-                // TEMPORARY
-            }
-            if (Gdx.input.isButtonJustPressed(Input.Buttons.MIDDLE)) {
-                gameManager.tryRemoveBuilding(playerUUID, tileCoords.getX(), tileCoords.getY());
-            }
-
-            Entity buildingAt = null;
-            Family family = Family.all(TilePositionComponent.class, BuildingComponent.class);
-            for (Entity entity : gameManager.getEngine().getEntities(family)) {
-                TilePositionComponent pos = entity.getComponent(TilePositionComponent.class);
-                if (pos != null && pos.tileX == tileCoords.getX() && pos.tileY == tileCoords.getY()) {
-                    buildingAt = entity;
-                    break;
-                }
-            }
-            if (buildingAt != null) {
-                if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
-                    if (buildingAt.hasComponent(AvailableRecipesComponent.class)) {
-                        AvailableRecipesComponent arc = buildingAt.getComponent(AvailableRecipesComponent.class);
-                        List<String> recipeList = new ArrayList<>();
-                        for (String recipe : arc.availableRecipes) {
-                            recipeList.add(recipe);
-                        }
-
-                        int index = 0;
-                        System.out.println(buildingAt.hasComponent(SelectedRecipeComponent.class));
-                        if (buildingAt.hasComponent(SelectedRecipeComponent.class)) {
-                            SelectedRecipeComponent src = buildingAt.getComponent(SelectedRecipeComponent.class);
-                            index = (recipeList.indexOf(src.selectedRecipe) + 1) % recipeList.size();
-                        }
-                        if (index == -1) {
-                            index = 0;
-                        }
-
-                        String selectedRecipe = recipeList.get(index);
-                        gameManager.trySelectRecipe(playerUUID, selectedRecipe, buildingAt.getID());
-                    }
-                }
-            }
-        }
-    }
-
-    private void processPanCameraInput() {
-        if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
-            // Store previous mouse position between frames
-            if (lastMouseX == -1 && lastMouseY == -1) {
-                lastMouseX = Gdx.input.getX();
-                lastMouseY = Gdx.input.getY();
-            } else {
-                int currentX = Gdx.input.getX();
-                int currentY = Gdx.input.getY();
-                float deltaX = lastMouseX - currentX;
-                float deltaY = currentY - lastMouseY; // Y is inverted in screen coords
-
-                // Adjust camera position based on drag and camera zoom
-                OrthographicCamera cam = (OrthographicCamera) worldViewport.getCamera();
-                float zoom = cam.zoom;
-                cam.position.add(
-                        deltaX * worldViewport.getWorldWidth() / Gdx.graphics.getWidth() * zoom,
-                        deltaY * worldViewport.getWorldHeight() / Gdx.graphics.getHeight() * zoom,
-                        0);
-                cam.update();
-
-                lastMouseX = currentX;
-                lastMouseY = currentY;
-            }
-        } else {
-            lastMouseX = -1;
-            lastMouseY = -1;
-        }
-    }
-
-    private void setupInputProcessor() {
-        InputMultiplexer inputMultiplexer = new InputMultiplexer();
-
-        inputMultiplexer.addProcessor(new InputAdapter() {
-            @Override
-            public boolean scrolled(float amountX, float amountY) {
-                if (worldViewport.getCamera() instanceof OrthographicCamera) {
-                    OrthographicCamera cam = (OrthographicCamera) worldViewport.getCamera();
-                    float oldZoom = cam.zoom;
-                    float newZoom = oldZoom + Math.signum(amountY) * amountY * amountY * 0.1f;
-                    newZoom = Math.max(0.5f, Math.min(newZoom, 5f)); // Clamp zoom between 0.5 and 5
-
-                    // Move camera towards cursor position
-                    float mouseX = Gdx.input.getX();
-                    float mouseY = Gdx.input.getY();
-
-                    // Convert screen coordinates to world coordinates before zoom
-                    worldViewport.apply();
-                    Vector3 before = cam.unproject(new Vector3(mouseX, mouseY, 0));
-
-                    cam.zoom = newZoom;
-                    cam.update();
-
-                    // Convert screen coordinates to world coordinates after zoom
-                    worldViewport.apply();
-                    Vector3 after = cam.unproject(new Vector3(mouseX, mouseY, 0));
-
-                    // Offset camera position so the point under the cursor stays fixed
-                    cam.position.add(before.x - after.x, before.y - after.y, 0);
-                    cam.update();
-
-                    return true;
-                }
-                return false;
-            }
-        });
-        inputMultiplexer.addProcessor(stage);
-
-        Gdx.input.setInputProcessor(inputMultiplexer);
+        inputHelper.updatePanCamera();
+        inputHelper.updateInput();
     }
 
     public void focusOnTile(int x, int y) {
@@ -333,39 +239,16 @@ public class GameScreen implements Screen {
         }
     }
 
-    private void prepareMenus() {
+    private void setupInputProcessor() {
+        inputHelper = new InputHelper(this, gameManager, playerUUID, worldViewport);
+        inputHelper.prepare();
+    }
 
-        Table rightTop = new Table();
-        rightTop.setFillParent(true);
-        rightTop.right().top().pad(10);
-        Table resourceTable = new Table(skin);
-        resourceTable.scaleBy(.5f);
-        resourceTable.setOrigin(Align.topRight);
-        resourceTable.setBackground(skin.getDrawable("window"));
-        resourceTable.pad(10);
-
-        resourceTable.addAction(Actions.forever(Actions.run(() -> {
-            resourceTable.clearChildren();
-            for (Resource resource : Registry.getResourceRegistry().values()) {
-                Table resourceInfoTable = new Table(skin);
-                resourceInfoTable.add(new Image(Sprites.getTexture(resource.getIcon()))).size(16).pad(2);
-                float productionAmount = gameManager.getEngine().getSystem(ResourceSystem.class).getDisplayResourcePerSecond().getOrDefault(resource.getId(), 0f);
-                //System.out.println(productionAmount + ": "+resource.getName());
-                if (productionAmount == 0) {
-                    continue;
-                }
-                resourceInfoTable.add("0 : "+productionAmount);
-                resourceTable.add(resourceInfoTable).row();
-            }
-        })));
-
-        rightTop.add(resourceTable).top().right().expand().space(10);
-        stage.addActor(rightTop);
-
+    private void setupMenus() {
+        menuHelper = new MenuHelper(this, gameManager, playerUUID, stage);
+        menuHelper.build();
     }
 
     // Helper methods
-
-
 
 }

@@ -5,7 +5,6 @@ import java.util.HashSet;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 
-import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
 import net.cmr.alchemycompany.world.World.WorldFeature;
 
 public class BuildingComponent extends Component {

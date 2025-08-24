@@ -10,12 +10,12 @@ import java.util.UUID;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector3;
 
 import net.cmr.alchemycompany.IsometricHelper;
 import net.cmr.alchemycompany.Sprites;
-import net.cmr.alchemycompany.Sprites.SpriteType;
 import net.cmr.alchemycompany.component.RenderComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Engine;
@@ -66,13 +66,13 @@ public class RenderSystem extends EntitySystem {
 
                     Vector3 iso = IsometricHelper.project(x, y);
                     boolean invert = isInvert(x, y);
-                    Texture texture = getSprite(world.getTile(x, y), x, y);
+                    Sprite sprite = getSprite(world.getTile(x, y), x, y);
 
                     if (!isVisibleCurrently) {
                         batch.setColor(Color.GRAY);
                     }
-                    if (texture != null) {
-                        batch.draw(texture, (iso.x - (invert ? -1.5f : 0) - 0.75f) * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (invert ? -1 : 1) * 1.5f, TILE_SIZE * 1.5f);
+                    if (sprite != null) {
+                        batch.draw(sprite, (iso.x - (invert ? -1.5f : 0) - 0.75f) * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (invert ? -1 : 1) * 1.5f, TILE_SIZE * 1.5f);
                         //batch.draw(texture, iso.x * TILE_SIZE, iso.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                     }
                     if (!isVisibleCurrently) {
@@ -82,9 +82,9 @@ public class RenderSystem extends EntitySystem {
                         if (currentEntities != null) {
                             for (Entity entity : currentEntities) {
                                 RenderComponent rc = entity.getComponent(RenderComponent.class);
-                                Texture entityTexture = Sprites.getTexture(rc.spriteType);
+                                Sprite entitySprite = Sprites.getSprite(rc.spriteType);
                                 boolean entityInvert = rc.invertable && invert;
-                                batch.draw(entityTexture, (iso.x - (entityInvert ? -1.5f : 0) - 0.75f) * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (entityInvert ? -1 : 1) * 1.5f, TILE_SIZE * 1.5f);
+                                batch.draw(entitySprite, (iso.x - (entityInvert ? -1.5f : 0) - 0.75f) * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (entityInvert ? -1 : 1) * 1.5f, TILE_SIZE * 1.5f);
                             }
                         }
                     }
@@ -103,27 +103,27 @@ public class RenderSystem extends EntitySystem {
         return new Random(generateNoise(x, y)).nextInt((max- min) + 1) + min;
     }
 
-    private Texture getSprite(Tile tile, int x, int y) {
+    private Sprite getSprite(Tile tile, int x, int y) {
         WorldFeature feature = tile.getFeature();
-        SpriteType spriteType = null;
+        String spriteType = null;
         switch (feature) {
             case WATER:
-                spriteType = SpriteType.WATER;
+                spriteType = "WATER";
                 break;
             case PLAINS:
-                spriteType = SpriteType.PLAINS;
+                spriteType = "PLAINS";
                 break;
             case FOREST:
-                spriteType = SpriteType.FOREST;
+                spriteType = "FOREST";
                 break;
             case MOUNTAINS:
-                spriteType = SpriteType.MOUNTAINS;
+                spriteType = "MOUNTAINS";
                 break;
             case CRYSTAL_VALLEY:
-                spriteType = SpriteType.CRYSTAL_VALLEY;
+                spriteType = "CRYSTAL_VALLEY";
                 break;
             case SWAMP:
-                SpriteType[] options = new SpriteType[] {SpriteType.SWAMP1, SpriteType.SWAMP2, SpriteType.SWAMP3, SpriteType.SWAMP4, SpriteType.SWAMP5};
+                String[] options = new String[] {"SWAMP1", "SWAMP2", "SWAMP3", "SWAMP4", "SWAMP5"};
                 int option = getNumberBetween(x, y, 0, 4);
                 spriteType = options[option];
                 break;
@@ -133,7 +133,7 @@ public class RenderSystem extends EntitySystem {
         if (spriteType == null) {
             return null;
         }
-        return Sprites.getTexture(spriteType);
+        return Sprites.getSprite(spriteType);
     }
 
     @Override

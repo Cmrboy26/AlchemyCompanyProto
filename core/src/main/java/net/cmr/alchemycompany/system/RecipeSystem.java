@@ -20,7 +20,6 @@ import net.cmr.alchemycompany.component.actions.SelectRecipeActionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
-import net.cmr.alchemycompany.entity.BuildingFactory.BuildingType;
 import net.cmr.alchemycompany.game.Recipe;
 import net.cmr.alchemycompany.game.Registry;
 

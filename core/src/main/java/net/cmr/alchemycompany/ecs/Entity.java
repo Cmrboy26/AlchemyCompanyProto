@@ -39,8 +39,14 @@ public class Entity implements Serializable, Cloneable {
     public boolean hasComponent(Class<? extends Component> componentClass) {
         return componentMap.containsKey(componentClass);
     }
+    /**
+     * @return desired component if entity has it, otherwise returns null.
+     */
     @SuppressWarnings("unchecked")
     public <T extends Component> T getComponent(Class<T> clazz) {
+        if (!componentMap.containsKey(clazz)) {
+            return null;
+        }
         return (T) componentMap.get(clazz);
     }
     public UUID getID() {

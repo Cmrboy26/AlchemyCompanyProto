@@ -9,7 +9,6 @@ import java.util.function.BiFunction;
 import com.badlogic.gdx.math.Vector2;
 
 import net.cmr.alchemycompany.OpenSimplexNoise;
-import net.cmr.alchemycompany.Sprites.SpriteType;
 
 public class World implements Cloneable {
 

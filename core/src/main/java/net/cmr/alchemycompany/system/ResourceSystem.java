@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+
+import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.ConsumerComponent;
 import net.cmr.alchemycompany.component.ProducerComponent;
 import net.cmr.alchemycompany.component.StorageComponent;
@@ -15,20 +18,17 @@ import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.game.Registry;
-import net.cmr.alchemycompany.game.Resource;
 import net.cmr.alchemycompany.game.Registry.ResourceFilter;
+import net.cmr.alchemycompany.game.Resource;
 
 public class ResourceSystem extends EntitySystem {
 
     private Map<String, Float> displayGenerationPerSecond = new HashMap<>();
+    private List<Entity> activeEntities = new ArrayList<>();
 
     @Override
     public void addedToEngine(Engine engine) {
         super.addedToEngine(engine);
-    }
-
-    private class ResourcesOutcome {
-
     }
 
     public void calculateTurn() {
@@ -37,7 +37,8 @@ public class ResourceSystem extends EntitySystem {
         Map<String, Float> calculatedStoredResources = new HashMap<>();
         Map<String, Float> calculatedTotalStorageCapacity = new HashMap<>();
 
-        calculateBuildingOutput(trueResourcesInStorage, calculatedStoredResources, calculatedTotalStorageCapacity);
+        List<Entity> activeEntities = calculateBuildingOutput(trueResourcesInStorage, calculatedStoredResources, calculatedTotalStorageCapacity);
+        this.activeEntities = activeEntities;
 
         for (Resource resource : Registry.getResourceValues(ResourceFilter.OMIT_PER_TURN).values()) {
             float inStorage = trueResourcesInStorage.getOrDefault(resource.getId(), 0f);
@@ -220,6 +221,18 @@ public class ResourceSystem extends EntitySystem {
 
     public Map<String, Float> getDisplayResourcePerSecond() {
         return displayGenerationPerSecond;
+    }
+
+    public List<Entity> getActiveEntities() {
+        return activeEntities;
+    }
+
+    public static Image getImageDisplay(Resource resource) {
+        Image image = new Image(Sprites.getSprite(resource.getIcon()));
+        return image;
+    }
+    public static Image getImageDisplay(String resourceId) {
+        return getImageDisplay(Registry.getResourceRegistry().get(resourceId));
     }
 
 }

@@ -1,0 +1,8 @@
+{
+    "animations": {
+        "troop_idle": {
+            "frameDuration": 0.1,
+            "animationType": "LOOP"
+        }
+    }
+}

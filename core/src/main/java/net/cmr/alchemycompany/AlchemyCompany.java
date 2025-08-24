@@ -20,8 +20,6 @@ public class AlchemyCompany extends Game {
     public void create() {
         spriteBatch = new SpriteBatch();
         setScreen(new GameScreen());
-
-        System.out.println(2 & 0x0001);
     }
 
     public SpriteBatch batch() {

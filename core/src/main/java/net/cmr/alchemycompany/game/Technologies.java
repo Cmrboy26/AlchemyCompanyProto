@@ -3,9 +3,11 @@ package net.cmr.alchemycompany.game;
 public class Technologies {
     
     public enum Technology {
-        AGRICULTURE,
-        MINING,
-        SCIENCE,
+        EXTRACTION,
+        ADVANCED_EXTRACTION,
+        PROCESSING,
+        ADVANCED_PROCESSING,
+        MAGIC,
     }
 
 }

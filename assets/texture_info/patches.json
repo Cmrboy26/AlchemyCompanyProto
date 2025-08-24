@@ -1,0 +1,5 @@
+{
+    "patches": {
+        "panel": {"leftWidth": 10, "rightWidth": 10, "topHeight": 10, "bottomHeight": 10}
+    }
+}

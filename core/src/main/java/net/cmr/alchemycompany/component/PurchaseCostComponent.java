@@ -18,16 +18,16 @@ public class PurchaseCostComponent extends Component {
 
     @Override
     public void write(Json json) {
-        json.writeArrayStart("resourceCost");
+        json.writeObjectStart("resourceCost");
         for (Entry<String, Float> entry : resourceCost.entrySet()) {
             json.writeValue(entry.getKey(), entry.getValue(), Float.class);
         }
-        json.writeArrayEnd();
-        json.writeArrayStart("resourceCostScale");
+        json.writeObjectEnd();
+        json.writeObjectStart("resourceCostScale");
         for (Entry<String, Float> entry : resourceCostScale.entrySet()) {
-            json.writeValue(entry.getKey(), entry.getValue(), Float.class);
+            json.writeValue(entry.getKey(), entry.getValue());
         }
-        json.writeArrayEnd();
+        json.writeObjectEnd();
     }
 
     @Override

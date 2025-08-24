@@ -20,6 +20,7 @@ public class Registry {
     public static Registry getInstance() {
         if (instance == null) {
             instance = new Registry();
+            instance.registerAll();
         }
         return instance;
     }
@@ -32,6 +33,9 @@ public class Registry {
     private Registry() {
         System.out.println("INITIALIZING REGISTRY.");
         register = new HashMap<>();
+    }
+
+    private void registerAll() {
         registerObjects(Resource.class, Gdx.files.internal("gamedata/resources.json"));
         registerObjects(Recipe.class, Gdx.files.internal("gamedata/recipes.json"));
     }
