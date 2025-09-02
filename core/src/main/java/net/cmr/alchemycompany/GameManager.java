@@ -130,9 +130,10 @@ public class GameManager {
     public static ACEngine createServerEngine(World world) {
         ACEngine engine = new ACEngine();
 
-        Entity fogOfWarEntity = new Entity();
-        fogOfWarEntity.addComponent(new FogOfWarComponent(), engine);
-        engine.addEntity(fogOfWarEntity);
+        //Entity fogOfWarEntity = new Entity();
+        //fogOfWarEntity.addComponent(new FogOfWarComponent(), engine);
+        //fogOfWarEntity.addComponent(new OwnerComponent(null), engine);
+        //engine.addEntity(fogOfWarEntity);
 
         addSharedSystems(engine, world);
         return engine;

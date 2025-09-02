@@ -1,6 +1,7 @@
 package net.cmr.alchemycompany.helper;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.UUID;
@@ -46,6 +47,7 @@ import net.cmr.alchemycompany.entity.EntityUtils;
 import net.cmr.alchemycompany.game.Recipe;
 import net.cmr.alchemycompany.game.Registry;
 import net.cmr.alchemycompany.game.Resource;
+import net.cmr.alchemycompany.game.Resources;
 import net.cmr.alchemycompany.system.ResourceSystem;
 import net.cmr.alchemycompany.system.SelectionSystem;
 import net.cmr.alchemycompany.world.TilePoint;
@@ -73,36 +75,47 @@ public class MenuHelper extends ScreenHelper {
         Table rightTop = new Table();
         rightTop.setFillParent(true);
         rightTop.right().top().pad(10);
+
+        Table resourceTable2 = new Table(skin);
+        resourceTable2.setBackground(skin.getDrawable("window"));
+        resourceTable2.pad(10);
+
+        resourceTable2.addAction(Actions.forever(Actions.run(() -> {
+            resourceTable2.clearChildren();
+            HashSet<Resource> resourceSet = new HashSet<>(Registry.getResourceRegistry().values());
+            resourceSet.removeIf(r -> {
+                return !(r.getId().equals("GOLD") || r.getId().equals("SCIENCE"));
+            });
+            for (Resource resource : resourceSet) {
+                float productionAmount = gameManager.getEngine().getSystem(ResourceSystem.class).getDisplayResourcePerSecond().getOrDefault(resource.getId(), 0f);
+                Table resourceInfoTable = Resources.createResourceTable(resource, productionAmount, 0);
+                resourceTable2.add(resourceInfoTable).space(10);
+            }
+        })));
+
+        rightTop.add(resourceTable2).top().right().space(10);
+
         Table resourceTable = new Table(skin);
         resourceTable.setBackground(skin.getDrawable("window"));
         resourceTable.pad(10);
 
         resourceTable.addAction(Actions.forever(Actions.run(() -> {
             resourceTable.clearChildren();
-            for (Resource resource : Registry.getResourceRegistry().values()) {
-                Table resourceInfoTable = new Table(skin);
-                float productionAmount = gameManager.getEngine().getSystem(ResourceSystem.class)
-                        .getDisplayResourcePerSecond().getOrDefault(resource.getId(), 0f);
-                // System.out.println(productionAmount + ": "+resource.getName());
-                if (productionAmount == 0) {
-                    continue;
+            HashSet<Resource> resourceSet = new HashSet<>(Registry.getResourceRegistry().values());
+            resourceSet.removeIf(r -> {
+                return r.getId().equals("GOLD") || r.getId().equals("SCIENCE");
+            });
+            for (Resource resource : resourceSet) {
+                float productionAmount = gameManager.getEngine().getSystem(ResourceSystem.class).getDisplayResourcePerSecond().getOrDefault(resource.getId(), 0f);
+                Table resourceInfoTable = Resources.createResourceTable(resource, productionAmount, 0);
+                if (resourceInfoTable.getChildren().size != 0) {
+                    resourceTable.add(resourceInfoTable).space(10).row();
                 }
-                String sign = productionAmount > 0 ? "+" : "";
-                
-                Label storageLabel = null;
-                Label generationLabel = new Label(sign + productionAmount, skin);
-                if (!resource.isPerTurnResource()) {
-                    storageLabel = new Label("0", skin);
-                    resourceInfoTable.add(storageLabel).spaceRight(2);
-                }
-                generationLabel.setFontScale(0.7f);
-                resourceInfoTable.add(new Image(Sprites.getSprite(resource.getIcon()))).size(12).pad(2).spaceRight(2);
-                resourceInfoTable.add(generationLabel);
-                resourceTable.add(resourceInfoTable).row();
             }
         })));
 
-        rightTop.add(resourceTable).top().right().expand().space(10);
+        rightTop.add(resourceTable).top().right().space(10);
+
         stage.addActor(rightTop);
         
         // Right bottom is turn button
@@ -117,6 +130,7 @@ public class MenuHelper extends ScreenHelper {
         Table menuSelector = new Table(skin);
         menuSelector.setBackground(skin.getDrawable("window"));
         menuSelector.pad(4);
+        menuSelector.left().bottom();
 
         menusGroup = new ButtonGroup<>();
         menusGroup.setMaxCheckCount(1);
@@ -127,14 +141,20 @@ public class MenuHelper extends ScreenHelper {
         menusGroup.add(shopButton);
         menuSelector.add(shopButton).pad(2);
 
-        leftBottom.add(menuSelector).left().bottom().expand().space(10);
+        ImageButton researchButton = new ImageButton(Sprites.getDrawable("SCIENCE_ICON"));
+        researchButton.pad(0);
+        menusGroup.add(researchButton);
+        menuSelector.add(researchButton).pad(2);
+
+        // TODO: ts does not look right
+        leftBottom.left().bottom();
+        leftBottom.add(menuSelector).space(10);
         stage.addActor(leftBottom);
-
-
 
         Table left = new Table();
         left.setFillParent(true);
         left.left().pad(10);
+
         Table shopMenu = new Table(skin);
         shopMenu.setBackground(skin.getDrawable("window"));
         shopMenu.pad(10);
@@ -209,8 +229,27 @@ public class MenuHelper extends ScreenHelper {
         left.add(shopMenu).left().expand().space(10);
         stage.addActor(left);
 
-        shopButton.addAction(Actions.forever(Actions.run(() -> {
+        // Tech Menu
+
+        left = new Table();
+        left.setFillParent(true);
+        left.left().pad(10);
+
+        Table researchMenu = new Table(skin);
+        researchMenu.setBackground(skin.getDrawable("window"));
+        researchMenu.pad(10);
+        researchMenu.setVisible(true);
+
+        Label researchTitle = new Label("Research Technology", skin);
+        researchTitle.setAlignment(Align.left);
+        researchMenu.add(researchTitle).left().growX().pad(4).row();
+        
+        left.add(researchMenu).left().expand().space(10);
+        stage.addActor(left);
+
+        leftBottom.addAction(Actions.forever(Actions.run(() -> {
             shopMenu.setVisible(shopButton.isChecked());
+            researchMenu.setVisible(researchButton.isChecked());
         })));
 
         // Middle bottom is selection information and battle calculations

@@ -1,0 +1,26 @@
+{
+    "registry": [
+        {
+            "id": "EXTRACTION",
+            "name": "Extraction",
+            "description": "New technologies allow extraction.",
+            "icon": "IRON_ICON",
+            "position": [0, 0],
+            "cost": 25
+        },
+        {
+            "id": "ADVANCED_EXTRACTION",
+            "prerequisites": [
+                "EXTRACTION"
+            ],
+            "name": "Advanced Extraction",
+            "description": "New technologies allow advanced extraction.",
+            "icon": "TITANIUM_ICON",
+            "position": [1, 0],
+            "cost": {
+                "SCIENCE": 100,
+                "TITANIUM": 5
+            }
+        }
+    ]
+}

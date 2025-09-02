@@ -12,11 +12,11 @@ import net.cmr.alchemycompany.component.AvailableRecipesComponent;
 import net.cmr.alchemycompany.component.ConsumerComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.ProducerComponent;
+import net.cmr.alchemycompany.component.ResearchManagementComponent;
 import net.cmr.alchemycompany.component.SelectedRecipeComponent;
-import net.cmr.alchemycompany.component.TilePositionComponent;
-import net.cmr.alchemycompany.component.actions.BuildingActionComponent;
 import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
 import net.cmr.alchemycompany.component.actions.SelectRecipeActionComponent;
+import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
@@ -77,6 +77,18 @@ public class RecipeSystem extends EntitySystem implements IUpdateSystem {
             // Check if owner has the prerequisite techs
             System.out.println("TODO: add technology check");
             Thread.dumpStack();
+            // TODO: add tech check to resource display as well and test if this works
+
+            ResearchManagementComponent rmc = getResearchComponent(playerId.toString(), engine); // Just to verify it exists
+            if (rmc == null) {
+                return false;
+            }
+            for (String tech : recipeObj.getRequiredTechnologies()) {
+                if (!rmc.hasResearched(tech)) {
+                    return false;
+                }
+            }
+
         }
 
         // Remove existing and add selected recipe component
@@ -100,6 +112,27 @@ public class RecipeSystem extends EntitySystem implements IUpdateSystem {
         return true;
     }
 
+    private static Entity getResearchHolderEntity(String playerID, Engine engine) {
+        Set<Entity> researchEntities = engine.getEntities(Family.all(OwnerComponent.class, ResearchManagementComponent.class));
+        for (Entity entity : researchEntities) {
+            OwnerComponent owner = entity.getComponent(OwnerComponent.class);
+            if (owner != null && owner.playerID != null && owner.playerID.equals(playerID.toString())) {
+                return entity;
+            }
+        }
+        return null;
+    }
 
+    private static ResearchManagementComponent getResearchComponent(String playerID, Engine engine) {
+        Entity researchEntity = getResearchHolderEntity(playerID, engine);
+        if (researchEntity == null) {
+            throw new IllegalStateException("No ResearchManagementComponent found for player " + playerID);
+        }
+        ResearchManagementComponent researchComponent = researchEntity.getComponent(ResearchManagementComponent.class);
+        if (researchComponent == null) {
+            throw new IllegalStateException("No ResearchManagementComponent found for player " + playerID);
+        }
+        return researchComponent;
+    }
 
 }

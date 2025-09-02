@@ -8,11 +8,12 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
-import com.badlogic.gdx.utils.Array;
-
 import net.cmr.alchemycompany.ACEngine;
 import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.component.Component;
+import net.cmr.alchemycompany.component.FogOfWarComponent;
+import net.cmr.alchemycompany.component.OwnerComponent;
+import net.cmr.alchemycompany.component.ResearchManagementComponent;
 import net.cmr.alchemycompany.component.actions.IActionComponent;
 import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
@@ -20,7 +21,6 @@ import net.cmr.alchemycompany.network.Stream.StreamState;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.network.packet.Packet;
 import net.cmr.alchemycompany.network.packet.UUIDPacket;
-import net.cmr.alchemycompany.system.BuildingManagementSystem;
 import net.cmr.alchemycompany.world.World;
 import net.cmr.alchemycompany.world.World.WorldType;
 
@@ -127,17 +127,33 @@ public class GameServer {
             UUID playerUUID = UUID.randomUUID();
             playerStreams.put(playerUUID, serverStream);
             serverStream.sendPacket(new UUIDPacket(playerUUID));
+            initializeNewPlayer(playerUUID);
+        }
+    }
 
-            World world = engine.getWorld();
-            while (true) {
-                int x = new Random().nextInt((int) (world.width));
-                int y = new Random().nextInt((int) (world.height));
-                boolean result = gameManager.tryPlaceBuilding(playerUUID, "HEADQUARTERS", x, y, true);
-                //focusOnTile(x, y);
-                if (result) {
-                    GameManager.onBuildingChange(playerUUID, x, y, engine);
-                    break;
-                }
+    private void initializeNewPlayer(UUID playerUUID) {
+        // Add any initialization logic for a new player here.
+
+        // TODO: maybe make a new thread and block until the player has sent their ready signal?
+        Entity fogEntity = new Entity();
+        fogEntity.addComponent(new OwnerComponent(playerUUID), engine);
+        fogEntity.addComponent(new FogOfWarComponent(), engine);
+        engine.addEntity(fogEntity);
+
+        Entity researchEntity = new Entity();
+        researchEntity.addComponent(new ResearchManagementComponent(), engine);
+        researchEntity.addComponent(new OwnerComponent(playerUUID), engine);
+        engine.addEntity(researchEntity);
+
+        World world = engine.getWorld();
+        while (true) {
+            int x = new Random().nextInt((int) (world.width));
+            int y = new Random().nextInt((int) (world.height));
+            boolean result = gameManager.tryPlaceBuilding(playerUUID, "HEADQUARTERS", x, y, true);
+            // focusOnTile(x, y);
+            if (result) {
+                GameManager.onBuildingChange(playerUUID, x, y, engine);
+                break;
             }
         }
     }

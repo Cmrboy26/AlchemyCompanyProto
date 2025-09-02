@@ -3,6 +3,13 @@ package net.cmr.alchemycompany.game;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+
+import net.cmr.alchemycompany.Sprites;
+
 public class Resources {
 
     public static HashMap<String, Float> singleItem(String resourceId, Float amount) {
@@ -35,6 +42,27 @@ public class Resources {
     }
     public Map<Resource, Float> build() {
         return resources;
+    }
+
+    public static Table createResourceTable(Resource resource, float productionAmount, float storageAmount) {
+        Skin skin = Sprites.getSkin();
+        Table resourceInfoTable = new Table(skin);
+        // System.out.println(productionAmount + ": "+resource.getName());
+        if (productionAmount == 0) {
+            return resourceInfoTable;
+        }
+        String sign = productionAmount > 0 ? "+" : "";
+
+        Label storageLabel = null;
+        Label generationLabel = new Label(sign + productionAmount, skin);
+        if (!resource.isPerTurnResource()) {
+            storageLabel = new Label(storageAmount+"", skin);
+            resourceInfoTable.add(storageLabel).spaceRight(2);
+        }
+        generationLabel.setFontScale(0.7f);
+        resourceInfoTable.add(new Image(Sprites.getSprite(resource.getIcon()))).size(12).pad(2).spaceRight(2);
+        resourceInfoTable.add(generationLabel);
+        return resourceInfoTable;
     }
 
 }

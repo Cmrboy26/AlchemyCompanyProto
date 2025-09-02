@@ -8,9 +8,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.Json.Serializable;
-
-import net.cmr.alchemycompany.ecs.Entity;
-
 import com.badlogic.gdx.utils.JsonValue;
 
 public class Registry {
@@ -38,6 +35,7 @@ public class Registry {
     private void registerAll() {
         registerObjects(Resource.class, Gdx.files.internal("gamedata/resources.json"));
         registerObjects(Recipe.class, Gdx.files.internal("gamedata/recipes.json"));
+        registerObjects(Technology.class, Gdx.files.internal("gamedata/technologies.json"));
     }
 
     private void registerObjects(Class<? extends Serializable> clazz, FileHandle jsonFile) {
