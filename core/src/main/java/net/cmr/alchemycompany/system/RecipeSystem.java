@@ -76,8 +76,6 @@ public class RecipeSystem extends EntitySystem implements IUpdateSystem {
             recipeObj = Registry.getInstance().getRegistry(Recipe.class).get(recipe);
             // Check if owner has the prerequisite techs
             System.out.println("TODO: add technology check");
-            Thread.dumpStack();
-            // TODO: add tech check to resource display as well and test if this works
 
             ResearchManagementComponent rmc = getResearchComponent(playerId.toString(), engine); // Just to verify it exists
             if (rmc == null) {
@@ -85,6 +83,9 @@ public class RecipeSystem extends EntitySystem implements IUpdateSystem {
             }
             for (String tech : recipeObj.getRequiredTechnologies()) {
                 if (!rmc.hasResearched(tech)) {
+                    System.out.println("TECH NOT RESEARCHED: "+tech);
+                    Thread.dumpStack();
+                    // TODO: add tech check to resource display as well and test if this works
                     return false;
                 }
             }

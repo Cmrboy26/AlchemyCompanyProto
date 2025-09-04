@@ -155,52 +155,58 @@ public class GameScreen implements Screen {
         serverThread.setDaemon(true);
         serverThread.start();
 
-        stream = new LocalStream(server, true);
-        server.addClientStream((LocalStream) stream);
+        for (int i = 0; i < 1; i++) {
+            stream = new LocalStream(server, true);
+            server.addClientStream((LocalStream) stream, false);
 
-        while (stream.getState() != StreamState.PLAYING) {
-            try {
-                stream.updateStream();
-            } catch (IOException e) {
-                e.printStackTrace();
-                throw new RuntimeException("Forcibly disconnected.");
-            }
-        }
-
-        // Connected. Process packets.
-        List<Packet> polledPackets = stream.pollAllPackets();
-        List<EntityPacket> entityList = new ArrayList<>();
-        World world = null;
-        for (Packet packet : polledPackets) {
-            if (packet instanceof WorldPacket) {
-                world = ((WorldPacket) packet).world;
-            }
-            if (packet instanceof UUIDPacket) {
-                playerUUID = ((UUIDPacket) packet).id;
-            }
-            if (packet instanceof EntityPacket) {
-                entityList.add((EntityPacket) packet);
-                //System.out.println("Recieved entity: "+((EntityPacket) packet).entity);
-            }
-        }
-
-        ACEngine engine = GameManager.createClientEngine(world);
-        engine.addEntityChangeListener((e, added) -> {
-            engine.getSystem(ResourceSystem.class).calculateTurn();
-        });
-        for (EntityPacket entityPacket : entityList) {
-            if (entityPacket.added) {
-                engine.addEntity(entityPacket.entity);
-                BuildingComponent bc = entityPacket.entity.getComponent(BuildingComponent.class);
-                if (bc != null && bc.buildingId.equals("HEADQUARTERS")) {
-                    TilePositionComponent tpc = entityPacket.entity.getComponent(TilePositionComponent.class);
-                    focusOnTile(tpc.tileX, tpc.tileY);
+            while (stream.getState() != StreamState.PLAYING) {
+                try {
+                    stream.updateStream();
+                    System.out.println("Updating stream, current state: " + stream.getState());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    throw new RuntimeException("Forcibly disconnected.");
                 }
-            } else {
-                engine.removeEntity(entityPacket.entity);
             }
+
+            // Connected. Process packets.
+            List<Packet> polledPackets = stream.pollAllPackets();
+            List<EntityPacket> entityList = new ArrayList<>();
+            World world = null;
+            for (Packet packet : polledPackets) {
+                if (packet instanceof WorldPacket) {
+                    world = ((WorldPacket) packet).world;
+                }
+                if (packet instanceof UUIDPacket) {
+                    playerUUID = ((UUIDPacket) packet).id;
+                }
+                if (packet instanceof EntityPacket) {
+                    entityList.add((EntityPacket) packet);
+                    //System.out.println("Recieved entity: "+((EntityPacket) packet).entity);
+                }
+            }
+
+            ACEngine engine = GameManager.createClientEngine(this, world);
+            engine.addEntityChangeListener((e, added) -> {
+                engine.getSystem(ResourceSystem.class).calculateTurn(true);
+            });
+            for (EntityPacket entityPacket : entityList) {
+                if (entityPacket.added) {
+                    engine.addEntity(entityPacket.entity);
+                    BuildingComponent bc = entityPacket.entity.getComponent(BuildingComponent.class);
+                    if (bc != null && bc.buildingId.equals("HEADQUARTERS")) {
+                        TilePositionComponent tpc = entityPacket.entity.getComponent(TilePositionComponent.class);
+                        focusOnTile(tpc.tileX, tpc.tileY);
+                    }
+                } else {
+                    engine.removeEntity(entityPacket.entity);
+                }
+            }
+            if (i == 0) {      
+                gameManager = new GameManager(stream, engine, world);
+            }
+            
         }
-        gameManager = new GameManager(stream, engine, world);
     }
 
     private void prepareUI() {
@@ -250,5 +256,18 @@ public class GameScreen implements Screen {
     }
 
     // Helper methods
+
+    public Stream getStream() {
+        return stream;
+    }
+
+    boolean turnFinished = false;
+    public void onTurnButtonPressed() {
+
+    }
+
+    public UUID getPlayerUUID() {
+        return playerUUID;
+    }
 
 }

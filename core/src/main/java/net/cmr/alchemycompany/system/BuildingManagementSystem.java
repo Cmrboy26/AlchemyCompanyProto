@@ -2,13 +2,17 @@ package net.cmr.alchemycompany.system;
 
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import net.cmr.alchemycompany.ACEngine;
 import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.IUpdateSystem;
 import net.cmr.alchemycompany.component.BuildingComponent;
+import net.cmr.alchemycompany.component.Component;
 import net.cmr.alchemycompany.component.OwnerComponent;
+import net.cmr.alchemycompany.component.PurchaseCostComponent;
 import net.cmr.alchemycompany.component.actions.BuildingActionComponent;
+import net.cmr.alchemycompany.component.actions.IActionComponent;
 import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
 import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
@@ -28,8 +32,7 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
 
     @Override
     public void update(float delta) {
-        Set<Entity> entities = engine.getEntities(buildingActionFamily);
-        for (Entity entity : entities) {
+        IActionComponent.processActionEntities(engine, BuildingActionComponent.class, (entity) -> {
             PlayerActionComponent pac = entity.getComponent(PlayerActionComponent.class);
             BuildingActionComponent bac = entity.getComponent(BuildingActionComponent.class);
 
@@ -49,9 +52,7 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
                     GameManager.onBuildingChange(playerID, x, y, engine);
                 }
             }
-
-            engine.removeEntity(entity);
-        }
+        });
     }
 
     public static boolean tryRemoveBuilding(UUID playerID, int x, int y, ACEngine engine) {
@@ -79,7 +80,17 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
             if (overrideVisibility || visibilitySystem == null || (visibilitySystem != null && visibilitySystem.isVisibleCurrently(playerID, x, y))) {
                 Entity building = BuildingFactory.createBuilding(playerID, type, x, y);
                 BuildingComponent bc = building.getComponent(BuildingComponent.class);
+                PurchaseCostComponent pcc = building.getComponent(PurchaseCostComponent.class);
                 if (bc.validPlacement.contains(tile.getFeature())) {
+                    if (pcc != null) {
+                        ResourceSystem resourceSystem = engine.getSystem(ResourceSystem.class);
+                        if (resourceSystem != null) {
+                            if (!resourceSystem.tryUseResources(playerID, pcc.getResourceCost(playerID, bc.buildingId, engine))) {
+                                return false;
+                            }
+                        }
+                    }
+
                     tile.setBuildingSlotID(building.getID()); // set tile occupied
                     engine.addEntity(building);
                     return true;

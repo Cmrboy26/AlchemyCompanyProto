@@ -1,18 +1,13 @@
 package net.cmr.alchemycompany.system;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import net.cmr.alchemycompany.component.BuildingComponent;
-import net.cmr.alchemycompany.component.Component;
 import net.cmr.alchemycompany.component.FogOfWarComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.SightComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
-import net.cmr.alchemycompany.component.UnitComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
@@ -67,7 +62,7 @@ public class VisibilitySystem extends EntitySystem {
 
     public void updateVisibility(UUID playerID) {
         FogOfWarComponent fogOfWar = getFogComponent(playerID);
-        Family sightFamily = Family.all(SightComponent.class, TilePositionComponent.class);
+        Family sightFamily = Family.all(SightComponent.class, TilePositionComponent.class, OwnerComponent.class);
         Set<Entity> validEntities = engine.getEntities(sightFamily);
         // Keep references valid
         fogOfWar.currentlyVisibleTiles.putIfAbsent(playerID, new HashSet<>());
@@ -77,6 +72,10 @@ public class VisibilitySystem extends EntitySystem {
         visibleTileCoordinates.clear();
         for (Entity entity : validEntities) {
             TilePositionComponent tilePosition = entity.getComponent(TilePositionComponent.class);
+            OwnerComponent owner = entity.getComponent(OwnerComponent.class);
+            if (!owner.playerID.equals(playerID.toString())) {
+                continue;
+            }
             int radius = entity.getComponent(SightComponent.class).radius;
             for (int x = radius; x >= -radius; x--) {
                 for (int y = radius; y >= -radius; y--) {

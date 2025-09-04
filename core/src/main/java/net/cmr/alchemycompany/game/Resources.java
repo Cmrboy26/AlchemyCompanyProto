@@ -44,11 +44,12 @@ public class Resources {
         return resources;
     }
 
+    // TODO: display max storage here
     public static Table createResourceTable(Resource resource, float productionAmount, float storageAmount) {
         Skin skin = Sprites.getSkin();
         Table resourceInfoTable = new Table(skin);
         // System.out.println(productionAmount + ": "+resource.getName());
-        if (productionAmount == 0) {
+        if (productionAmount == 0 && storageAmount == 0) {
             return resourceInfoTable;
         }
         String sign = productionAmount > 0 ? "+" : "";

@@ -14,6 +14,11 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.GameScreen;
 import net.cmr.alchemycompany.IsometricHelper;
+import net.cmr.alchemycompany.component.BuildingComponent;
+import net.cmr.alchemycompany.component.OwnerComponent;
+import net.cmr.alchemycompany.component.TilePositionComponent;
+import net.cmr.alchemycompany.ecs.Entity;
+import net.cmr.alchemycompany.ecs.Family;
 import net.cmr.alchemycompany.system.SelectionSystem;
 import net.cmr.alchemycompany.world.TilePoint;
 
@@ -124,6 +129,21 @@ public class InputHelper extends ScreenHelper {
         } else {
             lastMouseX = -1;
             lastMouseY = -1;
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.L)) {
+            for (Entity entity : gameManager.getEngine().getEntities(Family.all(BuildingComponent.class, OwnerComponent.class))) {
+                OwnerComponent oc = entity.getComponent(OwnerComponent.class);
+                if (oc.playerID != null && oc.playerID.equals(playerUUID.toString())) {
+                    BuildingComponent bc = entity.getComponent(BuildingComponent.class);
+                    if (bc.buildingId.equals("HEADQUARTERS")) {
+                        TilePositionComponent tpc = entity.getComponent(TilePositionComponent.class);
+                        System.out.println("FOCUSING");
+                        screen.focusOnTile(tpc.tileX, tpc.tileY);
+                        break;
+                    }
+                }
+            }
         }
     }
     

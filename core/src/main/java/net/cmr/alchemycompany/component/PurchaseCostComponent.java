@@ -2,13 +2,18 @@ package net.cmr.alchemycompany.component;
 
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.UUID;
 
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 
+import net.cmr.alchemycompany.ecs.Engine;
+import net.cmr.alchemycompany.ecs.Entity;
+import net.cmr.alchemycompany.ecs.Family;
+
 public class PurchaseCostComponent extends Component {
 
-    public HashMap<String, Float> resourceCost, resourceCostScale;
+    private HashMap<String, Float> resourceCost, resourceCostScale;
 
     public PurchaseCostComponent() { }
     public PurchaseCostComponent(HashMap<String, Float> resourceCost, HashMap<String, Float> resourceCostScale) {
@@ -48,9 +53,32 @@ public class PurchaseCostComponent extends Component {
             for (JsonValue entry = resourceCostScale.child; entry != null; entry = entry.next) {
                 String key = entry.name;
                 Float value = entry.asFloat();
-                this.resourceCost.put(key, value);
+                this.resourceCostScale.put(key, value);
             }
         }
+    }
+
+    public HashMap<String, Float> getResourceCost(UUID playerUUID, String buildingID, Engine engine) {
+        int existingBuildings = 0;
+        for (Entity entity : engine.getEntities(Family.all(BuildingComponent.class, OwnerComponent.class))) {
+            OwnerComponent owner = entity.getComponent(OwnerComponent.class);
+            BuildingComponent building = entity.getComponent(BuildingComponent.class);
+            if (owner != null && owner.playerID != null && owner.playerID.equals(playerUUID.toString())
+                && building != null && building.buildingId != null && building.buildingId.equals(buildingID)) {
+                existingBuildings++;
+            }
+        }
+        return getResourceCost(existingBuildings);
+    }
+
+    public HashMap<String, Float> getResourceCost(int existingBuildings) {
+        HashMap<String, Float> updatedResourceCost = new HashMap<>(resourceCost);
+        for (Entry<String, Float> entry : resourceCostScale.entrySet()) {
+            String resource = entry.getKey();
+            Float scale = entry.getValue();
+            updatedResourceCost.put(resource, updatedResourceCost.getOrDefault(resource, 0f) + scale * existingBuildings);
+        }
+        return updatedResourceCost;
     }
 
 }

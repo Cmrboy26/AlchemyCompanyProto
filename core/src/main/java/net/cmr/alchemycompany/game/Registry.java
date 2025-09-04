@@ -55,7 +55,7 @@ public class Registry {
             
             System.out.println("Loaded " + register.get(clazz).size() + " objects from "+jsonFile.name());
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new Error("Failed to parse registry file \""+jsonFile.nameWithoutExtension()+"\"", e);
         }
     }
 

@@ -6,18 +6,19 @@ import java.util.HashSet;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 
+import net.cmr.alchemycompany.game.Registry;
 import net.cmr.alchemycompany.game.Technology;
 
 public class ResearchManagementComponent extends Component {
 
     HashSet<String> researchedTechnologies;
     Technology currentResearch;
-    HashMap<String, Float> resourcesInvested;
+    HashMap<String, Float> costRemaining;
 
     public ResearchManagementComponent() {
         researchedTechnologies = new HashSet<>();
         currentResearch = null;
-        resourcesInvested = new HashMap<>();
+        costRemaining = new HashMap<>();
     }
 
     @Override
@@ -25,9 +26,9 @@ public class ResearchManagementComponent extends Component {
         json.writeValue("researchedTechnologies", researchedTechnologies, HashSet.class, Technology.class);
         json.writeValue("currentResearch", currentResearch, String.class);
         
-        json.writeArrayStart("resourcesInvested");
-        for (String key : resourcesInvested.keySet()) {
-            json.writeValue(key, resourcesInvested.get(key), Float.class);
+        json.writeArrayStart("costRemaining");
+        for (String key : costRemaining.keySet()) {
+            json.writeValue(key, costRemaining.get(key), Float.class);
         }
         json.writeArrayEnd();
     }
@@ -37,13 +38,13 @@ public class ResearchManagementComponent extends Component {
         researchedTechnologies = json.readValue("researchedTechnologies", HashSet.class, String.class, jsonData);
         currentResearch = json.readValue("currentResearch", Technology.class, jsonData);
 
-        resourcesInvested = new HashMap<>();
-        JsonValue resourcesArray = jsonData.get("resourcesInvested");
+        costRemaining = new HashMap<>();
+        JsonValue resourcesArray = jsonData.get("costRemaining");
         if (resourcesArray != null) {
             for (JsonValue entry = resourcesArray.child; entry != null; entry = entry.next) {
                 String key = entry.name;
                 Float value = entry.asFloat();
-                resourcesInvested.put(key, value);
+                costRemaining.put(key, value);
             }
         }
     }
@@ -55,7 +56,21 @@ public class ResearchManagementComponent extends Component {
         return currentResearch;
     }
     public boolean hasResearched(String technology) {
+        //return true;
         return researchedTechnologies.contains(technology);
+    }
+    public boolean startResearch(String technologyId) {
+        if (currentResearch != null) return false; // Already researching something
+        Technology tech = Registry.getInstance().getRegistry(Technology.class).get(technologyId);
+        if (tech == null) return false; // Invalid technology
+        if (researchedTechnologies.contains(technologyId)) return false; // Already researched
+        currentResearch = tech;
+        costRemaining = new HashMap<>(tech.getCost());
+        return true;
+    }
+    public void stopResearch() {
+        currentResearch = null;
+        costRemaining.clear();
     }
     
 }

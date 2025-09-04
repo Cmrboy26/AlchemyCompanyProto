@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
@@ -20,9 +21,9 @@ public abstract class Engine {
     private Set<BiConsumer<Entity, Boolean>> entityChangeListeners;
 
     public Engine() {
-        this.entities = new HashMap<>();
-        this.componentIndex = new HashMap<>();
-        this.systemMap = new HashMap<>();
+        this.entities = new ConcurrentHashMap<>();
+        this.componentIndex = new ConcurrentHashMap<>();
+        this.systemMap = new ConcurrentHashMap<>();
         this.entityChangeListeners = new HashSet<>();
     }
 
@@ -93,6 +94,9 @@ public abstract class Engine {
     @SuppressWarnings("unchecked")
     public <T extends EntitySystem> T getSystem(Class<T> systemClass) {
         return (T) systemMap.get(systemClass);
+    }
+    public Map<Class<? extends EntitySystem>, EntitySystem> getSystems() {
+        return Collections.unmodifiableMap(systemMap);
     }
 
     public Set<Entity> getComponentMapper(Class<? extends Component> componentClass) {

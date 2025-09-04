@@ -1,6 +1,22 @@
 {
     "registry": [
         {
+            "id": "PROCESSING",
+            "name": "Processing",
+            "description": "Process new technologies.",
+            "icon": "MINES",
+            "position": [1, 0],
+            "cost": 25
+        },
+        {
+            "id": "ADVANCED_PROCESSING",
+            "name": "Advanced Processing",
+            "description": "Process new technologies.",
+            "icon": "MINES",
+            "position": [1, 0],
+            "cost": 25
+        },
+        {
             "id": "EXTRACTION",
             "name": "Extraction",
             "description": "New technologies allow extraction.",

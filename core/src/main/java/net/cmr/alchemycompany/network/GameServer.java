@@ -2,10 +2,13 @@ package net.cmr.alchemycompany.network;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 import net.cmr.alchemycompany.ACEngine;
@@ -24,20 +27,24 @@ import net.cmr.alchemycompany.network.packet.UUIDPacket;
 import net.cmr.alchemycompany.world.World;
 import net.cmr.alchemycompany.world.World.WorldType;
 
-public class GameServer {
+public class GameServer implements PlayerStateListener {
 
     private Object streamLock = new Object(), broadcastLock = new Object();
-    private Map<UUID, Stream> playerStreams; // player is assigned randomly selected uuid
+    private Map<UUID, Stream> playerStreams; // contains all player streams, including computer players
+    private Map<UUID, LocalStream> computerPlayerStreams; // contains only computer player streams. localstream because all computer players are local.
     private ACEngine engine;
     private List<Packet> queuedBroadcasts;
     private GameManager gameManager;
+    private Set<PlayerStateListener> playerStateListeners;
 
     public GameServer() {
         playerStreams = new HashMap<>();
         queuedBroadcasts = new ArrayList<>();
+        playerStateListeners = new HashSet<>();
+        computerPlayerStreams = new HashMap<>();
 
         World world = new World(WorldType.SMALL, System.currentTimeMillis());
-        ACEngine engine = GameManager.createServerEngine(world);
+        ACEngine engine = GameManager.createServerEngine(this, world);
         this.engine = engine;
         this.engine.setWorld(world);
         engine.addEntityChangeListener((entity, added) -> {
@@ -119,13 +126,16 @@ public class GameServer {
         // If new connection, create a stream.
     }
 
-    public void addClientStream(LocalStream clientStream) {
+    public void addClientStream(LocalStream clientStream, boolean isComputerPlayer) {
         synchronized (streamLock) {
             LocalStream serverStream = new LocalStream(this, false, clientStream);
             clientStream.otherStream = serverStream;
             serverStream.setServerObject(this);
             UUID playerUUID = UUID.randomUUID();
             playerStreams.put(playerUUID, serverStream);
+            if (isComputerPlayer) {
+                computerPlayerStreams.put(playerUUID, serverStream);
+            }
             serverStream.sendPacket(new UUIDPacket(playerUUID));
             initializeNewPlayer(playerUUID);
         }
@@ -156,6 +166,8 @@ public class GameServer {
                 break;
             }
         }
+
+        onPlayerConnected(playerUUID, playerStreams.get(playerUUID));
     }
 
     public void processPacket(UUID playerID, Stream stream, Packet packet) {
@@ -192,6 +204,52 @@ public class GameServer {
     }
     public World getWorld() {
         return engine.getWorld();
+    }
+    public Set<UUID> getPlayerUUIDs() {
+        return playerStreams.keySet();
+    }
+    public Map<UUID, Stream> getPlayerStreams() {
+        return Collections.unmodifiableMap(playerStreams);
+    }
+    public Map<UUID, Stream> getComputerPlayerStreams() {
+        return Collections.unmodifiableMap(computerPlayerStreams);
+    }
+
+    public void registerPlayerStateListener(PlayerStateListener listener) {
+        playerStateListeners.add(listener);
+    }
+    public void unregisterPlayerStateListener(PlayerStateListener listener) {
+        playerStateListeners.remove(listener);
+    }
+
+    @Override
+    public void onPlayerConnected(UUID playerUUID, Stream stream) {
+        // TODO: add multithreading support for connected and disconnected
+        Set<PlayerStateListener> finishedListeners = new HashSet<>();
+        for (PlayerStateListener listener : playerStateListeners) {
+            listener.onPlayerConnected(playerUUID, stream);
+            if (listener.isFinished()) {
+                finishedListeners.add(listener);
+            }
+        }
+        for (PlayerStateListener listener : finishedListeners) {
+            playerStateListeners.remove(listener);
+        }
+    }
+
+    @Override
+    public void onPlayerDisconnected(UUID playerUUID, Stream stream) {
+        // TODO: if a player disconnects, create a computer player to take over
+        Set<PlayerStateListener> finishedListeners = new HashSet<>();
+        for (PlayerStateListener listener : playerStateListeners) {
+            listener.onPlayerDisconnected(playerUUID, stream);
+            if (listener.isFinished()) {
+                finishedListeners.add(listener);
+            }
+        }
+        for (PlayerStateListener listener : finishedListeners) {
+            playerStateListeners.remove(listener);
+        }
     }
 
 }

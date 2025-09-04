@@ -3,42 +3,81 @@ package net.cmr.alchemycompany.system;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.utils.Null;
 
+import net.cmr.alchemycompany.GameScreen;
+import net.cmr.alchemycompany.ITurnSystem;
 import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.ConsumerComponent;
+import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.ProducerComponent;
 import net.cmr.alchemycompany.component.StorageComponent;
 import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
+import net.cmr.alchemycompany.ecs.Family;
 import net.cmr.alchemycompany.game.Registry;
 import net.cmr.alchemycompany.game.Registry.ResourceFilter;
 import net.cmr.alchemycompany.game.Resource;
 
-public class ResourceSystem extends EntitySystem {
+public class ResourceSystem extends EntitySystem implements ITurnSystem {
 
-    private Map<String, Float> displayGenerationPerSecond = new HashMap<>();
-    private List<Entity> activeEntities = new ArrayList<>();
+    private Map<UUID, Map<String, Float>> cachedGenerationPerSecond = new HashMap<>();
+    private Map<UUID, Map<String, Float>> cachedStoredResources = new HashMap<>();
+    private Map<UUID, List<Entity>> activeEntities = new HashMap<>();
+    private final @Null GameScreen playerScreen;
+
+    public ResourceSystem() {
+        this.playerScreen = null;
+    }
+    public ResourceSystem(GameScreen screen) {
+        this.playerScreen = screen;
+    }
 
     @Override
     public void addedToEngine(Engine engine) {
         super.addedToEngine(engine);
     }
 
-    public void calculateTurn() {
+    public void calculateTurn(boolean simulate) {
+        Set<UUID> players = new HashSet<>();
+        if (playerScreen != null) {
+            players.add(getLocalPlayerUUID());
+        } else {
+            Set<Entity> ownedEntities = engine.getComponentMapper(OwnerComponent.class);
+            for (Entity e : ownedEntities) {
+                OwnerComponent owner = e.getComponent(OwnerComponent.class);
+                if (owner != null && owner.playerID != null) {
+                    try {
+                        players.add(UUID.fromString(owner.playerID));
+                    } catch (IllegalArgumentException ex) {
+                        System.err.println("Invalid UUID string in OwnerComponent: " + owner.playerID);
+                    }
+                }
+            }
+        }
+
+        for (UUID playerUUID : players) {
+            calculateTurn(playerUUID, simulate);
+        }
+    }
+
+    private void calculateTurn(UUID playerUUID, boolean simulate) {
         Map<String, Float> generationPerSecond = new HashMap<>();
         Map<String, Float> trueResourcesInStorage = new HashMap<>();
         Map<String, Float> calculatedStoredResources = new HashMap<>();
         Map<String, Float> calculatedTotalStorageCapacity = new HashMap<>();
 
-        List<Entity> activeEntities = calculateBuildingOutput(trueResourcesInStorage, calculatedStoredResources, calculatedTotalStorageCapacity);
-        this.activeEntities = activeEntities;
+        List<Entity> activeEntities = calculateBuildingOutput(playerUUID, trueResourcesInStorage, calculatedStoredResources, calculatedTotalStorageCapacity);
 
         for (Resource resource : Registry.getResourceValues(ResourceFilter.OMIT_PER_TURN).values()) {
             float inStorage = trueResourcesInStorage.getOrDefault(resource.getId(), 0f);
@@ -54,24 +93,102 @@ public class ResourceSystem extends EntitySystem {
             generationPerSecond.put(resource.getId(), rps);
         }
 
-        System.out.println("Resource system calculating");
+        Set<Entity> storageBuildings = engine.getEntities(Family.all(StorageComponent.class, OwnerComponent.class));
+        if (!simulate) {
+            // Put calulated resources into storage components
+            for (Entity building : activeEntities) {
+                // TODO: add active display
+                //building.setActive();
+            }
+
+            // TODO: use resources that are per turn (like science)
+            for (Resource perTurnResources : Registry.getResourceValues(ResourceFilter.PER_TURN).values()) {
+                // Remove per turn resources from storage (they are not stored, just used)
+                calculatedStoredResources.remove(perTurnResources.getId());
+            }
+
+            // Progress research
+            /*float sciencePointsGained = calculatedStoredResources.getOrDefault(Resource.SCIENCE, 0f);
+
+            boolean scienceResearched = researchManager.addScience(sciencePointsGained);
+            if (scienceResearched) {
+                screen.researchButton.clearActions();
+                screen.researchButton.addAction(Actions.sequence(Actions.run(() -> {
+                    screen.researchButton.setText("RESEARCH\nCOMPLETE");
+                }), Actions.delay(2),Actions.run(() -> {
+                    screen.researchButton.setText("Research");
+                })));
+            }
+            calculatedStoredResources.remove(Resource.SCIENCE);*/
+
+            // Fill storages with remaining resources
+            for (Entity building : storageBuildings) {
+                StorageComponent storage = building.getComponent(StorageComponent.class);
+                OwnerComponent owner = building.getComponent(OwnerComponent.class);
+                if (owner == null || owner.playerID == null || !owner.playerID.equals(playerUUID.toString())) {
+                    continue; // Not owned by this player
+                }
+
+                for (String resourceID : storage.getMaxStorage().keySet()) {
+                    storage.consumeAmount(resourceID, storage.getAmountStored(resourceID));
+                    float toAdd = calculatedStoredResources.getOrDefault(resourceID, 0f);
+                    float remainingAfterAdd = storage.addAmount(resourceID, toAdd); 
+                    calculatedStoredResources.put(resourceID, remainingAfterAdd);
+                    //displayStoredResources.put(resource, displayStoredResources.getOrDefault(resource, 0f) + storage.getAmountStored(resource));
+                }
+            }
+
+            Set<Entity> buildingsToBroadcast = new HashSet<>();
+            buildingsToBroadcast.addAll(activeEntities);
+            buildingsToBroadcast.addAll(storageBuildings);
+            for (Entity building : buildingsToBroadcast) {
+                engine.changedEntity(building);
+            }
+        }
+
+        trueResourcesInStorage.clear();
+        for (Entity building : storageBuildings) {
+            StorageComponent storage = building.getComponent(StorageComponent.class);
+            OwnerComponent owner = building.getComponent(OwnerComponent.class);
+            if (owner == null || owner.playerID == null || !owner.playerID.equals(playerUUID.toString())) {
+                continue; // Not owned by this player
+            }
+
+            for (String resourceID : storage.getMaxStorage().keySet()) {
+                float amountStored = storage.getAmountStored(resourceID);
+                if (amountStored > 0) {
+                    trueResourcesInStorage.put(resourceID,
+                            trueResourcesInStorage.getOrDefault(resourceID, 0f) + amountStored);
+                }
+            }
+        }
+
+        System.out.println("Resource system calculating: "+playerUUID+"\t"+playerScreen);
         generationPerSecond.keySet().stream()
             .sorted()
-            .filter((rid) -> { return generationPerSecond.get(rid) != 0; })
+            .filter((rid) -> { return generationPerSecond.get(rid) != 0 || trueResourcesInStorage.getOrDefault(rid, 0f) != 0; })
             .forEach(resourceId ->
-            System.out.print(resourceId + ", " + generationPerSecond.get(resourceId) + "\t")
+            System.out.print(resourceId + ", " + generationPerSecond.get(resourceId) + "\t" + trueResourcesInStorage.getOrDefault(resourceId, 0f) + " / " + calculatedTotalStorageCapacity.getOrDefault(resourceId, 0f) + "\n")
             );
         System.out.println();
-        displayGenerationPerSecond = new HashMap<>(generationPerSecond);
+
+        System.out.println(getLocalPlayerUUID() + " == " + playerUUID + " ? " + (getLocalPlayerUUID() != null && getLocalPlayerUUID().equals(playerUUID)));
+        //if (getLocalPlayerUUID() != null && getLocalPlayerUUID().equals(playerUUID)) {
+            // Only update display for local player
+        this.cachedGenerationPerSecond.put(playerUUID, new HashMap<>(generationPerSecond));
+        this.activeEntities.put(playerUUID, new ArrayList<>(activeEntities));
+        this.cachedStoredResources.put(playerUUID, new HashMap<>(trueResourcesInStorage));
+        //}
     }
 
+    // TODO: things that only produce one thing should fill storage up to max. this doesnt happen with quartz for some reason???
     /**
      * @param resourcesInStorageOutput used for display in calculation
      * @param storedResourcesOutput amount of resources to be stored at the end of a turn
      * @param totalStorageCapacityOutput total amount of storage capacity (max holdable resources)
      * @return list of buildings that should be converted to active instead of idle
      */
-    public List<Entity> calculateBuildingOutput(final Map<String, Float> resourcesInStorageOutput, final Map<String, Float> storedResourcesOutput, final Map<String, Float> totalStorageCapacityOutput) {
+    public List<Entity> calculateBuildingOutput(final UUID playerUUID, final Map<String, Float> resourcesInStorageOutput, final Map<String, Float> storedResourcesOutput, final Map<String, Float> totalStorageCapacityOutput) {
         // Produce and consume all resources
         List<Entity> buildingsToProcess = new ArrayList<>();
         // Use a set to avoid duplicates
@@ -79,6 +196,10 @@ public class ResourceSystem extends EntitySystem {
         uniqueEntities.addAll(engine.getComponentMapper(ProducerComponent.class));
         uniqueEntities.addAll(engine.getComponentMapper(ConsumerComponent.class));
         uniqueEntities.addAll(engine.getComponentMapper(StorageComponent.class));
+        uniqueEntities.removeIf((e) -> {
+            OwnerComponent owner = e.getComponent(OwnerComponent.class);
+            return owner == null || owner.playerID == null || !owner.playerID.equals(playerUUID.toString());
+        });
         buildingsToProcess.addAll(uniqueEntities);
 
         List<Entity> toBeActive = new ArrayList<>();
@@ -116,8 +237,8 @@ public class ResourceSystem extends EntitySystem {
                         continue;
                     }*/
 
-                    boolean isProductionBuilding = building.hasComponent(ProducerComponent.class);
-                    boolean isConsumptionBuilding = building.hasComponent(ConsumerComponent.class);
+                    boolean isProductionBuilding = building.hasComponent(ProducerComponent.class) && building.getComponent(ProducerComponent.class).production.size() != 0;
+                    boolean isConsumptionBuilding = building.hasComponent(ConsumerComponent.class) && building.getComponent(ConsumerComponent.class).consumption.size() != 0;
                     boolean isStorageBuilding = building.hasComponent(StorageComponent.class);
                     boolean processed = false;
 
@@ -152,10 +273,18 @@ public class ResourceSystem extends EntitySystem {
                                 }
                                 float totalResourcesAfter = storedResourcesOutput.getOrDefault(resourceId, 0f) + producedResources.getOrDefault(resourceId, 0f);
                                 // If there is enough space for one "craft", allow the resource to be crafted
-                                if (totalResourcesAfter <= totalStorageCapacityOutput.getOrDefault(resourceId, 0f)) {
+                                // TODO: if a building adds 3 and theres 9 with a capacity of 10, totalResourcesAfter is 12, but there is space for one craft
+                                
+                                System.out.println(resourceId + ": " + storedResourcesOutput.getOrDefault(resourceId, 0f) + " / " + totalStorageCapacityOutput.getOrDefault(resourceId, 0f) + " (after: " + totalResourcesAfter + ")");
+                                if (storedResourcesOutput.getOrDefault(resourceId, 0f) < totalStorageCapacityOutput.getOrDefault(resourceId, 0f)) {
                                     spaceAvailable = true;
                                     break;
                                 }
+
+                                /*if (totalResourcesAfter <= totalStorageCapacityOutput.getOrDefault(resourceId, 0f)) {
+                                    spaceAvailable = true;
+                                    break;
+                                }*/
                             }
                         }
 
@@ -219,12 +348,88 @@ public class ResourceSystem extends EntitySystem {
         return toBeActive;
     }
 
-    public Map<String, Float> getDisplayResourcePerSecond() {
-        return displayGenerationPerSecond;
+    /**
+     * @param resourcesToStore
+     * @return remaining resources that could not be stored (all storage full)
+     */
+    /*public Map<String, Float> distributeStorage(Map<String, Float> resourcesToStore) {
+        // Clear all storage buildings
+        Set<Entity> storageBuildings = engine.getEntities(Family.all(StorageComponent.class, OwnerComponent.class));
+        // Distribute resources among storage buildings
+        for (Entity building : storageBuildings) {
+            StorageComponent storage = building.getComponent(StorageComponent.class);
+            for (String resourceID : storage.getMaxStorage().keySet()) {
+                storage.consumeAmount(resourceID, storage.getAmountStored(resourceID));
+            }
+        }
+        Map<String, Float> remainingResources = new HashMap<>();
+        for (String resourceID : resourcesToStore.keySet()) {
+            float toAdd = resourcesToStore.get(resourceID);
+            for (Entity building : storageBuildings) {
+                StorageComponent storage = building.getComponent(StorageComponent.class);
+                float remainingAfterAdd = storage.addAmount(resourceID, toAdd); 
+                toAdd = remainingAfterAdd;
+                if (toAdd == 0) break;
+            }
+            if (toAdd > 0) {
+                remainingResources.put(resourceID, toAdd);
+            }
+        }
+        // Update all storage buildings
+        for (Entity building : storageBuildings) {
+            engine.changedEntity(building);
+        }
+        return remainingResources;
+    }*/
+
+    public boolean tryUseResources(UUID playerUUID, Map<String, Float> resourcesToUse) {
+        Map<String, Float> storedResources = new HashMap<>(this.cachedStoredResources.get(playerUUID));
+        // Check if enough resources are available
+        for (String resourceId : resourcesToUse.keySet()) {
+            float amountToUse = resourcesToUse.get(resourceId);
+            float amountInStorage = this.cachedStoredResources.get(playerUUID).getOrDefault(resourceId, 0f);
+            if (amountInStorage < amountToUse) {
+                return false;
+            }
+        }
+
+        // If so, remove them from their storages
+        for (String resource : resourcesToUse.keySet()) {
+            Set<Entity> storageBuildings = engine.getEntities(Family.all(StorageComponent.class, OwnerComponent.class));
+            float toUse = resourcesToUse.get(resource);
+            System.out.println(toUse);
+            for (Entity building : storageBuildings) {
+                OwnerComponent owner = building.getComponent(OwnerComponent.class);
+                if (owner == null || owner.playerID == null || !owner.playerID.equals(playerUUID.toString())) {
+                    continue; // Not owned by this player
+                }
+                StorageComponent storage = building.getComponent(StorageComponent.class);
+                float amountInThisStorage = storage.getAmountStored(resource);
+                if (amountInThisStorage >= toUse) {
+                    storage.consumeAmount(resource, toUse);
+                    toUse = 0;
+                } else {
+                    storage.consumeAmount(resource, amountInThisStorage);
+                    toUse -= amountInThisStorage;
+                }
+                engine.changedEntity(building);
+                if (toUse == 0) break;
+            }
+        }
+
+        calculateTurn(true);
+        return true;
     }
 
-    public List<Entity> getActiveEntities() {
-        return activeEntities;
+    public Map<String, Float> getDisplayResourcePerSecond(UUID playerUUID) {
+        return cachedGenerationPerSecond.get(playerUUID);
+    }
+    public Map<String, Float> getCachedStoredResources(UUID playerUUID) {
+        return cachedStoredResources.get(playerUUID);
+    }
+
+    public List<Entity> getActiveEntities(UUID playerUUID) {
+        return activeEntities.get(playerUUID);
     }
 
     public static Image getImageDisplay(Resource resource) {
@@ -234,5 +439,23 @@ public class ResourceSystem extends EntitySystem {
     public static Image getImageDisplay(String resourceId) {
         return getImageDisplay(Registry.getResourceRegistry().get(resourceId));
     }
+
+    private UUID getLocalPlayerUUID() {
+        if (playerScreen != null) {
+            return playerScreen.getPlayerUUID();
+        }
+        return null;
+    }
+
+    @Override
+    public void onTurn() {
+        calculateTurn(false);
+    }
+    @Override
+    public int getTurnPriority() {
+        return 1;
+    }
+
+    
 
 }

@@ -4,7 +4,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.function.Function;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
@@ -48,8 +51,11 @@ import net.cmr.alchemycompany.game.Recipe;
 import net.cmr.alchemycompany.game.Registry;
 import net.cmr.alchemycompany.game.Resource;
 import net.cmr.alchemycompany.game.Resources;
+import net.cmr.alchemycompany.game.Technology;
+import net.cmr.alchemycompany.system.ResearchSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
 import net.cmr.alchemycompany.system.SelectionSystem;
+import net.cmr.alchemycompany.system.TurnSystem;
 import net.cmr.alchemycompany.world.TilePoint;
 
 public class MenuHelper extends ScreenHelper {
@@ -87,8 +93,9 @@ public class MenuHelper extends ScreenHelper {
                 return !(r.getId().equals("GOLD") || r.getId().equals("SCIENCE"));
             });
             for (Resource resource : resourceSet) {
-                float productionAmount = gameManager.getEngine().getSystem(ResourceSystem.class).getDisplayResourcePerSecond().getOrDefault(resource.getId(), 0f);
-                Table resourceInfoTable = Resources.createResourceTable(resource, productionAmount, 0);
+                float storageAmount = gameManager.getEngine().getSystem(ResourceSystem.class).getCachedStoredResources(playerUUID).getOrDefault(resource.getId(), 0f);
+                float productionAmount = gameManager.getEngine().getSystem(ResourceSystem.class).getDisplayResourcePerSecond(playerUUID).getOrDefault(resource.getId(), 0f);
+                Table resourceInfoTable = Resources.createResourceTable(resource, productionAmount, storageAmount);
                 resourceTable2.add(resourceInfoTable).space(10);
             }
         })));
@@ -106,8 +113,9 @@ public class MenuHelper extends ScreenHelper {
                 return r.getId().equals("GOLD") || r.getId().equals("SCIENCE");
             });
             for (Resource resource : resourceSet) {
-                float productionAmount = gameManager.getEngine().getSystem(ResourceSystem.class).getDisplayResourcePerSecond().getOrDefault(resource.getId(), 0f);
-                Table resourceInfoTable = Resources.createResourceTable(resource, productionAmount, 0);
+                float storageAmount = gameManager.getEngine().getSystem(ResourceSystem.class).getCachedStoredResources(playerUUID).getOrDefault(resource.getId(), 0f);
+                float productionAmount = gameManager.getEngine().getSystem(ResourceSystem.class).getDisplayResourcePerSecond(playerUUID).getOrDefault(resource.getId(), 0f);
+                Table resourceInfoTable = Resources.createResourceTable(resource, productionAmount, storageAmount);
                 if (resourceInfoTable.getChildren().size != 0) {
                     resourceTable.add(resourceInfoTable).space(10).row();
                 }
@@ -120,7 +128,41 @@ public class MenuHelper extends ScreenHelper {
         
         // Right bottom is turn button
 
+        Table rightBottom = new Table();
+        rightBottom.setFillParent(true);
+        rightBottom.right().bottom().pad(10);
+        Table turnTable = new Table(skin);
+        turnTable.setBackground(skin.getDrawable("window"));
+        turnTable.pad(4);
+        rightBottom.add(turnTable).right().bottom().space(10);
+        stage.addActor(rightBottom);
 
+        Callable<Integer> turnNumberCallable = () -> {
+            return 0;
+        };
+        Label turnLabel = new Label("Turn: ...", skin);
+        turnLabel.setFontScale(0.75f);
+        turnLabel.addAction(Actions.forever(Actions.run(() -> {
+            try {
+                turnLabel.setText("Turn: " + turnNumberCallable.call());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        })));
+        turnTable.add(turnLabel).pad(4).row();
+
+        final String endTurnString = "End Turn";
+        final String continueTurnString = "Continue Turn";
+
+        TextButton endTurnButton = new TextButton(endTurnString, skin);
+        endTurnButton.addListener(new InputListener() {
+            @Override
+            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                TurnSystem.broadcastTurnState(endTurnButton.isPressed(), playerUUID, screen.getStream());
+                return true;
+            }
+        });
+        turnTable.add(endTurnButton).size(64);
 
         // Left is shop menu, research, any selection menu
 
@@ -172,6 +214,18 @@ public class MenuHelper extends ScreenHelper {
         Table shopEntries = new Table(skin);
         ScrollPane scrollEntries = new ScrollPane(shopEntries, skin);
         scrollEntries.setScrollingDisabled(true, false);
+
+        final Function<Set<String>, Boolean> hasResearchFunction = (Set<String> techs) -> {
+            ResearchSystem system = gameManager.getEngine().getSystem(ResearchSystem.class);
+            if (system == null) return false;
+            for (String researchID : techs) {
+                if (!system.hasTechnology(playerUUID.toString(), researchID)) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
         for (String buildingId : buildingIds) {
             Button button = new Button(skin, "toggle");
 
@@ -194,20 +248,47 @@ public class MenuHelper extends ScreenHelper {
             button.add(buildingImage).left().expandX();
 
             Table costTable = new Table(skin);
-            final int columns = (int) Math.floor(pcc.resourceCost.size() / 3) + 1;
-            int index = 0;
-            for (Entry<String, Float> entry : pcc.resourceCost.entrySet()) {
-                Resource resource = Registry.getResourceRegistry().get(entry.getKey());
-                Float consumptionPerTurn = entry.getValue();
-                Image image = new Image(Sprites.getSprite(resource.getIcon()));
-                Label label = new Label(""+consumptionPerTurn, skin);
-                costTable.add(label).pad(2).growX();
-                costTable.add(image).size(16).growX();
-                if (index % columns == columns - 1) {
-                    costTable.row();
+            costTable.addAction(Actions.forever(Actions.run(() -> {
+                costTable.clearChildren();
+                boolean researchMet = hasResearchFunction.apply(rrc.technologiesRequired);
+                buildingImage.setVisible(researchMet);
+
+                if (!researchMet) {
+                    cost.setText("");
+                    cost.setWrap(true);
+                    String researchRequirementString = "Requires:\n";
+                    for (String techId : rrc.technologiesRequired) {
+                        Technology tech = Registry.getInstance().getRegistry(Technology.class).get(techId);
+                        if (tech != null) {
+                            researchRequirementString += "- " + tech.getName();
+                        } else {
+                            researchRequirementString += "- " + techId;
+                        }
+                        researchRequirementString += "\n";
+                    }
+                    Label label = new Label(researchRequirementString, skin);
+                    label.setFontScale(0.6f);
+                    label.setColor(Color.RED);
+                    costTable.add(label);
+                } else {
+                    cost.setText("Cost");
+                    cost.setFontScale(0.75f);
+                    final int columns = (int) Math.floor(pcc.getResourceCost(playerUUID, buildingId, gameManager.getEngine()).size() / 3) + 1;
+                    int index = 0;
+                    for (Entry<String, Float> entry : pcc.getResourceCost(playerUUID, buildingId, gameManager.getEngine()).entrySet()) {
+                        Resource resource = Registry.getResourceRegistry().get(entry.getKey());
+                        Float costDisplay = entry.getValue();
+                        Image image = new Image(Sprites.getSprite(resource.getIcon()));
+                        Label label = new Label(""+costDisplay, skin);
+                        costTable.add(label).pad(2).growX();
+                        costTable.add(image).size(16).growX();
+                        if (index % columns == columns - 1) {
+                            costTable.row();
+                        }
+                        index++;
+                    }
                 }
-                index++;
-            }
+            })));
 
             button.add(costTable).center().expandX().row();
 
@@ -215,8 +296,20 @@ public class MenuHelper extends ScreenHelper {
             button.setName(buildingId);
 
             button.addAction(Actions.forever(Actions.run(() -> {
+                /*ResearchSystem system = gameManager.getEngine().getSystem(ResearchSystem.class);
+                
                 boolean technologyMet = true;
-                // TODO: add technology requirements
+                if (system == null) {
+                    technologyMet = false;
+                } else {
+                    for (String researchID : rrc.technologiesRequired) {
+                        if (!system.hasTechnology(playerUUID.toString(), researchID)) {
+                            technologyMet = false;
+                            break;
+                        }
+                    }
+                }*/
+                boolean technologyMet = hasResearchFunction.apply(rrc.technologiesRequired);
                 button.setDisabled(!technologyMet);
                 button.getColor().a = technologyMet ? 1f : 0.5f;
             })));
@@ -292,7 +385,7 @@ public class MenuHelper extends ScreenHelper {
                 ConstructionComponent constc = selectedEntity.getComponent(ConstructionComponent.class);
 
                 boolean underConstruction = constc != null && constc.turns > 0;
-                boolean producing = gameManager.getEngine().getSystem(ResourceSystem.class).getActiveEntities()
+                boolean producing = gameManager.getEngine().getSystem(ResourceSystem.class).getActiveEntities(playerUUID)
                         .contains(selectedEntity);
 
                 float smallFont = 0.5f;

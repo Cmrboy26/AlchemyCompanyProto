@@ -23,7 +23,7 @@
             },
             {
                 "class": "net.cmr.alchemycompany.component.StorageComponent",
-                "maxStorage": 10
+                "maxStorage": 25
             },
             {
                 "class": "net.cmr.alchemycompany.component.ProducerComponent",
@@ -71,13 +71,16 @@
             {
                 "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
                 "resourceCost": {
-                    "GOLD": 5.0
+                    "GOLD": 3.0
+                },
+                "resourceScaleCost": {
+                    "GOLD": 2.0
                 }
             },
             {
                 "class": "net.cmr.alchemycompany.component.ResearchRequirementComponent",
                 "technologiesRequired": [
-                    "EXTRACTION"
+                    "ADVANCED_EXTRACTION"
                 ]
             },
             {
@@ -123,6 +126,9 @@
             {
                 "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
                 "resourceCost": {
+                    "GOLD": 6.0
+                },
+                "resourceCostScale": {
                     "GOLD": 3.0
                 }
             },

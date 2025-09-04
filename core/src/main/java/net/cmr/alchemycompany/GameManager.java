@@ -4,24 +4,23 @@ import java.util.UUID;
 
 import com.badlogic.gdx.utils.Null;
 
-import net.cmr.alchemycompany.component.BuildingComponent;
-import net.cmr.alchemycompany.component.FogOfWarComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.component.actions.BuildingActionComponent;
 import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
 import net.cmr.alchemycompany.component.actions.SelectRecipeActionComponent;
 import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
-import net.cmr.alchemycompany.entity.BuildingFactory;
+import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.network.Stream;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.system.BuildingManagementSystem;
 import net.cmr.alchemycompany.system.RecipeSystem;
 import net.cmr.alchemycompany.system.RenderSystem;
+import net.cmr.alchemycompany.system.ResearchSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
 import net.cmr.alchemycompany.system.SelectionSystem;
+import net.cmr.alchemycompany.system.TurnSystem;
 import net.cmr.alchemycompany.system.VisibilitySystem;
-import net.cmr.alchemycompany.world.Tile;
 import net.cmr.alchemycompany.world.World;
 
 /**
@@ -96,7 +95,7 @@ public class GameManager {
 
     public static void onBuildingChange(UUID buildingPlayerId, int x, int y, Engine engine) {
         engine.getSystem(VisibilitySystem.class).updateVisibility(buildingPlayerId);
-        engine.getSystem(ResourceSystem.class).calculateTurn();
+        engine.getSystem(ResourceSystem.class).calculateTurn(true);
     }
 
     public boolean isClient() {
@@ -114,26 +113,24 @@ public class GameManager {
     }
 
     private static void addSharedSystems(ACEngine engine, World world) {
-        engine.registerSystem(new ResourceSystem());
         engine.registerSystem(new VisibilitySystem());
         engine.registerSystem(new BuildingManagementSystem());
         engine.registerSystem(new RecipeSystem());
+        engine.registerSystem(new ResearchSystem());
     }
-    public static ACEngine createClientEngine(World world) {
+    public static ACEngine createClientEngine(GameScreen screen, World world) {
         ACEngine engine = new ACEngine();
         engine.registerSystem(new RenderSystem(world));
         engine.registerSystem(new SelectionSystem());
+        engine.registerSystem(new ResourceSystem(screen));
 
         addSharedSystems(engine, world);
         return engine;
     }
-    public static ACEngine createServerEngine(World world) {
+    public static ACEngine createServerEngine(GameServer server, World world) {
         ACEngine engine = new ACEngine();
-
-        //Entity fogOfWarEntity = new Entity();
-        //fogOfWarEntity.addComponent(new FogOfWarComponent(), engine);
-        //fogOfWarEntity.addComponent(new OwnerComponent(null), engine);
-        //engine.addEntity(fogOfWarEntity);
+        engine.registerSystem(new ResourceSystem());
+        engine.registerSystem(new TurnSystem(server));
 
         addSharedSystems(engine, world);
         return engine;
