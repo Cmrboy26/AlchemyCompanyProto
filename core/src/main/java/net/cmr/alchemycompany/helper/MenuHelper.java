@@ -12,6 +12,7 @@ import java.util.function.Function;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
@@ -27,6 +28,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
 import com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Tooltip;
+import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
 
@@ -339,6 +342,72 @@ public class MenuHelper extends ScreenHelper {
         
         left.add(researchMenu).left().expand().space(10);
         stage.addActor(left);
+
+        // Create a fixed-size container for the researchButtonArea
+        Table fixedSizeContainer = new Table();
+        fixedSizeContainer.setSize(500, 500);
+        fixedSizeContainer.setBackground(skin.getDrawable("window"));
+        // Use a WidgetGroup to allow free positioning of images
+        WidgetGroup researchButtonArea = new WidgetGroup();
+
+        // Find min/max positions to calculate offset
+        float minX = Float.MAX_VALUE, maxX = Float.MIN_VALUE;
+        float minY = Float.MAX_VALUE, maxY = Float.MIN_VALUE;
+        for (Technology tech : Registry.getInstance().getRegistry(Technology.class).values()) {
+            minX = Math.min(minX, tech.getPosition().x);
+            maxX = Math.max(maxX, tech.getPosition().x);
+            minY = Math.min(minY, tech.getPosition().y);
+            maxY = Math.max(maxY, tech.getPosition().y);
+        }
+
+        // Calculate WidgetGroup size and offset so (0,0) is bottom middle
+        float iconSize = 32;
+        float spacing = 48;
+        float width = (maxX - minX + 1) * spacing;
+        float height = (maxY - minY + 1) * spacing;
+        researchButtonArea.setSize(width, height);
+
+        float offsetX = width / 2 - iconSize / 2 - (0 - minX) * spacing;
+        float offsetY = 0 - minY * spacing;
+
+        // Add technology icons at calculated positions
+        for (Technology tech : Registry.getInstance().getRegistry(Technology.class).values()) {
+            Button image = new Button(skin, "toggle");
+            image.add(new Image(Sprites.getSprite(tech.getIcon()))).center().size(iconSize, iconSize);
+            image.setSize(iconSize, iconSize);
+            // Position so (0,0) is bottom middle
+            float x = offsetX + tech.getPosition().x * spacing;
+            float y = offsetY + tech.getPosition().y * spacing;
+            image.setPosition(x, y, Align.bottom);
+            researchButtonArea.addActor(image);
+
+            Table tooltipTable = new Table(skin);
+            tooltipTable.add(tech.getName());
+            Tooltip<Table> tooltip = new Tooltip<>(tooltipTable);
+            tooltip.setInstant(true);
+            image.addAction(Actions.forever(Actions.run(() -> {
+                Vector2 coordinates = image.screenToLocalCoordinates(new Vector2(Gdx.input.getX(), Gdx.input.getY()));
+                tooltip.getActor().setPosition(coordinates.x, coordinates.y);
+            })));
+            image.addListener(tooltip);
+        }
+
+        // Add the WidgetGroup to the fixed-size container
+        fixedSizeContainer.add(researchButtonArea).size(width, height);
+
+        // Put the fixed-size container in a ScrollPane
+        ScrollPane pane = new ScrollPane(fixedSizeContainer, skin);
+        pane.setScrollingDisabled(false, false);
+        pane.setOverscroll(false, false);
+        pane.setFadeScrollBars(false);
+
+        // Set the preferred size of the ScrollPane to be smaller than the container to enable scrolling
+        pane.setForceScroll(false, true); // Enable vertical scrolling
+        pane.setScrollbarsOnTop(true);
+
+        researchMenu.add(pane).size(200, 200).center().row();
+
+        // Below
 
         leftBottom.addAction(Actions.forever(Actions.run(() -> {
             shopMenu.setVisible(shopButton.isChecked());

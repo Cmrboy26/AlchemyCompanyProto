@@ -6,9 +6,16 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Lwjgl3Launcher",
+            "request": "launch",
+            "mainClass": "net.cmr.alchemycompany.lwjgl3.Lwjgl3Launcher",
+            "projectName": "Alchemy Company Prototype-lwjgl3"
+        },
+        {
+            "type": "java",
             "name": "Current File",
             "request": "launch",
-            "mainClass": "${file}",
+            "mainClass": "${file}"
         },
         {
             "type": "java",

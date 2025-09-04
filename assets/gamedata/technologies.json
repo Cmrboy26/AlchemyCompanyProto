@@ -13,7 +13,7 @@
             "name": "Advanced Processing",
             "description": "Process new technologies.",
             "icon": "MINES",
-            "position": [1, 0],
+            "position": [1, 1],
             "cost": 25
         },
         {
@@ -32,7 +32,7 @@
             "name": "Advanced Extraction",
             "description": "New technologies allow advanced extraction.",
             "icon": "TITANIUM_ICON",
-            "position": [1, 0],
+            "position": [0, 5],
             "cost": {
                 "SCIENCE": 100,
                 "TITANIUM": 5
