@@ -20,6 +20,7 @@ import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.ConsumerComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.ProducerComponent;
+import net.cmr.alchemycompany.component.ResearchManagementComponent;
 import net.cmr.alchemycompany.component.StorageComponent;
 import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
@@ -101,25 +102,16 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
                 //building.setActive();
             }
 
+            ResearchSystem researchSystem = engine.getSystem(ResearchSystem.class);
+            if (researchSystem != null) {
+                researchSystem.consumeAvailableResources(playerUUID, calculatedStoredResources);
+            }
+
             // TODO: use resources that are per turn (like science)
             for (Resource perTurnResources : Registry.getResourceValues(ResourceFilter.PER_TURN).values()) {
                 // Remove per turn resources from storage (they are not stored, just used)
                 calculatedStoredResources.remove(perTurnResources.getId());
             }
-
-            // Progress research
-            /*float sciencePointsGained = calculatedStoredResources.getOrDefault(Resource.SCIENCE, 0f);
-
-            boolean scienceResearched = researchManager.addScience(sciencePointsGained);
-            if (scienceResearched) {
-                screen.researchButton.clearActions();
-                screen.researchButton.addAction(Actions.sequence(Actions.run(() -> {
-                    screen.researchButton.setText("RESEARCH\nCOMPLETE");
-                }), Actions.delay(2),Actions.run(() -> {
-                    screen.researchButton.setText("Research");
-                })));
-            }
-            calculatedStoredResources.remove(Resource.SCIENCE);*/
 
             // Fill storages with remaining resources
             for (Entity building : storageBuildings) {

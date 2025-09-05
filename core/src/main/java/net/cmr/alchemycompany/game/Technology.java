@@ -73,7 +73,7 @@ public class Technology implements Serializable {
         }
         json.writeObjectEnd();
 
-        json.writeArrayStart("prerequisiteTechnologies");
+        json.writeArrayStart("prerequisites");
         if (prerequisiteTechnologies != null) {
             for (String techId : prerequisiteTechnologies) {
                 json.writeValue(techId);
@@ -103,16 +103,20 @@ public class Technology implements Serializable {
         this.cost = new HashMap<>();
         JsonValue costData = jsonData.get("cost");
         if (costData != null) {
-            for (JsonValue entry = costData.child; entry != null; entry = entry.next) {
-                String key = entry.name;
-                Float value = entry.asFloat();
-                this.cost.put(key, value);
+            if (costData.isNumber()) {
+                this.cost.put("SCIENCE", costData.asFloat());
+            } else {
+                for (JsonValue entry = costData.child; entry != null; entry = entry.next) {
+                    String key = entry.name;
+                    Float value = entry.asFloat();
+                    this.cost.put(key, value);
+                }
             }
         }
 
         // Read prerequisiteTechnologies
         this.prerequisiteTechnologies = new HashSet<>();
-        JsonValue techArray = jsonData.get("prerequisiteTechnologies");
+        JsonValue techArray = jsonData.get("prerequisites");
         if (techArray != null) {
             for (JsonValue tech = techArray.child; tech != null; tech = tech.next) {
                 this.prerequisiteTechnologies.add(tech.asString());

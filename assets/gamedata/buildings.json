@@ -29,7 +29,7 @@
                 "class": "net.cmr.alchemycompany.component.ProducerComponent",
                 "production": {
                     "GOLD": 3.0,
-                    "SCIENCE": 1.0
+                    "SCIENCE": 10.0
                 }
             },
             {

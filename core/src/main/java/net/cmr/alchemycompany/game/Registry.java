@@ -1,8 +1,10 @@
 package net.cmr.alchemycompany.game;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
@@ -13,6 +15,7 @@ import com.badlogic.gdx.utils.JsonValue;
 public class Registry {
 
     private static Registry instance = null;
+    private static final boolean TEST_OBJECTS = true;
 
     public static Registry getInstance() {
         if (instance == null) {
@@ -36,6 +39,9 @@ public class Registry {
         registerObjects(Resource.class, Gdx.files.internal("gamedata/resources.json"));
         registerObjects(Recipe.class, Gdx.files.internal("gamedata/recipes.json"));
         registerObjects(Technology.class, Gdx.files.internal("gamedata/technologies.json"));
+        if (TEST_OBJECTS) {
+            testRegistry();
+        }
     }
 
     private void registerObjects(Class<? extends Serializable> clazz, FileHandle jsonFile) {
@@ -61,6 +67,37 @@ public class Registry {
 
     public <T extends Serializable> Map<String, T> getRegistry(Class<T> clazz) {
         return (Map<String, T>) register.get(clazz);
+    }
+
+    private void testRegistry() {
+        for (Recipe recipe : getRegistry(Recipe.class).values()) {
+            Set<String> testResources = new HashSet<>();
+            testResources.addAll(recipe.getInputs().keySet());
+            testResources.addAll(recipe.getOutputs().keySet());
+            for (String resourceId : testResources) {
+                if (!getResourceRegistry().containsKey(resourceId)) {
+                    throw new Error("\"" + resourceId + "\" is not a valid resource in the resource registry.");
+                }
+            }
+
+            for (String technology : getRegistry(Technology.class).keySet()) {
+                if (!getRegistry(Technology.class).containsKey(technology)) {
+                    throw new Error("\"" + technology + "\" is not a valid technology in the technology registry.");
+                }
+            } 
+        }
+        for (Technology technology : getRegistry(Technology.class).values()) {
+            for (String resource : technology.getCost().keySet()) {
+                if (!getResourceRegistry().containsKey(resource)) {
+                    throw new Error("\"" + technology + "\" is not a valid resource in the resource registry.");
+                }
+            } 
+            for (String technology2 : technology.getPrerequisiteTechnologies()) {
+                if (!getRegistry(Technology.class).containsKey(technology2)) {
+                    throw new Error("\"" + technology + "\" is not a valid technology in the technology registry.");
+                }
+            }
+        }
     }
 
     // Helper methods
