@@ -1,16 +1,17 @@
 package net.cmr.alchemycompany.world;
 
-import java.io.Serializable;
 import java.util.UUID;
 
 import net.cmr.alchemycompany.world.World.WorldFeature;
 
-public class Tile implements Serializable, Cloneable {
+public class Tile implements Cloneable {
 
     WorldFeature feature;
     int x, y;
     UUID buildingEntityID;
     UUID troopEntityID;
+
+    public Tile() { }
 
     public Tile(WorldFeature feature, int x, int y) {
         this.feature = feature;

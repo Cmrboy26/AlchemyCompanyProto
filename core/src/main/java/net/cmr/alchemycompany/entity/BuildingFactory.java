@@ -8,6 +8,9 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter.OutputType;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
 
 import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.ConstructionComponent;
@@ -16,6 +19,7 @@ import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.SightComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
+import net.cmr.alchemycompany.network.OnlineStream;
 import net.cmr.alchemycompany.system.VisibilitySystem;
 
 public class BuildingFactory {
@@ -25,7 +29,9 @@ public class BuildingFactory {
         building.addComponent(new TilePositionComponent(x, y), null);
         building.addComponent(new OwnerComponent(playerID), null);
         building.addComponent(new HealthComponent(100), null);
-        building.addComponent(new SightComponent(VisibilitySystem.DEFAULT_BUILDING_RADIUS), null);
+        if (!building.hasComponent(SightComponent.class)) {
+            building.addComponent(new SightComponent(VisibilitySystem.DEFAULT_BUILDING_RADIUS), null);
+        }
         return building;
     }
 
@@ -36,7 +42,6 @@ public class BuildingFactory {
 
         JsonValue building = values.get(buildingId);
         Entity entity = json.fromJson(Entity.class, building.toJson(OutputType.json));
-
         return entity;
 
         /*boolean read = true;

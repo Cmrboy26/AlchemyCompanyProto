@@ -28,7 +28,7 @@ public class LocalStream extends Stream {
         if (isClient()) {
             waitUntilPacketRecieved(UUIDPacket.class);
         } else {
-
+            
         }
     }
 
@@ -56,7 +56,7 @@ public class LocalStream extends Stream {
     }
 
     @Override
-    protected void recievePackets() {
+    protected void update() {
         // Since packets are automatically added to necessary lists when sent, do nothing.
     }
 
@@ -68,15 +68,12 @@ public class LocalStream extends Stream {
             System.out.println("Server disconnect");
         }
     }
+
     @Override
     public void sendPacket(Packet packet) {
         synchronized (otherStream.incomingPacketLock) {
             otherStream.incomingPackets.add(packet);
         }
-    }
-
-    public void setServerObject(GameServer server) {
-        this.server = server;
     }
 
     protected GameServer getServer() {

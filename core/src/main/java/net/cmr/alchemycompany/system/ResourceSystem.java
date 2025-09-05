@@ -14,7 +14,6 @@ import java.util.function.BiConsumer;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.utils.Null;
 
-import net.cmr.alchemycompany.GameScreen;
 import net.cmr.alchemycompany.ITurnSystem;
 import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.ConsumerComponent;
@@ -28,6 +27,7 @@ import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
 import net.cmr.alchemycompany.game.Registry;
 import net.cmr.alchemycompany.game.Registry.ResourceFilter;
+import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.game.Resource;
 
 public class ResourceSystem extends EntitySystem implements ITurnSystem {
@@ -155,18 +155,15 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
             }
         }
 
-        System.out.println("Resource system calculating: "+playerUUID+"\t"+playerScreen);
+        /*System.out.println("Resource system calculating: "+playerUUID+"\t"+playerScreen);
         generationPerSecond.keySet().stream()
             .sorted()
             .filter((rid) -> { return generationPerSecond.get(rid) != 0 || trueResourcesInStorage.getOrDefault(rid, 0f) != 0; })
             .forEach(resourceId ->
             System.out.print(resourceId + ", " + generationPerSecond.get(resourceId) + "\t" + trueResourcesInStorage.getOrDefault(resourceId, 0f) + " / " + calculatedTotalStorageCapacity.getOrDefault(resourceId, 0f) + "\n")
             );
-        System.out.println();
+        System.out.println();*/
 
-        System.out.println(getLocalPlayerUUID() + " == " + playerUUID + " ? " + (getLocalPlayerUUID() != null && getLocalPlayerUUID().equals(playerUUID)));
-        //if (getLocalPlayerUUID() != null && getLocalPlayerUUID().equals(playerUUID)) {
-            // Only update display for local player
         this.cachedGenerationPerSecond.put(playerUUID, new HashMap<>(generationPerSecond));
         this.activeEntities.put(playerUUID, new ArrayList<>(activeEntities));
         this.cachedStoredResources.put(playerUUID, new HashMap<>(trueResourcesInStorage));
@@ -267,7 +264,7 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
                                 // If there is enough space for one "craft", allow the resource to be crafted
                                 // TODO: if a building adds 3 and theres 9 with a capacity of 10, totalResourcesAfter is 12, but there is space for one craft
                                 
-                                System.out.println(resourceId + ": " + storedResourcesOutput.getOrDefault(resourceId, 0f) + " / " + totalStorageCapacityOutput.getOrDefault(resourceId, 0f) + " (after: " + totalResourcesAfter + ")");
+                                //System.out.println(resourceId + ": " + storedResourcesOutput.getOrDefault(resourceId, 0f) + " / " + totalStorageCapacityOutput.getOrDefault(resourceId, 0f) + " (after: " + totalResourcesAfter + ")");
                                 if (storedResourcesOutput.getOrDefault(resourceId, 0f) < totalStorageCapacityOutput.getOrDefault(resourceId, 0f)) {
                                     spaceAvailable = true;
                                     break;

@@ -1,5 +1,6 @@
 package net.cmr.alchemycompany.system;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -46,6 +47,13 @@ public class VisibilitySystem extends EntitySystem {
             throw new IllegalStateException("No FogOfWarComponent found for player " + playerID);
         }
         return fogOfWar;
+    }
+
+    public boolean isVisibleAnywhere(Collection<UUID> playerUUIDs, int x, int y) {
+        for (UUID uuid : playerUUIDs) {
+            if (isVisibleCurrently(uuid, x, y)) { return true; }
+        }
+        return false;
     }
 
     public boolean isVisibleCurrently(UUID playerID, int x, int y) {

@@ -12,13 +12,13 @@ import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import net.cmr.alchemycompany.GameManager;
-import net.cmr.alchemycompany.GameScreen;
 import net.cmr.alchemycompany.IsometricHelper;
 import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.Family;
+import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.system.SelectionSystem;
 import net.cmr.alchemycompany.world.TilePoint;
 
@@ -77,6 +77,7 @@ public class InputHelper extends ScreenHelper {
     public void updateInput() {
         Vector3 screenCoords = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
         Vector3 worldCoords = worldViewport.unproject(screenCoords);
+
         TilePoint tileCoords = IsometricHelper.worldToIsometricTile(worldCoords, gameManager.getWorld());
         if (tileCoords != null) {
             if (!screen.menuHelper.isOverUI()) {
@@ -91,7 +92,7 @@ public class InputHelper extends ScreenHelper {
                         if (!multiple) screen.menuHelper.shopGroup.uncheckAll();
                         // if (!multiple) screen.menuHelper.menusGroup.uncheckAll();
                     } else {
-                        gameManager.getEngine().getSystem(SelectionSystem.class).select(tileCoords.getX(), tileCoords.getY());
+                        gameManager.getEngine().getSystem(SelectionSystem.class).select(playerUUID, tileCoords.getX(), tileCoords.getY());
                     }
                 }
             }

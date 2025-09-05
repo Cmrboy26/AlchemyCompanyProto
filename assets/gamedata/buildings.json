@@ -39,6 +39,10 @@
                     "NORMAL": 1.0,
                     "CORROSION": 2.0
                 }
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.SightComponent",
+                "radius": 4
             }
         ]
     },
@@ -66,7 +70,7 @@
             },
             {
                 "class": "net.cmr.alchemycompany.component.ConstructionComponent",
-                "turns": 0
+                "turns": 2
             },
             {
                 "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
@@ -80,7 +84,7 @@
             {
                 "class": "net.cmr.alchemycompany.component.ResearchRequirementComponent",
                 "technologiesRequired": [
-                    "ADVANCED_EXTRACTION"
+                    "EXTRACTION"
                 ]
             },
             {
@@ -121,7 +125,7 @@
             },
             {
                 "class": "net.cmr.alchemycompany.component.ConstructionComponent",
-                "turns": 0
+                "turns": 3
             },
             {
                 "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",

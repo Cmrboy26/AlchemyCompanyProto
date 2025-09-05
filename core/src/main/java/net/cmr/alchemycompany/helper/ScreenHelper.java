@@ -5,8 +5,8 @@ import java.util.UUID;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 
 import net.cmr.alchemycompany.GameManager;
-import net.cmr.alchemycompany.GameScreen;
 import net.cmr.alchemycompany.Sprites;
+import net.cmr.alchemycompany.screen.GameScreen;
 
 public abstract class ScreenHelper {
     

@@ -13,6 +13,7 @@ import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.network.Stream;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
+import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.system.BuildingManagementSystem;
 import net.cmr.alchemycompany.system.RecipeSystem;
 import net.cmr.alchemycompany.system.RenderSystem;

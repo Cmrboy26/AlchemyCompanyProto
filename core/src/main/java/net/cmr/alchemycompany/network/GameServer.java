@@ -11,6 +11,10 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
+import com.esotericsoftware.kryonet.Connection;
+import com.esotericsoftware.kryonet.Listener;
+import com.esotericsoftware.kryonet.Server;
+
 import net.cmr.alchemycompany.ACEngine;
 import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.component.Component;
@@ -24,6 +28,7 @@ import net.cmr.alchemycompany.network.Stream.StreamState;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.network.packet.Packet;
 import net.cmr.alchemycompany.network.packet.UUIDPacket;
+import net.cmr.alchemycompany.system.VisibilitySystem;
 import net.cmr.alchemycompany.world.World;
 import net.cmr.alchemycompany.world.World.WorldType;
 
@@ -36,14 +41,19 @@ public class GameServer implements PlayerStateListener {
     private List<Packet> queuedBroadcasts;
     private GameManager gameManager;
     private Set<PlayerStateListener> playerStateListeners;
+    private Server networkServer;
+    private boolean allowConnectionMidGame;
+    private boolean inLobby;
 
-    public GameServer() {
+    public GameServer(boolean allowConnectionMidGame) {
+        this.allowConnectionMidGame = allowConnectionMidGame;
+        this.inLobby = true;
         playerStreams = new HashMap<>();
         queuedBroadcasts = new ArrayList<>();
         playerStateListeners = new HashSet<>();
         computerPlayerStreams = new HashMap<>();
 
-        World world = new World(WorldType.SMALL, System.currentTimeMillis());
+        World world = new World(WorldType.MINI, System.currentTimeMillis());
         ACEngine engine = GameManager.createServerEngine(this, world);
         this.engine = engine;
         this.engine.setWorld(world);
@@ -58,13 +68,39 @@ public class GameServer implements PlayerStateListener {
             }
         });
         gameManager = new GameManager(null, engine, getWorld());
+        try {
+            initializeNetworkServer();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void initializeNetworkServer() throws IOException {
+        networkServer = new Server(16384, 16384);
+        OnlineStream.registerKryo(networkServer.getKryo());
+        networkServer.bind(11265);
+        networkServer.start();
+        networkServer.addListener(new Listener() {
+            @Override
+            public void connected(Connection connection) {
+                OnlineStream os = new OnlineStream(connection, false, GameServer.this);
+                UUID playerUUID = initializeNewPlayer(os, false);
+                connection.setArbitraryData(playerUUID);
+            }
+            @Override
+            public void disconnected(Connection connection) {
+                //System.out.println("DISCONNECTED");
+                UUID playerUUID = (UUID) connection.getArbitraryData();
+                onlinePlayerDisconnected(playerUUID);
+            }
+        });
+        System.out.println("Server STARTED!");
     }
 
     private volatile long lastUpdate = System.nanoTime();
 
     public void update() {
         // Look for new streams
-        searchForOnlineStreams();
         List<Packet> packetQueue = new ArrayList<>();
         synchronized (broadcastLock) {
             packetQueue.addAll(queuedBroadcasts);
@@ -86,6 +122,7 @@ public class GameServer implements PlayerStateListener {
                     StreamState previousState = stream.getState();
                     stream.updateStream();
                     if (stream.getState() == StreamState.FINISHED) {
+                        Thread.dumpStack();
                         removeStreams.add(playerID);
                         // Update players about stream removal
                         continue;
@@ -121,28 +158,44 @@ public class GameServer implements PlayerStateListener {
         engine.update(delta);
     }
 
-    private void searchForOnlineStreams() {
-        // Check network for new connections.
-        // If new connection, create a stream.
+    public void stop() {
+        networkServer.stop();
+        System.out.println("Server STOPPED");
+    }
+
+    public void dispose() {
+        try {
+            networkServer.dispose();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void addClientStream(LocalStream clientStream, boolean isComputerPlayer) {
         synchronized (streamLock) {
             LocalStream serverStream = new LocalStream(this, false, clientStream);
             clientStream.otherStream = serverStream;
-            serverStream.setServerObject(this);
-            UUID playerUUID = UUID.randomUUID();
-            playerStreams.put(playerUUID, serverStream);
-            if (isComputerPlayer) {
-                computerPlayerStreams.put(playerUUID, serverStream);
-            }
-            serverStream.sendPacket(new UUIDPacket(playerUUID));
-            initializeNewPlayer(playerUUID);
+            initializeNewPlayer(serverStream, isComputerPlayer);
         }
     }
 
-    private void initializeNewPlayer(UUID playerUUID) {
-        // Add any initialization logic for a new player here.
+    public void onlinePlayerDisconnected(UUID playerUUID) {
+        Stream stream = null;
+        synchronized (streamLock) {
+            stream = playerStreams.get(playerUUID);
+            if (stream != null) {
+                onPlayerDisconnected(playerUUID, stream);
+            }
+        }
+    }
+
+    private UUID initializeNewPlayer(Stream serverStream, boolean isComputerPlayer) {
+        UUID playerUUID = UUID.randomUUID();
+        playerStreams.put(playerUUID, serverStream);
+        if (isComputerPlayer && serverStream instanceof LocalStream) {
+            computerPlayerStreams.put(playerUUID, (LocalStream) serverStream);
+        }
+        serverStream.sendPacket(new UUIDPacket(playerUUID));
 
         // TODO: maybe make a new thread and block until the player has sent their ready signal?
         Entity fogEntity = new Entity();
@@ -156,9 +209,14 @@ public class GameServer implements PlayerStateListener {
         engine.addEntity(researchEntity);
 
         World world = engine.getWorld();
-        while (true) {
+        int iterations = 0;
+        while (iterations < 1000) {
             int x = new Random().nextInt((int) (world.width));
             int y = new Random().nextInt((int) (world.height));
+            boolean visibleAnywhere = engine.getSystem(VisibilitySystem.class).isVisibleAnywhere(getPlayerUUIDs(), x, y);
+            if (visibleAnywhere && iterations < 50) {
+                continue;
+            }
             boolean result = gameManager.tryPlaceBuilding(playerUUID, "HEADQUARTERS", x, y, true);
             // focusOnTile(x, y);
             if (result) {
@@ -168,6 +226,7 @@ public class GameServer implements PlayerStateListener {
         }
 
         onPlayerConnected(playerUUID, playerStreams.get(playerUUID));
+        return playerUUID;
     }
 
     public void processPacket(UUID playerID, Stream stream, Packet packet) {
@@ -241,6 +300,7 @@ public class GameServer implements PlayerStateListener {
     public void onPlayerDisconnected(UUID playerUUID, Stream stream) {
         // TODO: if a player disconnects, create a computer player to take over
         Set<PlayerStateListener> finishedListeners = new HashSet<>();
+        stream.requestDisconnect();
         for (PlayerStateListener listener : playerStateListeners) {
             listener.onPlayerDisconnected(playerUUID, stream);
             if (listener.isFinished()) {

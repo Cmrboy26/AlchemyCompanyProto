@@ -6,8 +6,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
+import net.cmr.alchemycompany.component.FogOfWarComponent;
 import net.cmr.alchemycompany.component.SelectableComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Engine;
@@ -30,7 +30,7 @@ public class SelectionSystem extends EntitySystem {
         super.removedFromEngine(engine);
     }
 
-    public void select(int tileX, int tileY) {
+    public void select(UUID playerUUID, int tileX, int tileY) {
         Family eligibleEntities = Family.all(SelectableComponent.class, TilePositionComponent.class);
         Set<Entity> entities = engine.getEntities(eligibleEntities);
         List<Entity> locatedEntities = new ArrayList<>();
@@ -44,6 +44,10 @@ public class SelectionSystem extends EntitySystem {
                 } else {
                     sameTileClickCount = 0;
                 }
+                /*OwnerComponent oc = entity.getComponent(OwnerComponent.class);
+                if (oc != null && oc.playerID.equals(playerUUID.toString())) {
+                    return;
+                }*/
             }
         }
 
@@ -55,7 +59,7 @@ public class SelectionSystem extends EntitySystem {
         }
         Collections.sort(locatedEntities, Comparator.comparing(Entity::getID));
 
-        if (locatedEntities.size() != 0) {
+        if (locatedEntities.size() != 0 && engine.getSystem(VisibilitySystem.class).isVisibleCurrently(playerUUID, tileX, tileY)) {
             int index = sameTileClickCount % locatedEntities.size();
             UUID selectedId = locatedEntities.get(index).getID();
             if (!selectedId.equals(selectedIdCache)) {

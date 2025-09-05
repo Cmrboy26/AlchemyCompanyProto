@@ -1,55 +1,37 @@
-package net.cmr.alchemycompany;
+package net.cmr.alchemycompany.screen;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.UUID;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
-import com.badlogic.gdx.InputAdapter;
-import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.actions.Actions;
-import com.badlogic.gdx.scenes.scene2d.ui.Image;
-import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
-import com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.esotericsoftware.kryonet.Client;
 
-import net.cmr.alchemycompany.component.AvailableRecipesComponent;
+import net.cmr.alchemycompany.ACEngine;
+import net.cmr.alchemycompany.AlchemyCompany;
+import net.cmr.alchemycompany.GameManager;
+import net.cmr.alchemycompany.IsometricHelper;
+import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.BuildingComponent;
-import net.cmr.alchemycompany.component.ConstructionComponent;
-import net.cmr.alchemycompany.component.ConsumerComponent;
-import net.cmr.alchemycompany.component.LabelComponent;
-import net.cmr.alchemycompany.component.ProducerComponent;
-import net.cmr.alchemycompany.component.SelectedRecipeComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
+import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
+import net.cmr.alchemycompany.component.actions.TurnActionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
-import net.cmr.alchemycompany.ecs.Family;
-import net.cmr.alchemycompany.entity.EntityUtils;
-import net.cmr.alchemycompany.game.Recipe;
-import net.cmr.alchemycompany.game.Registry;
-import net.cmr.alchemycompany.game.Resource;
 import net.cmr.alchemycompany.helper.InputHelper;
 import net.cmr.alchemycompany.helper.MenuHelper;
 import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.network.LocalStream;
+import net.cmr.alchemycompany.network.OnlineStream;
 import net.cmr.alchemycompany.network.Stream;
 import net.cmr.alchemycompany.network.Stream.StreamState;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
@@ -58,8 +40,6 @@ import net.cmr.alchemycompany.network.packet.UUIDPacket;
 import net.cmr.alchemycompany.network.packet.WorldPacket;
 import net.cmr.alchemycompany.system.RenderSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
-import net.cmr.alchemycompany.system.SelectionSystem;
-import net.cmr.alchemycompany.world.TilePoint;
 import net.cmr.alchemycompany.world.World;
 
 public class GameScreen implements Screen {
@@ -75,6 +55,12 @@ public class GameScreen implements Screen {
 
     private GameManager gameManager;
     private Stream stream;
+    private GameServer server;
+
+    public GameScreen(GameServer server, Stream stream) {
+        this.server = server;
+        this.stream = stream;
+    }
 
     @Override
     public void show() {
@@ -86,6 +72,7 @@ public class GameScreen implements Screen {
     @Override
     public void render(float delta) {
         // Camera drag with right mouse button
+        checkConnection();
         processTileFocus();
         updateInput();
         gameManager.getEngine().update(delta);
@@ -137,25 +124,68 @@ public class GameScreen implements Screen {
 
     @Override
     public void hide() {
-
+        if (server != null) {
+            server.stop();
+            server.dispose();
+        }
     }
 
     @Override
     public void dispose() {
         stage.dispose();
+        if (server != null) {
+            server.stop();
+            server.dispose();
+        }
     }
 
     private void prepareGame() {
-        final GameServer server = new GameServer();
-        Thread serverThread = new Thread(() -> {
-            while (true) {
-                server.update();
+        // Connected. Process packets.
+        while (stream.getState() != StreamState.PLAYING) {
+            System.out.println(stream.getState());
+            try {
+                stream.updateStream();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        });
-        serverThread.setDaemon(true);
-        serverThread.start();
+        }
 
-        for (int i = 0; i < 1; i++) {
+        List<Packet> polledPackets = stream.pollAllPackets();
+
+        List<EntityPacket> entityList = new ArrayList<>();
+        World world = null;
+        for (Packet packet : polledPackets) {
+            System.out.println("Recieved packet: "+packet.toString());
+            if (packet instanceof WorldPacket) {
+                world = ((WorldPacket) packet).world;
+            }
+            if (packet instanceof UUIDPacket) {
+                playerUUID = ((UUIDPacket) packet).id;
+            }
+            if (packet instanceof EntityPacket) {
+                entityList.add((EntityPacket) packet);
+            }
+        }
+
+        ACEngine engine = GameManager.createClientEngine(this, world);
+        engine.addEntityChangeListener((e, added) -> {
+            engine.getSystem(ResourceSystem.class).calculateTurn(true);
+        });
+        for (EntityPacket entityPacket : entityList) {
+            if (entityPacket.added) {
+                engine.addEntity(entityPacket.entity);
+                BuildingComponent bc = entityPacket.entity.getComponent(BuildingComponent.class);
+                if (bc != null && bc.buildingId.equals("HEADQUARTERS")) {
+                    TilePositionComponent tpc = entityPacket.entity.getComponent(TilePositionComponent.class);
+                    focusOnTile(tpc.tileX, tpc.tileY);
+                }
+            } else {
+                engine.removeEntity(entityPacket.entity);
+            }
+        }
+        gameManager = new GameManager(stream, engine, world);
+
+        /*for (int i = 0; i < 1; i++) {
             stream = new LocalStream(server, true);
             server.addClientStream((LocalStream) stream, false);
 
@@ -206,7 +236,7 @@ public class GameScreen implements Screen {
                 gameManager = new GameManager(stream, engine, world);
             }
             
-        }
+        }*/
     }
 
     private void prepareUI() {
@@ -243,6 +273,21 @@ public class GameScreen implements Screen {
                 focusY = -1;
             }
         }
+    }
+
+    private void checkConnection() {
+        if (this.stream.getState() == StreamState.FINISHED) {
+            returnToTitle();
+        }
+    }
+
+    public void returnToTitle() {
+        returnToTitle("Disconnected.");
+    }
+
+    public void returnToTitle(String message) {
+        dispose();
+        AlchemyCompany.getInstance().setScreen(new MainMenuScreen(message));
     }
 
     private void setupInputProcessor() {

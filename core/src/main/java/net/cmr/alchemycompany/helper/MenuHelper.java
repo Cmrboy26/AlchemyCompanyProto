@@ -36,13 +36,13 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
 
 import net.cmr.alchemycompany.GameManager;
-import net.cmr.alchemycompany.GameScreen;
 import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.AvailableRecipesComponent;
 import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.ConsumerComponent;
 import net.cmr.alchemycompany.component.LabelComponent;
+import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.ProducerComponent;
 import net.cmr.alchemycompany.component.PurchaseCostComponent;
 import net.cmr.alchemycompany.component.RenderComponent;
@@ -61,6 +61,7 @@ import net.cmr.alchemycompany.game.Resource;
 import net.cmr.alchemycompany.game.Resources;
 import net.cmr.alchemycompany.game.Technology;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
+import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.system.ResearchSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
 import net.cmr.alchemycompany.system.SelectionSystem;
@@ -218,7 +219,7 @@ public class MenuHelper extends ScreenHelper {
         shopGroup = new ButtonGroup<>();
         shopGroup.setMinCheckCount(0);
         shopGroup.setMaxCheckCount(1);
-        String[] buildingIds = new String[] {"MINES", "REFINERY"};
+        String[] buildingIds = new String[] {"MINES", "REFINERY", "FARM"};
         
         Table shopEntries = new Table(skin);
         ScrollPane scrollEntries = new ScrollPane(shopEntries, skin);
@@ -259,7 +260,7 @@ public class MenuHelper extends ScreenHelper {
             Table costTable = new Table(skin);
             costTable.addAction(Actions.forever(Actions.run(() -> {
                 costTable.clearChildren();
-                boolean researchMet = hasResearchFunction.apply(rrc.technologiesRequired);
+                boolean researchMet = rrc == null || hasResearchFunction.apply(rrc.technologiesRequired);
                 buildingImage.setVisible(researchMet);
 
                 if (!researchMet) {
@@ -321,7 +322,7 @@ public class MenuHelper extends ScreenHelper {
                         }
                     }
                 }*/
-                boolean technologyMet = hasResearchFunction.apply(rrc.technologiesRequired);
+                boolean technologyMet = rrc == null || hasResearchFunction.apply(rrc.technologiesRequired);
                 button.setDisabled(!technologyMet);
                 button.getColor().a = technologyMet ? 1f : 0.5f;
             })));
@@ -547,6 +548,7 @@ public class MenuHelper extends ScreenHelper {
         // TODO: Make SelectionSystem have listeners instead
         final SelectionSystem selectionSystem = gameManager.getEngine().getSystem(SelectionSystem.class);
 
+        // TODO: have the update display update whenever the selected entity is updated in the engine
         final Runnable[] updateDisplay = new Runnable[1];
         updateDisplay[0] = new Runnable() {
             @Override
@@ -555,12 +557,16 @@ public class MenuHelper extends ScreenHelper {
 
                 selectionTable.setVisible(true);
                 selectionTable.reset();
+                if (selectedEntityId == null || gameManager.getEngine().getEntity(selectedEntityId) == null) {
+                    return;
+                }
                 selectionTable.setName(selectedEntityId.toString());
 
                 Entity selectedEntity = gameManager.getEngine().getEntity(selectedEntityId);
                 LabelComponent lc = selectedEntity.getComponent(LabelComponent.class);
                 TilePositionComponent tpc = selectedEntity.getComponent(TilePositionComponent.class);
                 BuildingComponent bc = selectedEntity.getComponent(BuildingComponent.class);
+                OwnerComponent oc = selectedEntity.getComponent(OwnerComponent.class);
 
                 // Display name centered
                 // Display description underneath in smaller characters
@@ -587,151 +593,164 @@ public class MenuHelper extends ScreenHelper {
 
                 descriptionLabel.setFontScale(smallFont);
 
-                if (!underConstruction) {
-                    ArrayList<Table> statsSections = new ArrayList<Table>();
-                    Color producingColor = new Color(1, 1, 1, producing ? 1f : 0.33f);
+                if (oc != null && !oc.getUUID().equals(playerUUID)) {
+                    // not our building
+                    descriptionLabel.getText().append("Owned by: "+oc.getUUID().toString());
+                } else {
+                    if (!underConstruction) {
+                        ArrayList<Table> statsSections = new ArrayList<Table>();
+                        Color producingColor = new Color(1, 1, 1, producing ? 1f : 0.33f);
 
-                    if (src != null) {
-                        Table selectedRecipeTable = new Table(skin);
-                        statsSections.add(selectedRecipeTable);
-                        Recipe recipe = Registry.getInstance().getRegistry(Recipe.class).get(src.selectedRecipe);
-                        String labelString = "Selected Recipe:\n";
-                        if (recipe != null) {
-                            labelString += recipe.getName() + "\n";
-                        } else {
-                            labelString += "None\n";
+                        if (src != null) {
+                            Table selectedRecipeTable = new Table(skin);
+                            statsSections.add(selectedRecipeTable);
+                            Recipe recipe = Registry.getInstance().getRegistry(Recipe.class).get(src.selectedRecipe);
+                            String labelString = "Selected Recipe:\n";
+                            if (recipe != null) {
+                                labelString += recipe.getName() + "\n";
+                            } else {
+                                labelString += "None\n";
+                            }
+                            labelString += "Recipe " + (producing ? "ACTIVE" : "IDLE");
+                            Label label = new Label(labelString, skin);
+                            label.setFontScale(smallFont);
+                            selectedRecipeTable.add(label);
                         }
-                        labelString += "Recipe " + (producing ? "ACTIVE" : "IDLE");
-                        Label label = new Label(labelString, skin);
-                        label.setFontScale(smallFont);
-                        selectedRecipeTable.add(label);
-                    }
 
-                    if (cc != null) {
-                        Table consumptionTable = new Table(skin);
-                        statsSections.add(consumptionTable);
-                        for (Entry<String, Float> entry : cc.consumption.entrySet()) {
-                            Table resourceSection = getResourceSection(entry.getKey(), entry.getValue(), -1);
-                            resourceSection.setColor(producingColor);
-                            consumptionTable.add(resourceSection);
+                        if (cc != null) {
+                            Table consumptionTable = new Table(skin);
+                            statsSections.add(consumptionTable);
+                            for (Entry<String, Float> entry : cc.consumption.entrySet()) {
+                                Table resourceSection = getResourceSection(entry.getKey(), entry.getValue(), -1);
+                                resourceSection.setColor(producingColor);
+                                consumptionTable.add(resourceSection);
+                            }
                         }
-                    }
 
-                    if (pc != null) {
-                        Table productionTable = new Table(skin);
-                        statsSections.add(productionTable);
-                        for (Entry<String, Float> entry : pc.production.entrySet()) {
-                            Table resourceSection = getResourceSection(entry.getKey(), entry.getValue(), 1);
-                            resourceSection.setColor(producingColor);
-                            productionTable.add(resourceSection);
+                        if (pc != null) {
+                            Table productionTable = new Table(skin);
+                            statsSections.add(productionTable);
+                            for (Entry<String, Float> entry : pc.production.entrySet()) {
+                                Table resourceSection = getResourceSection(entry.getKey(), entry.getValue(), 1);
+                                resourceSection.setColor(producingColor);
+                                productionTable.add(resourceSection);
+                            }
                         }
-                    }
 
-                    for (Table table : statsSections) {
-                        statsTable.add(table).pad(0, 3, 0, 3).expandY();
-                    }
+                        for (Table table : statsSections) {
+                            statsTable.add(table).pad(0, 3, 0, 3).expandY();
+                        }
 
-                    // Interactions
+                        // Interactions
 
-                    ArrayList<Table> interactionSections = new ArrayList<>();
+                        ArrayList<Table> interactionSections = new ArrayList<>();
 
-                    if (arc != null) {
-                        Table availableRecipesTable = new Table(skin);
-                        interactionSections.add(availableRecipesTable);
+                        if (arc != null) {
+                            Table availableRecipesTable = new Table(skin);
+                            interactionSections.add(availableRecipesTable);
 
-                        SelectBoxStyle style = new SelectBoxStyle(skin.get(SelectBoxStyle.class));
+                            SelectBoxStyle style = new SelectBoxStyle(skin.get(SelectBoxStyle.class));
 
-                        Set<String> availableRecipes = new HashSet<>(arc.availableRecipes);
-                        availableRecipes.removeIf(id -> {
-                            ResearchSystem rs = gameManager.getEngine().getSystem(ResearchSystem.class);
-                            if (rs == null) return true;
-                            ResearchManagementComponent rmc = rs.getPlayerResearchManager(playerUUID.toString());
-                            if (rmc == null) return true;
-                            Recipe recipe = Registry.getInstance().getRegistry(Recipe.class).get(id);
-                            for (String prereq : recipe.getRequiredTechnologies()) {
-                                if (!rmc.hasResearched(prereq)) {
+                            Set<String> availableRecipes = new HashSet<>(arc.availableRecipes);
+                            availableRecipes.removeIf(id -> {
+                                ResearchSystem rs = gameManager.getEngine().getSystem(ResearchSystem.class);
+                                if (rs == null) return true;
+                                ResearchManagementComponent rmc = rs.getPlayerResearchManager(playerUUID.toString());
+                                if (rmc == null) return true;
+                                Recipe recipe = Registry.getInstance().getRegistry(Recipe.class).get(id);
+                                for (String prereq : recipe.getRequiredTechnologies()) {
+                                    if (!rmc.hasResearched(prereq)) {
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            });
+
+                            SelectBox<String> box = new SelectBox<String>(style);
+                            String[] items = new String[availableRecipes.size() + 1];
+                            String[] recipeIds = new String[availableRecipes.size()];
+                            items[0] = "None";
+                            int index = 1;
+                            int selectedIndex = 0;
+                            for (String recipeId : availableRecipes) {
+                                Recipe recipe = Registry.getInstance().getRegistry(Recipe.class).get(recipeId);
+                                items[index] = recipe.getName();
+                                recipeIds[index - 1] = recipe.getId();
+                                if (src != null && src.selectedRecipe.contentEquals(recipeId)) {
+                                    selectedIndex = index;
+                                }
+                                index++;
+                            }
+                            box.setItems(items);
+                            box.setSelectedIndex(selectedIndex);
+                            box.addListener(new ChangeListener() {
+                                @Override
+                                public void changed(ChangeEvent event, Actor actor) {
+                                    // change recipe
+                                    String recipeId = null;
+                                    if (box.getSelectedIndex() != 0) {
+                                        recipeId = recipeIds[box.getSelectedIndex() - 1];
+                                    }
+                                    gameManager.trySelectRecipe(playerUUID, recipeId, selectedEntityId);
+                                    //selectionSystem.deselect();
+                                    /*box.addAction(Actions.sequence(Actions.delay(0.1f), Actions.run(() -> {
+                                        updateDisplay[0].run();
+                                    })));*/
+                                }
+                            });
+
+                            availableRecipesTable.add(box);
+                        }
+
+                        if (bc != null && !bc.buildingId.equals("HEADQUARTERS")) {
+                            Table destructionTable = new Table(skin);
+                            interactionSections.add(destructionTable);
+
+                            final String confirmString = "Confirm?";
+                            final String defaultString = "Destroy";
+
+                            TextButton destroyButton = new TextButton(defaultString, skin);
+
+                            destroyButton.addListener(new InputListener() {
+                                @Override
+                                public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                                    if (!destroyButton.getText().toString().equals(confirmString)) {
+                                        destroyButton.clearActions();
+                                        destroyButton.setText(confirmString);
+                                        destroyButton.addAction(Actions.sequence(
+                                                Actions.delay(5),
+                                                Actions.run(() -> {
+                                                    destroyButton.setText(defaultString);
+                                                })));
+                                    } else {
+                                        // Remove
+                                        TilePoint tp = EntityUtils
+                                                .getPosition(gameManager.getEngine().getEntity(selectedEntityId));
+                                        //selectionSystem.deselect();
+                                        gameManager.tryRemoveBuilding(playerUUID, tp.getX(), tp.getY());
+                                    }
                                     return true;
                                 }
-                            }
-                            return false;
-                        });
-
-                        SelectBox<String> box = new SelectBox<String>(style);
-                        String[] items = new String[availableRecipes.size() + 1];
-                        String[] recipeIds = new String[availableRecipes.size()];
-                        items[0] = "None";
-                        int index = 1;
-                        int selectedIndex = 0;
-                        for (String recipeId : availableRecipes) {
-                            Recipe recipe = Registry.getInstance().getRegistry(Recipe.class).get(recipeId);
-                            items[index] = recipe.getName();
-                            recipeIds[index - 1] = recipe.getId();
-                            if (src != null && src.selectedRecipe.contentEquals(recipeId)) {
-                                selectedIndex = index;
-                            }
-                            index++;
+                            });
+                            destructionTable.add(destroyButton);
                         }
-                        box.setItems(items);
-                        box.setSelectedIndex(selectedIndex);
-                        box.addListener(new ChangeListener() {
-                            @Override
-                            public void changed(ChangeEvent event, Actor actor) {
-                                // change recipe
-                                String recipeId = null;
-                                if (box.getSelectedIndex() != 0) {
-                                    recipeId = recipeIds[box.getSelectedIndex() - 1];
-                                }
-                                gameManager.trySelectRecipe(playerUUID, recipeId, selectedEntityId);
-                                selectionSystem.deselect();
-                                /*box.addAction(Actions.sequence(Actions.delay(0.1f), Actions.run(() -> {
-                                    updateDisplay[0].run();
-                                })));*/
-                            }
-                        });
 
-                        availableRecipesTable.add(box);
+                        for (Table table : interactionSections) {
+                            interactionTable.add(table).pad(0, 3, 0, 3).expandY();
+                        }
+                    } else {
+                        // Display construction time
+
+                        descriptionLabel.setText((lc.description + "\nConstruction Finished in " + constc.turns + " turn(s)"));
+                        descriptionLabel.addAction(Actions.forever(Actions.run(() -> { 
+                            Entity entity = gameManager.getEngine().getEntity(selectedEntityId);
+                            if (entity == null) return;
+                            ConstructionComponent constc2 = entity.getComponent(ConstructionComponent.class);
+                            if (constc2 == null) return;
+                            descriptionLabel.setText(lc.description + "\nConstruction Finished in " + constc2.turns + " turn(s)"); 
+                        })));
                     }
-
-                    if (bc != null && !bc.buildingId.equals("HEADQUARTERS")) {
-                        Table destructionTable = new Table(skin);
-                        interactionSections.add(destructionTable);
-
-                        final String confirmString = "Confirm?";
-                        final String defaultString = "Destroy";
-
-                        TextButton destroyButton = new TextButton(defaultString, skin);
-
-                        destroyButton.addListener(new InputListener() {
-                            @Override
-                            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-                                if (!destroyButton.getText().toString().equals(confirmString)) {
-                                    destroyButton.clearActions();
-                                    destroyButton.setText(confirmString);
-                                    destroyButton.addAction(Actions.sequence(
-                                            Actions.delay(5),
-                                            Actions.run(() -> {
-                                                destroyButton.setText(defaultString);
-                                            })));
-                                } else {
-                                    // Remove
-                                    TilePoint tp = EntityUtils
-                                            .getPosition(gameManager.getEngine().getEntity(selectedEntityId));
-                                    selectionSystem.deselect();
-                                    gameManager.tryRemoveBuilding(playerUUID, tp.getX(), tp.getY());
-                                }
-                                return true;
-                            }
-                        });
-                        destructionTable.add(destroyButton);
-                    }
-
-                    for (Table table : interactionSections) {
-                        interactionTable.add(table).pad(0, 3, 0, 3).expandY();
-                    }
-                } else {
-                    // Display construction time
-                    descriptionLabel.setText(
-                            descriptionLabel.getText() + "\nConstruction Finished in " + constc.turns + " turn(s)");
+                    
                 }
 
                 int pad = 2;
@@ -741,6 +760,9 @@ public class MenuHelper extends ScreenHelper {
                 selectionTable.add(interactionTable).pad(pad).expandX().row();
             }
         };
+        gameManager.getEngine().addEntityChangeListener((e, added) -> {
+            updateDisplay[0].run();
+        });
 
         selectionTable.addAction(Actions.forever(Actions.run(() -> {
             UUID selectedEntityId = selectionSystem.getSelectedId();

@@ -6,9 +6,11 @@ import java.util.function.Consumer;
 
 import net.cmr.alchemycompany.ACEngine;
 import net.cmr.alchemycompany.GameManager;
+import net.cmr.alchemycompany.ITurnSystem;
 import net.cmr.alchemycompany.IUpdateSystem;
 import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.Component;
+import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.PurchaseCostComponent;
 import net.cmr.alchemycompany.component.actions.BuildingActionComponent;
@@ -21,7 +23,7 @@ import net.cmr.alchemycompany.ecs.Family;
 import net.cmr.alchemycompany.entity.BuildingFactory;
 import net.cmr.alchemycompany.world.Tile;
 
-public class BuildingManagementSystem extends EntitySystem implements IUpdateSystem {
+public class BuildingManagementSystem extends EntitySystem implements IUpdateSystem, ITurnSystem {
 
     Family buildingActionFamily;
 
@@ -98,6 +100,24 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
             }
         }
         return false;
+    }
+
+    @Override
+    public void onTurn() {
+        Family constructingBuildings = Family.all(BuildingComponent.class, ConstructionComponent.class);
+        for (Entity entity : engine.getEntities(constructingBuildings)) {
+            ConstructionComponent cc = entity.getComponent(ConstructionComponent.class);
+            cc.turns--;
+            if (cc.turns <= 0) {
+                entity.removeComponent(ConstructionComponent.class, engine);
+            }
+            engine.changedEntity(entity);
+        }
+    }
+
+    @Override
+    public int getTurnPriority() {
+        return 2;
     }
 
 }

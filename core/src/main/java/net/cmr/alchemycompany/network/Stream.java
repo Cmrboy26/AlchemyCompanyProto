@@ -47,10 +47,11 @@ public abstract class Stream {
      */
     public void updateStream() throws IOException {
         try {
-            recievePackets();
+            update();
             switch (state) {
                 case CONNECTING:
                     connect(); // blocks
+                    // TODO: make lobby mode
                     boolean isInLobby = false;
                     if (isInLobby) {
                         state = StreamState.WAITING;
@@ -91,7 +92,7 @@ public abstract class Stream {
     /**
      * Updates recieved packets.
      */
-    protected abstract void recievePackets();
+    protected abstract void update();
     /**
      * Initializes the connection (connects online, establishes encryption). Should block.
      */
@@ -129,7 +130,7 @@ public abstract class Stream {
     }
     protected void waitUntilPacketRecieved(Class<? extends Packet> packetClass) {
         while (true) {
-            recievePackets();
+            update();
             if (peekAllPackets().stream().anyMatch(p -> {
                 return packetClass.isInstance(p);
             })) {
@@ -149,6 +150,9 @@ public abstract class Stream {
     }
     public StreamState getState() {
         return state;
+    }
+    public void requestDisconnect() {
+        this.state = StreamState.DISCONNECTING;
     }
 
 }

@@ -7,10 +7,13 @@ import java.util.Random;
 import java.util.function.BiFunction;
 
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.Json.Serializable;
+import com.badlogic.gdx.utils.JsonValue;
 
 import net.cmr.alchemycompany.OpenSimplexNoise;
 
-public class World implements Cloneable {
+public class World implements Cloneable, Serializable {
 
     public enum WorldFeature {
         WATER,
@@ -27,6 +30,7 @@ public class World implements Cloneable {
     }
 
     public enum WorldType {
+        MINI(10, 10, 1),
         SMALL(30, 30, 1),
         MEDIUM(60, 60, 2),
         LARGE(90, 90, 3);
@@ -47,6 +51,8 @@ public class World implements Cloneable {
     private Tile[][] tiles;
     private long seed;
     public transient OpenSimplexNoise noise;
+
+    public World() { } // serialization
 
     public World(WorldType worldType, long seed) {
         this.worldType = worldType;
@@ -224,5 +230,24 @@ public class World implements Cloneable {
             throw new AssertionError();
         }
     }
+
+    @Override
+    public void write(Json json) {
+        json.writeField(worldType, "worldType");
+        json.writeField(width, "width");
+        json.writeField(height, "height");
+        json.writeField(tiles, "tiles");
+        json.writeField(seed, "seed");
+    }
+
+    @Override
+    public void read(Json json, JsonValue jsonData) {
+        json.readField(this, "worldType", jsonData);
+        json.readField(this, "width", jsonData);
+        json.readField(this, "height", jsonData);
+        json.readField(this, "tiles", jsonData);
+        json.readField(this, "seed", jsonData);
+        noise = new OpenSimplexNoise(seed);
+    } 
 
 }
