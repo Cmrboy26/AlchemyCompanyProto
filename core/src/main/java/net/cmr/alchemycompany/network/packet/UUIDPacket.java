@@ -2,7 +2,7 @@ package net.cmr.alchemycompany.network.packet;
 
 import java.util.UUID;
 
-public class UUIDPacket  extends Packet {
+public class UUIDPacket extends Packet {
 
     public UUID id;
 

@@ -1,2 +1,5 @@
 - Have client send username over and use that to create the random UUID for them combined with the seed of the world
+- Display turn counter
+- Display turns left with research
+- Make notifications in right bottom (icons with tooltips, right click to delete)
 

@@ -23,6 +23,7 @@ import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.IsometricHelper;
 import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.BuildingComponent;
+import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
 import net.cmr.alchemycompany.component.actions.TurnActionComponent;
@@ -175,7 +176,8 @@ public class GameScreen implements Screen {
             if (entityPacket.added) {
                 engine.addEntity(entityPacket.entity);
                 BuildingComponent bc = entityPacket.entity.getComponent(BuildingComponent.class);
-                if (bc != null && bc.buildingId.equals("HEADQUARTERS")) {
+                OwnerComponent oc = entityPacket.entity.getComponent(OwnerComponent.class);
+                if (bc != null && bc.buildingId.equals("HEADQUARTERS") && oc != null && oc.playerID.equals(playerUUID.toString())) {
                     TilePositionComponent tpc = entityPacket.entity.getComponent(TilePositionComponent.class);
                     focusOnTile(tpc.tileX, tpc.tileY);
                 }

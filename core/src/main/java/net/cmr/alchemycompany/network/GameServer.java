@@ -160,7 +160,6 @@ public class GameServer implements PlayerStateListener {
 
     public void stop() {
         networkServer.stop();
-        System.out.println("Server STOPPED");
     }
 
     public void dispose() {

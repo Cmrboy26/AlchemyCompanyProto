@@ -70,11 +70,10 @@ public class MainMenuScreen extends ScreenAdapter {
                 Integer port = null;
                 try {
                     port = Integer.parseInt(portField.getText());
-                    if (port < 0 || port > Short.MAX_VALUE) {
-                        throw new NumberFormatException("Port cannot be less than 0 or greater than "+Short.MAX_VALUE);
+                    if (port < 1 || port > Short.MAX_VALUE) {
+                        throw new NumberFormatException("Please enter a valid port");
                     }
                 } catch (NumberFormatException e) {
-                    e.printStackTrace();
                     portField.addAction(Actions.sequence(Actions.fadeOut(0.2f), Actions.fadeIn(0.2f)));
                     return;
                 }
