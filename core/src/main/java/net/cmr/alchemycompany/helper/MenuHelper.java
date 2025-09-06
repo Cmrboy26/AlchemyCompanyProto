@@ -219,7 +219,17 @@ public class MenuHelper extends ScreenHelper {
         shopGroup = new ButtonGroup<>();
         shopGroup.setMinCheckCount(0);
         shopGroup.setMaxCheckCount(1);
-        String[] buildingIds = new String[] {"MINES", "REFINERY", "FARM"};
+
+        List<String> buyableBuildings = new ArrayList<>();
+        for (Entry<String, Entity> entry : BuildingFactory.getRegisteredBuildingEntities().entrySet()) {
+            if (entry.getValue().hasComponent(PurchaseCostComponent.class)) {
+                buyableBuildings.add(entry.getKey());
+            }
+        }
+        String[] buildingIds = new String[buyableBuildings.size()];
+        for (int i = 0; i < buyableBuildings.size(); i++) {
+            buildingIds[i] = buyableBuildings.get(i);
+        }
         
         Table shopEntries = new Table(skin);
         ScrollPane scrollEntries = new ScrollPane(shopEntries, skin);
@@ -379,6 +389,8 @@ public class MenuHelper extends ScreenHelper {
 
         float offsetX = width / 2 - iconSize / 2 - (0 - minX) * spacing;
         float offsetY = 0 - minY * spacing;
+        offsetX = 0;
+        offsetY = 0;
 
         ButtonGroup<Button> technologyButtonGroup = new ButtonGroup<>();
         technologyButtonGroup.setMaxCheckCount(1);
@@ -516,7 +528,7 @@ public class MenuHelper extends ScreenHelper {
 
         // Put the fixed-size container in a ScrollPane
         ScrollPane pane = new ScrollPane(fixedSizeContainer, skin);
-        pane.setScrollingDisabled(false, false);
+        pane.setScrollingDisabled(true, false);
         pane.setOverscroll(false, false);
         pane.setFadeScrollBars(false);
 
@@ -651,7 +663,7 @@ public class MenuHelper extends ScreenHelper {
 
                             SelectBoxStyle style = new SelectBoxStyle(skin.get(SelectBoxStyle.class));
 
-                            Set<String> availableRecipes = new HashSet<>(arc.availableRecipes);
+                            Set<String> availableRecipes = new HashSet<>(arc.getAvailableRecipes(selectedEntity, gameManager.getWorld()));
                             availableRecipes.removeIf(id -> {
                                 ResearchSystem rs = gameManager.getEngine().getSystem(ResearchSystem.class);
                                 if (rs == null) return true;

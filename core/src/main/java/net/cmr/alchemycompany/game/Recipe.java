@@ -89,8 +89,8 @@ public class Recipe implements Serializable {
     @Override
     public void read(Json json, JsonValue jsonData) {
         this.id = json.readValue("id", String.class, jsonData);
-        this.name = json.readValue("name", String.class, jsonData);
-        this.description = json.readValue("description", String.class, jsonData);
+        this.name = json.readValue("name", String.class, this.id.replaceAll("_", " "), jsonData);
+        this.description = json.readValue("description", String.class, this.id.replaceAll("_", " "), jsonData);
         this.icon = json.readValue("icon", String.class, jsonData);
         
         // Read input and output manually to avoid type information issues

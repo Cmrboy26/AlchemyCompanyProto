@@ -1,4 +1,4 @@
-package net.cmr.alchemycompany;
+ package net.cmr.alchemycompany;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +50,7 @@ import net.cmr.alchemycompany.World.WorldFeature;
 import net.cmr.alchemycompany.troops.HealthHolder;
 import net.cmr.alchemycompany.troops.Scout;
 import net.cmr.alchemycompany.troops.Soldier;
+
 import net.cmr.alchemycompany.troops.Troop;
 import net.cmr.alchemycompany.troops.Troop.FightInformation;
 

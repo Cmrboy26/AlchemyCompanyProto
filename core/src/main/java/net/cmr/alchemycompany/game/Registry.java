@@ -79,7 +79,7 @@ public class Registry {
                     throw new Error("\"" + resourceId + "\" is not a valid resource in the resource registry.");
                 }
             }
-
+ 
             for (String technology : getRegistry(Technology.class).keySet()) {
                 if (!getRegistry(Technology.class).containsKey(technology)) {
                     throw new Error("\"" + technology + "\" is not a valid technology in the technology registry.");

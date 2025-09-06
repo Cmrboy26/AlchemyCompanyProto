@@ -29,7 +29,7 @@
                 "class": "net.cmr.alchemycompany.component.ProducerComponent",
                 "production": {
                     "GOLD": 3.0,
-                    "SCIENCE": 10.0
+                    "SCIENCE": 100.0
                 }
             },
             {
@@ -52,7 +52,8 @@
                 "class": "net.cmr.alchemycompany.component.BuildingComponent",
                 "buildingId": "MINES",
                 "validPlacement": [
-                    "MOUNTAINS"
+                    "MOUNTAINS",
+                    "SWAMP"
                 ]
             },
             {
@@ -94,9 +95,13 @@
                     "EXTRACT_COAL",
                     "EXTRACT_IRON_ORE",
                     "EXTRACT_COPPER_ORE",
-                    "EXTRACT_SULFUR",
-                    "EXTRACT_TITANIUM_ORE"
-                ]
+                    "EXTRACT_TITANIUM_ORE",
+                    "EXTRACT_CRYSTAL",
+                    "EXTRACT_MYTHRIL"
+                ],
+                "tileSpecificRecipes": {
+                    "EXTRACT_SULFUR": ["SWAMP"]
+                }
             }
         ]
     },
@@ -156,6 +161,59 @@
             }
         ]
     },
+    "FACTORY": {
+        "components": [
+            {
+                "class": "net.cmr.alchemycompany.component.BuildingComponent",
+                "buildingId": "FACTORY",
+                "validPlacement": [
+                    "PLAINS",
+                    "FOREST"
+                ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.LabelComponent",
+                "name": "Refinery",
+                "description": "Combines resources to make better goods."
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.SelectableComponent"
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.RenderComponent",
+                "spriteType": "FACTORY",
+                "invertable": false
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.ConstructionComponent",
+                "turns": 3
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
+                "resourceCost": {
+                    "GOLD": 12.0,
+                    "TITANIUM": 4
+                },
+                "resourceCostScale": {
+                    "GOLD": 6.0,
+                    "TITANIUM": 2
+                }
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.ResearchRequirementComponent",
+                "technologiesRequired": [
+                    "ADVANCED_PROCESSING"
+                ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",
+                "availableRecipes": [
+                    "PRODUCE_BATTERY",
+                    "PRODUCE_BATTERY_MAGIC_STONE"
+                ]
+            }
+        ]
+    },
     "FARM": {
         "components": [
             {
@@ -181,12 +239,6 @@
             {
                 "class": "net.cmr.alchemycompany.component.ConstructionComponent",
                 "turns": 0
-            },
-            {
-                "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
-                "resourceCost": {
-                    "GOLD": 1.0
-                }
             },
             {
                 "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",

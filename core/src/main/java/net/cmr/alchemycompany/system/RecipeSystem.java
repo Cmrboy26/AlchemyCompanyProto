@@ -67,7 +67,7 @@ public class RecipeSystem extends EntitySystem implements IUpdateSystem {
 
         // Verify entity can select recipe
         AvailableRecipesComponent arc = buildingEntity.getComponent(AvailableRecipesComponent.class);
-        if (!arc.availableRecipes.contains(recipe) && recipe != null) {
+        if (!arc.getAvailableRecipes(buildingEntity, engine.getWorld()).contains(recipe) && recipe != null) {
             return false;
         }
 

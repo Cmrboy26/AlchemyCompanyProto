@@ -1,6 +1,7 @@
 package net.cmr.alchemycompany.entity;
 
-import java.beans.Visibility;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import com.badlogic.gdx.Gdx;
@@ -8,21 +9,30 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter.OutputType;
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
 
 import net.cmr.alchemycompany.component.BuildingComponent;
-import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.HealthComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.SightComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
-import net.cmr.alchemycompany.network.OnlineStream;
 import net.cmr.alchemycompany.system.VisibilitySystem;
 
 public class BuildingFactory {
+
+    public static Map<String, Entity> getRegisteredBuildingEntities() {
+        Json json = new Json();
+        JsonReader reader = new JsonReader();
+        JsonValue values = reader.parse(Gdx.files.internal("assets/gamedata/buildings.json"));
+
+        Map<String, Entity> buildingTemplates = new HashMap<>();
+        for (JsonValue entry = values.child; entry != null; entry = entry.next) {
+            Entity entity = json.fromJson(Entity.class, entry.toJson(OutputType.json));
+            BuildingComponent bc = entity.getComponent(BuildingComponent.class);
+            buildingTemplates.put(bc.buildingId, entity);
+        }
+        return buildingTemplates;
+    }
 
     public static Entity createBuilding(UUID playerID, String buildingId, int x, int y) {
         Entity building = createEmptyBuilding(buildingId);
