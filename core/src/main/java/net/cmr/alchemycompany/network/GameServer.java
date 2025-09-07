@@ -23,11 +23,14 @@ import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.ResearchManagementComponent;
 import net.cmr.alchemycompany.component.actions.IActionComponent;
 import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
+import net.cmr.alchemycompany.component.actions.TurnActionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.network.Stream.StreamState;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.network.packet.Packet;
+import net.cmr.alchemycompany.network.packet.TurnStatePacket.TurnState;
 import net.cmr.alchemycompany.network.packet.UUIDPacket;
+import net.cmr.alchemycompany.system.TurnSystem;
 import net.cmr.alchemycompany.system.VisibilitySystem;
 import net.cmr.alchemycompany.world.World;
 import net.cmr.alchemycompany.world.World.WorldType;
@@ -44,14 +47,16 @@ public class GameServer implements PlayerStateListener {
     private Server networkServer;
     private boolean allowConnectionMidGame;
     private boolean inLobby;
+    private Map<UUID, List<Entity>> queuedActions;
 
     public GameServer(boolean allowConnectionMidGame) {
         this.allowConnectionMidGame = allowConnectionMidGame;
-        this.inLobby = true;
+        this.inLobby = false;
         playerStreams = new HashMap<>();
         queuedBroadcasts = new ArrayList<>();
         playerStateListeners = new HashSet<>();
         computerPlayerStreams = new HashMap<>();
+        queuedActions = new HashMap<>();
 
         World world = new World(WorldType.MINI, System.currentTimeMillis());
         ACEngine engine = GameManager.createServerEngine(this, world);
@@ -152,6 +157,33 @@ public class GameServer implements PlayerStateListener {
             }
         }
 
+        TurnState turnState = engine.getSystem(TurnSystem.class).getTurnState();
+        for (UUID playerActionUUID : queuedActions.keySet()) {
+            boolean isComputer = computerPlayerStreams.containsKey(playerActionUUID);
+            if ((isComputer && turnState == TurnState.AI_TURN) || (!isComputer && turnState == TurnState.PLAYER_TURN)) {
+                // Extra safeguard to make sure player doesn't queue multiple "ready" turn actions
+                Entity turnActionEntity = null;
+                for (Entity actionEntity : queuedActions.get(playerActionUUID)) {
+                    if (actionEntity.hasComponent(TurnActionComponent.class)) {
+                        TurnActionComponent tac = actionEntity.getComponent(TurnActionComponent.class);
+                        if (tac.turnFinished) {
+                            turnActionEntity = actionEntity;
+                            break;
+                        }
+                    }
+                }
+                queuedActions.get(playerActionUUID).removeIf((e) -> { return e.hasComponent(TurnActionComponent.class); } );
+                queuedActions.get(playerActionUUID).add(turnActionEntity);
+
+                for (Entity actionEntity : queuedActions.get(playerActionUUID)) {
+                    if (actionEntity != null) {
+                        engine.addEntity(actionEntity);
+                    }
+                }
+                queuedActions.remove(playerActionUUID);
+            }
+        }
+
         long now = System.nanoTime();
         float delta = (now - lastUpdate) / 1_000_000_000f;
         lastUpdate = now;
@@ -244,7 +276,9 @@ public class GameServer implements PlayerStateListener {
                         return;
                     }
                 }
-                getEngine().addEntity(entity);
+                queuedActions.putIfAbsent(playerID, new ArrayList<>());
+                queuedActions.get(playerID).add(entity);
+                //getEngine().addEntity(entity);
             } else {
                 // DO NOTHING: they sent over a non-action component.
             }

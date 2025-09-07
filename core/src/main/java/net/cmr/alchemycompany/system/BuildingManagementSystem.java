@@ -63,7 +63,7 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
             // Remove tile at location if it is the players
             Entity building = engine.getEntity(tile.getBuildingSlotID());
             BuildingComponent bc = building.getComponent(BuildingComponent.class);
-            if (bc.buildingId != "HEADQUARTERS") {
+            if (!bc.buildingId.equals("HEADQUARTERS")) {
                 UUID buildingOwner = building.getComponent(OwnerComponent.class).getUUID();
                 if (playerID.equals(buildingOwner)) {
                     tile.setBuildingSlotID(null); // set tile unoccupied

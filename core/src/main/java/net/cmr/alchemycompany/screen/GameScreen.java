@@ -5,17 +5,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import com.esotericsoftware.kryonet.Client;
 
 import net.cmr.alchemycompany.ACEngine;
 import net.cmr.alchemycompany.AlchemyCompany;
@@ -25,18 +25,16 @@ import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
-import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
-import net.cmr.alchemycompany.component.actions.TurnActionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.helper.InputHelper;
 import net.cmr.alchemycompany.helper.MenuHelper;
 import net.cmr.alchemycompany.network.GameServer;
-import net.cmr.alchemycompany.network.LocalStream;
-import net.cmr.alchemycompany.network.OnlineStream;
 import net.cmr.alchemycompany.network.Stream;
 import net.cmr.alchemycompany.network.Stream.StreamState;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.network.packet.Packet;
+import net.cmr.alchemycompany.network.packet.TurnStatePacket;
+import net.cmr.alchemycompany.network.packet.TurnStatePacket.TurnState;
 import net.cmr.alchemycompany.network.packet.UUIDPacket;
 import net.cmr.alchemycompany.network.packet.WorldPacket;
 import net.cmr.alchemycompany.system.RenderSystem;
@@ -57,6 +55,7 @@ public class GameScreen implements Screen {
     private GameManager gameManager;
     private Stream stream;
     private GameServer server;
+    private int turn;
 
     public GameScreen(GameServer server, Stream stream) {
         this.server = server;
@@ -88,6 +87,24 @@ public class GameScreen implements Screen {
                     gameManager.getEngine().addEntity(entity);
                 } else {
                     gameManager.getEngine().removeEntity(entity);
+                }
+            }
+            if (packet instanceof TurnStatePacket) {
+                TurnStatePacket tsp = (TurnStatePacket) packet;
+                turn = tsp.getTurn();
+                System.out.println(tsp);
+                TextButton endTurnButton = menuHelper.getEndTurnButton();
+                if (tsp.getState() == TurnState.PLAYER_TURN) {
+                    endTurnButton.addAction(Actions.sequence(
+                        Actions.run(() -> { endTurnButton.setText("Your Turn!"); }),
+                        Actions.delay(5),
+                        Actions.run(() -> { endTurnButton.setText("End Turn"); })
+                    ));
+                    endTurnButton.setDisabled(false);
+                } else {
+                    endTurnButton.clearActions();
+                    endTurnButton.setDisabled(true);
+                    endTurnButton.setText("Please Wait...");
                 }
             }
         }
@@ -165,6 +182,10 @@ public class GameScreen implements Screen {
             }
             if (packet instanceof EntityPacket) {
                 entityList.add((EntityPacket) packet);
+            }
+            if (packet instanceof TurnStatePacket) {
+                TurnStatePacket tsp = (TurnStatePacket) packet;
+                turn = tsp.getTurn();
             }
         }
 
@@ -259,6 +280,10 @@ public class GameScreen implements Screen {
     public void focusOnTile(int x, int y) {
         focusX = x;
         focusY = y;
+    }
+    
+    public int getTurn() {
+        return turn;
     }
 
     private void processTileFocus() {

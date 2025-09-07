@@ -71,9 +71,31 @@ public class RenderSystem extends EntitySystem {
                     if (!isVisibleCurrently) {
                         batch.setColor(Color.GRAY);
                     }
+
+                    float width = sprite.getWidth() * 4f;
+                    float height = sprite.getHeight() * 4f;
+                    float displayX = iso.x * TILE_SIZE;
+                    float displayY = (iso.y + 1) / 4 * TILE_SIZE;
+                    if (invert) {
+                        width *= -1;
+                    }
+                    displayX -= width / 2;
+                    displayY -= height / 2;
+
+                    /*
+                    width = sprite.getWidth() * 4f;
+                    height = sprite.getHeight() * 4f;
+                    displayX = iso.x * TILE_SIZE;
+                    displayY = (iso.y + 1) / 4 * TILE_SIZE;
+                    if (invert) {
+                        width *= -1;
+                    }
+                    displayX -= width / 2;
+                    displayY -= height / 2;
+                     */
+
                     if (sprite != null) {
-                        batch.draw(sprite, (iso.x - (invert ? -1.5f : 0) - 0.75f) * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (invert ? -1 : 1) * 1.5f, TILE_SIZE * 1.5f);
-                        //batch.draw(texture, iso.x * TILE_SIZE, iso.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        batch.draw(sprite, displayX, displayY, width, height);
                     }
                     if (!isVisibleCurrently) {
                         batch.setColor(Color.WHITE);
@@ -84,7 +106,16 @@ public class RenderSystem extends EntitySystem {
                                 RenderComponent rc = entity.getComponent(RenderComponent.class);
                                 Sprite entitySprite = Sprites.getSprite(rc.spriteType);
                                 boolean entityInvert = rc.invertable && invert;
-                                batch.draw(entitySprite, (iso.x - (entityInvert ? -1.5f : 0) - 0.75f) * TILE_SIZE, (iso.y / 4f - 0.5f) * TILE_SIZE, TILE_SIZE * (entityInvert ? -1 : 1) * 1.5f, TILE_SIZE * 1.5f);
+                                width = entitySprite.getWidth() * 4f;
+                                height = entitySprite.getHeight() * 4f;
+                                displayX = iso.x * TILE_SIZE;
+                                displayY = (iso.y + 1) / 4 * TILE_SIZE;
+                                if (entityInvert) {
+                                    width *= -1;
+                                }
+                                displayX -= width / 2;
+                                displayY -= TILE_SIZE / 4;
+                                batch.draw(entitySprite, displayX, displayY, width, height);
                             }
                         }
                     }

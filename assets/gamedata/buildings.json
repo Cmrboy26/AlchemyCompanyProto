@@ -42,7 +42,7 @@
             },
             {
                 "class": "net.cmr.alchemycompany.component.SightComponent",
-                "radius": 4
+                "radius": 3
             }
         ]
     },
@@ -90,17 +90,15 @@
             },
             {
                 "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",
-                "availableRecipes": [
-                    "EXTRACT_QUARTZ",
-                    "EXTRACT_COAL",
-                    "EXTRACT_IRON_ORE",
-                    "EXTRACT_COPPER_ORE",
-                    "EXTRACT_TITANIUM_ORE",
-                    "EXTRACT_CRYSTAL",
-                    "EXTRACT_MYTHRIL"
-                ],
                 "tileSpecificRecipes": {
-                    "EXTRACT_SULFUR": ["SWAMP"]
+                    "EXTRACT_SULFUR": ["SWAMP"],
+                    "EXTRACT_QUARTZ": ["MOUNTAINS"],
+                    "EXTRACT_COAL": ["MOUNTAINS"],
+                    "EXTRACT_IRON_ORE": ["MOUNTAINS"],
+                    "EXTRACT_COPPER_ORE": ["MOUNTAINS"],
+                    "EXTRACT_TITANIUM_ORE": ["MOUNTAINS"],
+                    "EXTRACT_CRYSTAL": ["MOUNTAINS"],
+                    "EXTRACT_MYTHRIL": ["MOUNTAINS"]
                 }
             }
         ]
@@ -173,7 +171,7 @@
             },
             {
                 "class": "net.cmr.alchemycompany.component.LabelComponent",
-                "name": "Refinery",
+                "name": "Factory",
                 "description": "Combines resources to make better goods."
             },
             {

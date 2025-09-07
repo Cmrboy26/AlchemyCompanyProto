@@ -25,6 +25,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane.ScrollPaneStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
 import com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -73,6 +74,7 @@ public class MenuHelper extends ScreenHelper {
     Stage stage;
     ButtonGroup<Button> shopGroup;
     ButtonGroup<Button> menusGroup;
+    TextButton endTurnButton;
 
     public MenuHelper(GameScreen screen, GameManager gameManager, UUID playerUUID, Stage stage) {
         super(screen, gameManager, playerUUID);
@@ -148,7 +150,7 @@ public class MenuHelper extends ScreenHelper {
         stage.addActor(rightBottom);
 
         Callable<Integer> turnNumberCallable = () -> {
-            return 0;
+            return screen.getTurn();
         };
         Label turnLabel = new Label("Turn: ...", skin);
         turnLabel.setFontScale(0.75f);
@@ -164,10 +166,12 @@ public class MenuHelper extends ScreenHelper {
         final String endTurnString = "End Turn";
         final String continueTurnString = "Continue Turn";
 
-        TextButton endTurnButton = new TextButton(endTurnString, skin);
+        endTurnButton = new TextButton(endTurnString, skin);
+        endTurnButton.getLabel().setWrap(true);
         endTurnButton.addListener(new InputListener() {
             @Override
             public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                if (endTurnButton.isDisabled()) return false;
                 TurnSystem.broadcastTurnState(endTurnButton.isPressed(), playerUUID, screen.getStream());
                 return true;
             }
@@ -231,9 +235,17 @@ public class MenuHelper extends ScreenHelper {
             buildingIds[i] = buyableBuildings.get(i);
         }
         
+        Table scrollTable = new Table(skin);
         Table shopEntries = new Table(skin);
-        ScrollPane scrollEntries = new ScrollPane(shopEntries, skin);
+        ScrollPane scrollEntries = new ScrollPane(scrollTable, skin);
         scrollEntries.setScrollingDisabled(true, false);
+        scrollEntries.setOverscroll(false, false);
+        scrollEntries.setFadeScrollBars(false);
+        scrollTable.add(shopEntries).grow();
+
+        // Set the preferred size of the ScrollPane to be smaller than the container to enable scrolling
+        scrollEntries.setForceScroll(false, true); // Enable vertical scrolling
+        scrollEntries.setScrollbarsOnTop(true);
 
         final Function<Set<String>, Boolean> hasResearchFunction = (Set<String> techs) -> {
             ResearchSystem system = gameManager.getEngine().getSystem(ResearchSystem.class);
@@ -246,16 +258,121 @@ public class MenuHelper extends ScreenHelper {
             return true;
         };
 
+        scrollEntries.layout();
+        shopEntries.padRight(scrollEntries.getScrollBarWidth() + 10);
+
+        // TODO: sort buildings by ease to get
         for (String buildingId : buildingIds) {
             Button button = new Button(skin, "toggle");
+            button.setName(buildingId);
+            shopGroup.add(button);
+            shopEntries.add(button).growX().pad(2).spaceRight(4).row();
 
             Entity building = BuildingFactory.createEmptyBuilding(buildingId);
             RenderComponent rc = building.getComponent(RenderComponent.class);
             PurchaseCostComponent pcc = building.getComponent(PurchaseCostComponent.class);
             LabelComponent lc = building.getComponent(LabelComponent.class);
             ResearchRequirementComponent rrc = building.getComponent(ResearchRequirementComponent.class);
+            ConstructionComponent cc = building.getComponent(ConstructionComponent.class);
 
+            Table textTable = new Table();
             Label name = new Label(lc.name, skin);
+            name.setAlignment(Align.center);
+            textTable.add(name).grow().pad(2).row();
+            Image image = new Image(Sprites.getSprite(rc.spriteType));
+            button.add(image).left().pad(4).colspan(1);
+            button.add(textTable).left().growX().colspan(1).padRight(scrollEntries.getScrollBarWidth() + 4);
+            button.pack();
+
+            button.addListener(new InputListener() {
+                 @Override
+                 public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+                    // Display information table
+                 }
+                 @Override
+                 public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+                     // Hide information table
+                 }
+            });
+            button.addAction(Actions.forever(Actions.run(() -> {
+                boolean technologyMet = rrc == null || hasResearchFunction.apply(rrc.technologiesRequired);
+                button.setDisabled(!technologyMet);
+                button.getColor().a = technologyMet ? 1f : 0.5f;
+                
+                Actor errorActor = button.findActor("errorActor");
+                if (errorActor != null) {
+                    button.getCell(errorActor).pad(0);
+                    button.removeActor(errorActor);
+                }
+
+                String message = null;
+                if (!technologyMet) {
+                    ResearchSystem system = gameManager.getEngine().getSystem(ResearchSystem.class);
+                    for (String researchID : rrc.technologiesRequired) {
+                        if (!system.hasTechnology(playerUUID.toString(), researchID)) {
+                            Technology tech = Registry.getInstance().getRegistry(Technology.class).get(researchID);
+                            message = "Locked behind \""+tech.getName()+"\"";
+                            break;
+                        }
+                    }
+                }
+
+                if (message != null) {
+                    Label bottomLabel = new Label(message, skin);
+                    bottomLabel.setAlignment(Align.left);
+                    bottomLabel.setWrap(true);
+                    bottomLabel.setName("errorActor");
+                    bottomLabel.setFontScale(0.5f);
+                    button.add(bottomLabel).growX().colspan(2).padLeft(8).padBottom(2).row();
+                }
+
+                Actor infoActor = button.findActor("infoActor");
+                if (infoActor != null) {
+                    button.getCell(infoActor).pad(0);
+                    button.removeActor(infoActor);
+                }
+
+                if (button.isChecked()) {
+                    Table infoTable = new Table(skin);
+                    infoTable.setName("infoActor");
+                    button.add(infoTable).grow().colspan(2).pad(2).row();
+                    Label descriptionLabel = new Label(lc.description, skin);
+                    descriptionLabel.setWrap(true);
+                    descriptionLabel.setFontScale(0.5f);
+                    infoTable.add(descriptionLabel).colspan(2).growX().padLeft(4).row();
+                    Label costLabel = new Label("Cost:", skin);
+                    costLabel.setAlignment(Align.center);
+                    infoTable.add(costLabel).colspan(1).grow();
+                    Table costTable = new Table(skin);
+                    infoTable.add(costTable).colspan(1).grow().row();
+
+                    costTable.add(cc.turns + " turn" + (cc.turns == 1 ? "" : "s")).row();
+                    costLabel.setFontScale(0.75f);
+                    final int columns = (int) Math.floor(pcc.getResourceCost(playerUUID, buildingId, gameManager.getEngine()).size() / 3) + 1;
+                    int index = 0;
+                    ResourceSystem resourceSystem = gameManager.getEngine().getSystem(ResourceSystem.class);
+                    Map<String, Float> cachedStoredResources = resourceSystem.getCachedStoredResources(playerUUID);
+                    for (Entry<String, Float> entry : pcc.getResourceCost(playerUUID, buildingId, gameManager.getEngine()).entrySet()) {
+                        Table entryTable = getResourceSection(entry.getKey(), entry.getValue());
+                        if (cachedStoredResources != null) {
+                            boolean enoughResources = cachedStoredResources.getOrDefault(entry.getKey(), 0f) >= entry.getValue();
+                            entryTable.findActor("image").setColor(enoughResources ? Color.WHITE : Color.GRAY);
+                            entryTable.findActor("amount").setColor(enoughResources ? Color.WHITE : Color.RED);
+                        }
+                        costTable.add(entryTable);
+                        if (index % columns == columns - 1) {
+                            costTable.row();
+                        }
+                        index++;
+                    }
+                }
+
+                
+            })));
+
+            
+
+            /*Label name = new Label(lc.name, skin);
             name.setAlignment(Align.center);
             button.add(name).left().growX();
 
@@ -268,6 +385,7 @@ public class MenuHelper extends ScreenHelper {
             button.add(buildingImage).left().expandX();
 
             Table costTable = new Table(skin);
+            cost.setWrap(true);
             costTable.addAction(Actions.forever(Actions.run(() -> {
                 costTable.clearChildren();
                 boolean researchMet = rrc == null || hasResearchFunction.apply(rrc.technologiesRequired);
@@ -275,7 +393,6 @@ public class MenuHelper extends ScreenHelper {
 
                 if (!researchMet) {
                     cost.setText("");
-                    cost.setWrap(true);
                     String researchRequirementString = "Requires:\n";
                     for (String techId : rrc.technologiesRequired) {
                         Technology tech = Registry.getInstance().getRegistry(Technology.class).get(techId);
@@ -313,34 +430,21 @@ public class MenuHelper extends ScreenHelper {
                 }
             })));
 
-            button.add(costTable).center().expandX().row();
+            button.add(costTable).center().growX().row();
 
             button.pad(3);
             button.setName(buildingId);
 
             button.addAction(Actions.forever(Actions.run(() -> {
-                /*ResearchSystem system = gameManager.getEngine().getSystem(ResearchSystem.class);
-                
-                boolean technologyMet = true;
-                if (system == null) {
-                    technologyMet = false;
-                } else {
-                    for (String researchID : rrc.technologiesRequired) {
-                        if (!system.hasTechnology(playerUUID.toString(), researchID)) {
-                            technologyMet = false;
-                            break;
-                        }
-                    }
-                }*/
                 boolean technologyMet = rrc == null || hasResearchFunction.apply(rrc.technologiesRequired);
                 button.setDisabled(!technologyMet);
                 button.getColor().a = technologyMet ? 1f : 0.5f;
             })));
 
             shopGroup.add(button);
-            shopEntries.add(button).growX().spaceBottom(2).row();
+            shopEntries.add(button).growX().spaceBottom(2).row();*/
         }
-        shopMenu.add(scrollEntries).height(200).width(150).expandX();
+        shopMenu.add(scrollEntries).height(200).width(200).expandX();
 
         left.add(shopMenu).left().expand().space(10);
         stage.addActor(left);
@@ -831,6 +935,10 @@ public class MenuHelper extends ScreenHelper {
         table.add(label).padRight(2);
         table.add(image).padRight(2).row();
         return table;
+    }
+
+    public TextButton getEndTurnButton() {
+        return endTurnButton;
     }
 
 }

@@ -65,6 +65,7 @@ public class GameConnector {
                     }
                 }
             });
+            clientUpdateThread.setDaemon(true);
             clientUpdateThread.start();
             client.connect(ip, port);
             startGameScreen(null, onlineStream);

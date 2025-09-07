@@ -42,6 +42,7 @@ public class AvailableRecipesComponent extends Component {
         availableRecipes = json.readValue(
             HashSet.class,
             String.class,
+            new HashSet<>(),
             jsonData.get("availableRecipes")
         );
         
