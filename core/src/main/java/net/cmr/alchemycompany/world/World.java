@@ -149,6 +149,9 @@ public class World implements Cloneable, Serializable {
 
         return worldFeatureList;
     }
+    public Tile getTile(TilePoint tp) {
+        return tiles[tp.getX()][tp.getY()];
+    }
     public Tile getTile(int x, int y) {
         return tiles[x][y];
     }
@@ -248,6 +251,10 @@ public class World implements Cloneable, Serializable {
         json.readField(this, "tiles", jsonData);
         json.readField(this, "seed", jsonData);
         noise = new OpenSimplexNoise(seed);
+    }
+
+    public boolean isInWorld(TilePoint tile) {
+        return tile.getX() >= 0 && tile.getX() < width && tile.getY() >= 0 && tile.getY() < height;
     } 
 
 }

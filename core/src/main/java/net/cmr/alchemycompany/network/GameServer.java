@@ -251,7 +251,8 @@ public class GameServer implements PlayerStateListener {
             boolean result = gameManager.tryPlaceBuilding(playerUUID, "HEADQUARTERS", x, y, true);
             // focusOnTile(x, y);
             if (result) {
-                GameManager.onBuildingChange(playerUUID, x, y, engine);
+                gameManager.tryPlaceUnit(playerUUID, "SCOUT", x, y, true);
+                GameManager.onPlacementChange(playerUUID, x, y, engine);
                 break;
             }
         }

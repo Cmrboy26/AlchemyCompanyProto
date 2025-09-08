@@ -9,7 +9,7 @@ public class Tile implements Cloneable {
     WorldFeature feature;
     int x, y;
     UUID buildingEntityID;
-    UUID troopEntityID;
+    UUID unitEntityID;
 
     public Tile() { }
 
@@ -25,26 +25,26 @@ public class Tile implements Cloneable {
     public boolean isBuildingSlotEmpty() {
         return buildingEntityID == null;
     }
-    public boolean isTroopSlotEmpty() {
-        return troopEntityID == null;
+    public boolean isUnitSlotEmpty() {
+        return unitEntityID == null;
     }
     public boolean canPlaceBuilding() {
         return isBuildingSlotEmpty();
     }
-    public boolean canPlaceTroop() {
-        return isTroopSlotEmpty();
+    public boolean canPlaceUnit() {
+        return isUnitSlotEmpty();
     }
     public UUID getBuildingSlotID() {
         return buildingEntityID;
     }
-    public UUID getTroopSlotID() {
-        return troopEntityID;
+    public UUID getUnitSlotID() {
+        return unitEntityID;
     }
     public void setBuildingSlotID(UUID id) {
         this.buildingEntityID = id;
     }
-    public void setTroopSlotID(UUID id) {
-        this.troopEntityID = id;
+    public void setUnitSlotID(UUID id) {
+        this.unitEntityID = id;
     }
 
     @Override

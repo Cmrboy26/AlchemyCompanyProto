@@ -4,17 +4,24 @@ import java.util.UUID;
 
 import com.badlogic.gdx.utils.Null;
 
+import net.cmr.alchemycompany.component.BuildingComponent;
+import net.cmr.alchemycompany.component.PurchaseCostComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
+import net.cmr.alchemycompany.component.UnitComponent;
 import net.cmr.alchemycompany.component.actions.BuildingActionComponent;
+import net.cmr.alchemycompany.component.actions.MovementActionComponent;
 import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
 import net.cmr.alchemycompany.component.actions.SelectRecipeActionComponent;
 import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
+import net.cmr.alchemycompany.entity.BuildingFactory;
+import net.cmr.alchemycompany.entity.UnitFactory;
 import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.network.Stream;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.system.BuildingManagementSystem;
+import net.cmr.alchemycompany.system.MovementSystem;
 import net.cmr.alchemycompany.system.RecipeSystem;
 import net.cmr.alchemycompany.system.RenderSystem;
 import net.cmr.alchemycompany.system.ResearchSystem;
@@ -22,6 +29,7 @@ import net.cmr.alchemycompany.system.ResourceSystem;
 import net.cmr.alchemycompany.system.SelectionSystem;
 import net.cmr.alchemycompany.system.TurnSystem;
 import net.cmr.alchemycompany.system.VisibilitySystem;
+import net.cmr.alchemycompany.world.Tile;
 import net.cmr.alchemycompany.world.World;
 
 /**
@@ -44,10 +52,40 @@ public class GameManager {
         if (isClient()) return;
     }
 
+    public boolean tryPlaceUnit(UUID playerUUID, String type, int x, int y, boolean ignoreVisibility) {
+        if (isClient()) {
+
+        } else {
+            Tile tile = engine.as(ACEngine.class).getWorld().getTile(x, y);
+            if (tile != null && tile.canPlaceUnit()) {
+                VisibilitySystem visibilitySystem = engine.getSystem(VisibilitySystem.class);
+                if (ignoreVisibility || visibilitySystem == null || (visibilitySystem != null && visibilitySystem.isVisibleCurrently(playerUUID, x, y))) {
+                    Entity unit = UnitFactory.createUnit(playerUUID, type, x, y);
+                    UnitComponent uc = unit.getComponent(UnitComponent.class);
+                    PurchaseCostComponent pcc = unit.getComponent(PurchaseCostComponent.class);
+                    //if (bc.validPlacement.contains(tile.getFeature())) {
+                        if (pcc != null) {
+                            ResourceSystem resourceSystem = engine.getSystem(ResourceSystem.class);
+                            if (resourceSystem != null) {
+                                if (!resourceSystem.tryUseResources(playerUUID, pcc.getResourceCost(playerUUID, uc.unitId, engine))) {
+                                    return false;
+                                }
+                            }
+                        }
+
+                        tile.setUnitSlotID(unit.getID()); // set tile occupied
+                        engine.addEntity(unit);
+                        return true;
+                    //}
+                }
+            }
+        }
+        return false;
+    }
+
     /*
      * When the player attempts to perform an action, send it to the server. The server will give a response if it is possible.
      */
-
     public boolean tryPlaceBuilding(UUID playerId, String type, int x, int y, boolean ignoreVisibility) {
         if (isClient()) {
             Entity buildAction = new Entity();
@@ -87,14 +125,23 @@ public class GameManager {
         }
     }
 
+    public void tryMoveUnit(UUID playerId, UUID unitId, int x, int y) {
+        if (isClient()) {
+            Entity moveAction = new Entity();
+            moveAction.addComponent(new PlayerActionComponent(playerId), engine);
+            moveAction.addComponent(new MovementActionComponent(unitId, x, y), engine);
+            clientStream.sendPacket(new EntityPacket(moveAction, isClient()));
+        }
+    }
+
     public static void onBuildingChange(UUID buildingPlayerId, Entity buildingEntity, Engine engine) {
         TilePositionComponent tpc = buildingEntity.getComponent(TilePositionComponent.class);
         int x = tpc.tileX;
         int y = tpc.tileY;
-        onBuildingChange(buildingPlayerId, x, y, engine);
+        onPlacementChange(buildingPlayerId, x, y, engine);
     }
 
-    public static void onBuildingChange(UUID buildingPlayerId, int x, int y, Engine engine) {
+    public static void onPlacementChange(UUID buildingPlayerId, int x, int y, Engine engine) {
         engine.getSystem(VisibilitySystem.class).updateVisibility(buildingPlayerId);
         engine.getSystem(ResourceSystem.class).calculateTurn(true);
     }
@@ -132,6 +179,7 @@ public class GameManager {
         ACEngine engine = new ACEngine();
         engine.registerSystem(new ResourceSystem());
         engine.registerSystem(new TurnSystem(server));
+        engine.registerSystem(new MovementSystem());
 
         addSharedSystems(engine, world);
         return engine;

@@ -12,6 +12,7 @@ import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.Component;
 import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
+import net.cmr.alchemycompany.component.PlacementComponent;
 import net.cmr.alchemycompany.component.PurchaseCostComponent;
 import net.cmr.alchemycompany.component.actions.BuildingActionComponent;
 import net.cmr.alchemycompany.component.actions.IActionComponent;
@@ -47,11 +48,11 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
 
             if (type != null) {
                 if (tryPlaceBuilding(playerID, type, x, y, false, engine.as(ACEngine.class))) {
-                    GameManager.onBuildingChange(playerID, x, y, engine);
+                    GameManager.onPlacementChange(playerID, x, y, engine);
                 }
             } else {
                 if (tryRemoveBuilding(playerID, x, y, engine.as(ACEngine.class))) {
-                    GameManager.onBuildingChange(playerID, x, y, engine);
+                    GameManager.onPlacementChange(playerID, x, y, engine);
                 }
             }
         });
@@ -83,7 +84,8 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
                 Entity building = BuildingFactory.createBuilding(playerID, type, x, y);
                 BuildingComponent bc = building.getComponent(BuildingComponent.class);
                 PurchaseCostComponent pcc = building.getComponent(PurchaseCostComponent.class);
-                if (bc.validPlacement.contains(tile.getFeature())) {
+                PlacementComponent pc = building.getComponent(PlacementComponent.class);
+                if (pc.getValidPlacement().contains(tile.getFeature())) {
                     if (pcc != null) {
                         ResourceSystem resourceSystem = engine.getSystem(ResourceSystem.class);
                         if (resourceSystem != null) {

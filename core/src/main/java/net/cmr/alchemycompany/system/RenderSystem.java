@@ -9,13 +9,13 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector3;
 
 import net.cmr.alchemycompany.IsometricHelper;
 import net.cmr.alchemycompany.Sprites;
+import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.RenderComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Engine;
@@ -72,30 +72,9 @@ public class RenderSystem extends EntitySystem {
                         batch.setColor(Color.GRAY);
                     }
 
-                    float width = sprite.getWidth() * 4f;
-                    float height = sprite.getHeight() * 4f;
-                    float displayX = iso.x * TILE_SIZE;
-                    float displayY = (iso.y + 1) / 4 * TILE_SIZE;
-                    if (invert) {
-                        width *= -1;
-                    }
-                    displayX -= width / 2;
-                    displayY -= height / 2;
-
-                    /*
-                    width = sprite.getWidth() * 4f;
-                    height = sprite.getHeight() * 4f;
-                    displayX = iso.x * TILE_SIZE;
-                    displayY = (iso.y + 1) / 4 * TILE_SIZE;
-                    if (invert) {
-                        width *= -1;
-                    }
-                    displayX -= width / 2;
-                    displayY -= height / 2;
-                     */
-
                     if (sprite != null) {
-                        batch.draw(sprite, displayX, displayY, width, height);
+                        SpriteRender render = new SpriteRender(sprite);
+                        render.renderSprite(batch, iso, invert, true);
                     }
                     if (!isVisibleCurrently) {
                         batch.setColor(Color.WHITE);
@@ -105,23 +84,50 @@ public class RenderSystem extends EntitySystem {
                             for (Entity entity : currentEntities) {
                                 RenderComponent rc = entity.getComponent(RenderComponent.class);
                                 Sprite entitySprite = Sprites.getSprite(rc.spriteType);
-                                boolean entityInvert = rc.invertable && invert;
-                                width = entitySprite.getWidth() * 4f;
-                                height = entitySprite.getHeight() * 4f;
-                                displayX = iso.x * TILE_SIZE;
-                                displayY = (iso.y + 1) / 4 * TILE_SIZE;
-                                if (entityInvert) {
-                                    width *= -1;
+                                SpriteRender spriteRender = new SpriteRender(entitySprite);
+                                spriteRender.renderSprite(batch, iso, rc.invertable && invert, false);
+
+                                if (entity.hasComponent(ConstructionComponent.class)) {
+                                    SpriteRender constructionRender = new SpriteRender("CONSTRUCTION_SCAFFOLD");
+                                    constructionRender.renderSprite(batch, iso, rc.invertable && invert, false);
                                 }
-                                displayX -= width / 2;
-                                displayY -= TILE_SIZE / 4;
-                                batch.draw(entitySprite, displayX, displayY, width, height);
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    private class SpriteRender {
+
+        private Sprite sprite;
+
+        SpriteRender(Sprite sprite) {
+            this.sprite = sprite;
+        }
+
+        SpriteRender(String spriteId) {
+            this.sprite = Sprites.getSprite(spriteId);
+        }
+
+        void renderSprite(SpriteBatch batch, Vector3 iso, boolean invert, boolean tile) {
+            float width = sprite.getWidth() * 4f;
+            float height = sprite.getHeight() * 4f;
+            float displayX = iso.x * TILE_SIZE;
+            float displayY = (iso.y + 1) / 4 * TILE_SIZE;
+            if (invert) {
+                width *= -1;
+            }
+            displayX -= width / 2;
+            if (tile) {
+                displayY -= height / 2;
+            } else {
+                displayY -= TILE_SIZE / 4;
+            }
+            batch.draw(sprite, displayX, displayY, width, height);
+        }
+
     }
 
     private boolean isInvert(int x, int y) {

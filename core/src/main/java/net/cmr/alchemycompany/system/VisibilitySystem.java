@@ -18,7 +18,7 @@ import net.cmr.alchemycompany.world.TilePoint;
 public class VisibilitySystem extends EntitySystem {
 
     public static final int DEFAULT_BUILDING_RADIUS = 3;
-    public static final int DEFAULT_TROOP_RADIUS = 3;
+    public static final int DEFAULT_UNIT_RADIUS = 2;
 
     private Family fogOfWarFamily = Family.all(FogOfWarComponent.class, OwnerComponent.class);
 

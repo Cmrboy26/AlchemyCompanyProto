@@ -8,25 +8,25 @@ import net.cmr.alchemycompany.game.Effects.AttackType;
 public class AttackComponent extends Component {
     
     public float baseAttack;
-    public AttackType baseType;
+    public AttackType typeMultipliers;
 
     public AttackComponent() {}
 
-    public AttackComponent(float baseAttack, AttackType baseType) {
+    public AttackComponent(float baseAttack, AttackType typeMultipliers) {
         this.baseAttack = baseAttack;
-        this.baseType = baseType;
+        this.typeMultipliers = typeMultipliers;
     }
 
     @Override
     public void write(Json json) {
         json.writeField(this, "baseAttack");
-        json.writeField(this, "baseType");
+        json.writeField(this, "typeMultipliers");
     }
 
     @Override
     public void read(Json json, JsonValue jsonData) {
         json.readValue("baseAttack", Float.class, jsonData);
-        json.readValue("baseType", AttackType.class, jsonData);
+        json.readValue("typeMultipliers", AttackType.class, jsonData);
     }
 
 }

@@ -43,6 +43,7 @@ import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.ConsumerComponent;
 import net.cmr.alchemycompany.component.LabelComponent;
+import net.cmr.alchemycompany.component.MovementComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.ProducerComponent;
 import net.cmr.alchemycompany.component.PurchaseCostComponent;
@@ -692,6 +693,7 @@ public class MenuHelper extends ScreenHelper {
 
                 ProducerComponent pc = selectedEntity.getComponent(ProducerComponent.class);
                 ConsumerComponent cc = selectedEntity.getComponent(ConsumerComponent.class);
+                MovementComponent mc = selectedEntity.getComponent(MovementComponent.class);
                 AvailableRecipesComponent arc = selectedEntity.getComponent(AvailableRecipesComponent.class);
                 SelectedRecipeComponent src = selectedEntity.getComponent(SelectedRecipeComponent.class);
                 ConstructionComponent constc = selectedEntity.getComponent(ConstructionComponent.class);
@@ -711,7 +713,7 @@ public class MenuHelper extends ScreenHelper {
 
                 if (oc != null && !oc.getUUID().equals(playerUUID)) {
                     // not our building
-                    descriptionLabel.getText().append("Owned by: "+oc.getUUID().toString());
+                    descriptionLabel.getText().append("Owned by: \n"+oc.getUUID().toString());
                 } else {
                     if (!underConstruction) {
                         ArrayList<Table> statsSections = new ArrayList<Table>();
@@ -750,6 +752,29 @@ public class MenuHelper extends ScreenHelper {
                                 Table resourceSection = getResourceSection(entry.getKey(), entry.getValue(), 1);
                                 resourceSection.setColor(producingColor);
                                 productionTable.add(resourceSection);
+                            }
+                        }
+                        
+                        if (mc != null) {
+                            Table movementTable = new Table(skin);
+                            statsSections.add(movementTable);
+                            Callable<String> turnString = () -> {
+                                MovementComponent tmc = gameManager.getEngine().getEntity(selectedEntityId).getComponent(MovementComponent.class);
+                                return tmc.movesRemaining + "/"+ tmc.movesPerTurn + " Turn" + (tmc.movesPerTurn != 1 ? "s" : "");
+                            };
+                            Label name;
+                            try {
+                                name = new Label(turnString.call(), skin);
+                                movementTable.add(name);
+                                name.addAction(Actions.forever(Actions.run(() -> {
+                                    try {
+                                        name.setText(turnString.call());
+                                    } catch (Exception e) {
+
+                                    }
+                                })));
+                            } catch (Exception e) {
+
                             }
                         }
 

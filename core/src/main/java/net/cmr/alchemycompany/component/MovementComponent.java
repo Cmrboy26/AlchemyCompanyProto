@@ -23,7 +23,11 @@ public class MovementComponent extends Component {
     @Override
     public void read(Json json, JsonValue jsonData) {
         this.movesPerTurn = json.readValue("movesPerTurn", Float.class, jsonData);
-        this.movesRemaining = json.readValue("movesRemaining", Float.class, jsonData);
+        this.movesRemaining = json.readValue("movesRemaining", Float.class, this.movesPerTurn, jsonData);
+    }
+
+    public void resetMovement() {
+        movesRemaining = movesPerTurn;
     }
 
 }

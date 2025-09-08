@@ -15,24 +15,21 @@ import net.cmr.alchemycompany.component.HealthComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.SightComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
+import net.cmr.alchemycompany.component.UnitComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.system.VisibilitySystem;
 
 public class BuildingFactory {
 
-    public static Map<String, Entity> getRegisteredBuildingEntities() {
-        Json json = new Json();
-        JsonReader reader = new JsonReader();
-        JsonValue values = reader.parse(Gdx.files.internal("assets/gamedata/buildings.json"));
+    private static EntityReader<String> reader;
 
-        Map<String, Entity> buildingTemplates = new HashMap<>();
-        for (JsonValue entry = values.child; entry != null; entry = entry.next) {
-            Entity entity = json.fromJson(Entity.class, entry.toJson(OutputType.json));
-            BuildingComponent bc = entity.getComponent(BuildingComponent.class);
-            buildingTemplates.put(bc.buildingId, entity);
+    public static Entity createEmptyBuilding(String unitId) {
+        if (reader == null) {
+            reader = new EntityReader<>();
+            reader.readEntities(Gdx.files.internal("gamedata/buildings.json"), (e) -> { return e.getComponent(BuildingComponent.class).buildingId; });
         }
-        return buildingTemplates;
-    }
+        return reader.getEntity(unitId);
+    }    
 
     public static Entity createBuilding(UUID playerID, String buildingId, int x, int y) {
         Entity building = createEmptyBuilding(buildingId);
@@ -45,56 +42,8 @@ public class BuildingFactory {
         return building;
     }
 
-    public static Entity createEmptyBuilding(String buildingId) {
-        Json json = new Json();
-        JsonReader reader = new JsonReader();
-        JsonValue values = reader.parse(Gdx.files.internal("assets/gamedata/buildings.json"));
-
-        JsonValue building = values.get(buildingId);
-        Entity entity = json.fromJson(Entity.class, building.toJson(OutputType.json));
-        return entity;
-
-        /*boolean read = true;
-
-        if (read) {
-            Entity building = new Json().fromJson(Entity.class,
-            "{\"id\":\"4dcee4bf-b235-4710-8684-4ad738cbac0e\",\"components\":[{\"type\":\"net.cmr.alchemycompany.component.ResearchRequirementComponent\",\"component\":{\"technologiesRequired\":[\"AGRICULTURE\"]}},{\"type\":\"net.cmr.alchemycompany.component.ProducerComponent\",\"component\":{\"production\":{\"IRON\":1}}},{\"type\":\"net.cmr.alchemycompany.component.BuildingComponent\",\"component\":{\"buildingType\":\"FARM\",\"validPlacement\":[\"PLAINS\"]}},{\"type\":\"net.cmr.alchemycompany.component.RenderComponent\",\"component\":{\"spriteType\":\"FARM\"}}]}"
-            );
-
-            return building;
-        } else {
-
-            Entity building = new Entity();
-            SpriteType sprite = null;
-            HashSet<WorldFeature> placeableFeatures = null;
-            switch (type) {
-                case HEADQUARTERS:
-                    sprite = SpriteType.HEADQUARTERS;
-                    placeableFeatures = BuildingComponent.exclude(WorldFeature.WATER);
-
-                    building.addComponent(new StorageComponent(new HashMap<>(), Resources.allItems(10f)), null);
-                    HashMap<AttackType, Float> defenseMap = new HashMap<>();
-                    defenseMap.put(AttackType.NORMAL, 2f);
-                    building.addComponent(new DefenseComponent(50, defenseMap), null);
-                    break;
-                case FARM:
-                    sprite = SpriteType.FARM;
-                    placeableFeatures = BuildingComponent.only(WorldFeature.PLAINS);
-                    building.addComponent(new ProducerComponent(Resources.singleItem(Resource.IRON, 1f)), null);
-                    building.addComponent(new ResearchRequirementComponent(Technology.AGRICULTURE), null);
-                    break;
-                default:
-                    break;
-            }
-            building.addComponent(new RenderComponent(sprite), null);
-            building.addComponent(new BuildingComponent(type, placeableFeatures), null);
-
-            Json json = new Json(OutputType.json);
-            System.out.println(json.toJson(building).toString());
-            System.out.println(json.prettyPrint(building));
-
-            return building;
-        }*/
+    public static Map<String, Entity> getRegisteredBuildingEntities() {
+        return reader.cloneEntityMap();
     }
 
 }

@@ -38,10 +38,12 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
     private final @Null GameScreen playerScreen;
 
     public ResourceSystem() {
-        this.playerScreen = null;
+        this(null);
     }
     public ResourceSystem(GameScreen screen) {
         this.playerScreen = screen;
+        this.cachedStoredResources = new HashMap<>();
+        this.cachedGenerationPerSecond = new HashMap<>();
     }
 
     @Override
@@ -372,11 +374,11 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
     }*/
 
     public boolean tryUseResources(UUID playerUUID, Map<String, Float> resourcesToUse) {
-        Map<String, Float> storedResources = new HashMap<>(this.cachedStoredResources.get(playerUUID));
+        Map<String, Float> storedResources = new HashMap<>(this.cachedStoredResources.getOrDefault(playerUUID, new HashMap<>()));
         // Check if enough resources are available
         for (String resourceId : resourcesToUse.keySet()) {
             float amountToUse = resourcesToUse.get(resourceId);
-            float amountInStorage = this.cachedStoredResources.get(playerUUID).getOrDefault(resourceId, 0f);
+            float amountInStorage = storedResources.getOrDefault(resourceId, 0f);
             if (amountInStorage < amountToUse) {
                 return false;
             }

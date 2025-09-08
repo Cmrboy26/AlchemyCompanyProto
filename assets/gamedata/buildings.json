@@ -3,10 +3,11 @@
         "components": [
             {
                 "class": "net.cmr.alchemycompany.component.BuildingComponent",
-                "buildingId": "HEADQUARTERS",
-                "invalidPlacement": [
-                    "WATER"
-                ]
+                "buildingId": "HEADQUARTERS"
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.PlacementComponent",
+                "invalidPlacement": [ "WATER" ]
             },
             {
                 "class": "net.cmr.alchemycompany.component.LabelComponent",
@@ -22,6 +23,14 @@
                 "invertable": true
             },
             {
+                "class": "net.cmr.alchemycompany.component.DefenseComponent",
+                "baseDefense": 10,
+                "typeMultipliers": {
+                    "NORMAL": 1.0,
+                    "CORROSION": 2.0
+                }
+            },
+            {
                 "class": "net.cmr.alchemycompany.component.StorageComponent",
                 "maxStorage": 25
             },
@@ -30,14 +39,6 @@
                 "production": {
                     "GOLD": 3.0,
                     "SCIENCE": 100.0
-                }
-            },
-            {
-                "class": "net.cmr.alchemycompany.component.DefenseComponent",
-                "baseDefense": 10,
-                "typeMultipliers": {
-                    "NORMAL": 1.0,
-                    "CORROSION": 2.0
                 }
             },
             {
@@ -50,11 +51,11 @@
         "components": [
             {
                 "class": "net.cmr.alchemycompany.component.BuildingComponent",
-                "buildingId": "MINES",
-                "validPlacement": [
-                    "MOUNTAINS",
-                    "SWAMP"
-                ]
+                "buildingId": "MINES"
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.PlacementComponent",
+                "validPlacement": [ "MOUNTAINS", "SWAMP"]
             },
             {
                 "class": "net.cmr.alchemycompany.component.LabelComponent",
@@ -72,6 +73,14 @@
             {
                 "class": "net.cmr.alchemycompany.component.ConstructionComponent",
                 "turns": 2
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.DefenseComponent",
+                "baseDefense": 10,
+                "typeMultipliers": {
+                    "NORMAL": 1.0,
+                    "CORROSION": 2.0
+                }
             },
             {
                 "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
@@ -107,11 +116,11 @@
         "components": [
             {
                 "class": "net.cmr.alchemycompany.component.BuildingComponent",
-                "buildingId": "REFINERY",
-                "validPlacement": [
-                    "PLAINS",
-                    "FOREST"
-                ]
+                "buildingId": "REFINERY"
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.PlacementComponent",
+                "validPlacement": [ "PLAINS", "FOREST"]
             },
             {
                 "class": "net.cmr.alchemycompany.component.LabelComponent",
@@ -146,6 +155,14 @@
                 ]
             },
             {
+                "class": "net.cmr.alchemycompany.component.DefenseComponent",
+                "baseDefense": 10,
+                "typeMultipliers": {
+                    "NORMAL": 1.0,
+                    "CORROSION": 2.0
+                }
+            },
+            {
                 "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",
                 "availableRecipes": [
                     "REFINE_IRON",
@@ -163,11 +180,11 @@
         "components": [
             {
                 "class": "net.cmr.alchemycompany.component.BuildingComponent",
-                "buildingId": "FACTORY",
-                "validPlacement": [
-                    "PLAINS",
-                    "FOREST"
-                ]
+                "buildingId": "FACTORY"
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.PlacementComponent",
+                "validPlacement": [ "PLAINS", "FOREST"]
             },
             {
                 "class": "net.cmr.alchemycompany.component.LabelComponent",
@@ -204,6 +221,14 @@
                 ]
             },
             {
+                "class": "net.cmr.alchemycompany.component.DefenseComponent",
+                "baseDefense": 10,
+                "typeMultipliers": {
+                    "NORMAL": 1.0,
+                    "CORROSION": 2.0
+                }
+            },
+            {
                 "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",
                 "availableRecipes": [
                     "PRODUCE_BATTERY",
@@ -216,10 +241,11 @@
         "components": [
             {
                 "class": "net.cmr.alchemycompany.component.BuildingComponent",
-                "buildingId": "FARM",
-                "invalidPlacement": [
-                    "WATER"
-                ]
+                "buildingId": "FARM"
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.PlacementComponent",
+                "invalidPlacement": [ "WATER" ]
             },
             {
                 "class": "net.cmr.alchemycompany.component.LabelComponent",
@@ -237,6 +263,14 @@
             {
                 "class": "net.cmr.alchemycompany.component.ConstructionComponent",
                 "turns": 0
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.DefenseComponent",
+                "baseDefense": 10,
+                "typeMultipliers": {
+                    "NORMAL": 1.0,
+                    "CORROSION": 2.0
+                }
             },
             {
                 "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",

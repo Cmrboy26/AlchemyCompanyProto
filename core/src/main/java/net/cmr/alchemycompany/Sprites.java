@@ -52,7 +52,7 @@ public class Sprites {
         if (!initialized) {
             load();
         }
-        return spritesMap.getOrDefault(type, spritesMap.get("MISSING_TEXTURE"));
+        return spritesMap.getOrDefault(type.toUpperCase(), spritesMap.get("MISSING_TEXTURE"));
     }
 
     public static TextureRegionDrawable getDrawable(String type) {

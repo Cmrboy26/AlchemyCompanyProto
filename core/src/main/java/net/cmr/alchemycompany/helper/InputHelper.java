@@ -100,6 +100,13 @@ public class InputHelper extends ScreenHelper {
             if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
                 gameManager.getEngine().getSystem(SelectionSystem.class).deselect();
             }
+
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                SelectionSystem selectionSystem = gameManager.getEngine().getSystem(SelectionSystem.class);
+                if (selectionSystem.getSelectedId() != null) {
+                    gameManager.tryMoveUnit(playerUUID, selectionSystem.getSelectedId(), tileCoords.getX(), tileCoords.getY());
+                }
+            }
         }
     }
 

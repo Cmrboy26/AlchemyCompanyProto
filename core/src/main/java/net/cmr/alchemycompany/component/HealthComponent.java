@@ -16,14 +16,14 @@ public class HealthComponent extends Component {
 
     @Override
     public void write(Json json) {
-        json.writeField(this, "health");
         json.writeField(this, "maxHealth");
+        json.writeField(this, "health");
     }
 
     @Override
     public void read(Json json, JsonValue jsonData) {
-        this.health = json.readValue("health", Float.class, jsonData);
         this.maxHealth = json.readValue("maxHealth", Float.class, jsonData);
+        this.health = json.readValue("health", Float.class, health, jsonData);
     }
 
 }

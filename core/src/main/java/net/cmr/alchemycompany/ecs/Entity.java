@@ -90,8 +90,15 @@ public class Entity implements Serializable, Cloneable {
     }
 
     public Entity cloneEntity() {
+        return cloneEntity(false);
+    }
+    public Entity cloneEntity(boolean newUUID) {
         try {
-            return (Entity) clone();
+            Entity entity = (Entity) clone();
+            if (newUUID) {
+                entity.id = UUID.randomUUID();
+            }
+            return entity;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError("Cloning not supported", e);
         }

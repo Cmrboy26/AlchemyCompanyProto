@@ -1,6 +1,10 @@
 package net.cmr.alchemycompany.world;
 
-public class TilePoint {
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.Json.Serializable;
+import com.badlogic.gdx.utils.JsonValue;
+
+public class TilePoint implements Serializable {
 
     private int x, y;
 
@@ -47,6 +51,16 @@ public class TilePoint {
     @Override
     public String toString() {
         return "TilePoint{" + "x=" + x + ", y=" + y + '}';
+    }
+    @Override
+    public void write(Json json) {
+        json.writeValue("x", x);
+        json.writeValue("y", y);
+    }
+    @Override
+    public void read(Json json, JsonValue jsonData) {
+        this.x = json.readValue("x", Integer.class, jsonData);
+        this.y = json.readValue("y", Integer.class, jsonData);
     }
 
 }
