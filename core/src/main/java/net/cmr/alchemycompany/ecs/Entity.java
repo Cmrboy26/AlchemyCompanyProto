@@ -25,10 +25,20 @@ public class Entity implements Serializable, Cloneable {
     public Map<Class<? extends Component>, Component> getComponents() {
         return componentMap;
     }
+    /**
+     * Adds a component if the component doesn't exist.
+     * @throws IllegalArgumentException if component already exists in the entity.
+     */
     public void addComponent(Component component, @Null Engine engine) {
         if (componentMap.containsKey(component.getClass())) {
             throw new IllegalArgumentException("Component of type " + component.getClass().getSimpleName() + " already exists in this entity.");
         }
+        setComponent(component, engine);
+    }
+    /**
+     * Stronger version of addComponent. Does not check for existing components and overrides anything at the current location
+     */
+    public void setComponent(Component component, @Null Engine engine) {
         componentMap.put(component.getClass(), component);
         if (engine != null) engine.onAddComponent(this, component);
     }

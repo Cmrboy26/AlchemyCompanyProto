@@ -8,6 +8,7 @@ import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.PurchaseCostComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.component.UnitComponent;
+import net.cmr.alchemycompany.component.actions.AttackActionComponent;
 import net.cmr.alchemycompany.component.actions.BuildingActionComponent;
 import net.cmr.alchemycompany.component.actions.MovementActionComponent;
 import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
@@ -19,8 +20,10 @@ import net.cmr.alchemycompany.entity.UnitFactory;
 import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.network.Stream;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
+import net.cmr.alchemycompany.network.packet.TilePacket;
 import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.system.BuildingManagementSystem;
+import net.cmr.alchemycompany.system.CombatSystem;
 import net.cmr.alchemycompany.system.MovementSystem;
 import net.cmr.alchemycompany.system.RecipeSystem;
 import net.cmr.alchemycompany.system.RenderSystem;
@@ -45,11 +48,6 @@ public class GameManager {
         this.clientStream = clientStream;
         this.engine = engine;
         this.engine.setWorld(world);
-    }
-
-    @BroadcastUpdate
-    public void updateTile(int x, int y) {
-        if (isClient()) return;
     }
 
     public boolean tryPlaceUnit(UUID playerUUID, String type, int x, int y, boolean ignoreVisibility) {
@@ -130,7 +128,16 @@ public class GameManager {
             Entity moveAction = new Entity();
             moveAction.addComponent(new PlayerActionComponent(playerId), engine);
             moveAction.addComponent(new MovementActionComponent(unitId, x, y), engine);
-            clientStream.sendPacket(new EntityPacket(moveAction, isClient()));
+            clientStream.sendPacket(new EntityPacket(moveAction, true));
+        }
+    }
+
+    public void tryAttackUnit(UUID playerId, UUID unitId, UUID targetId) {
+        if (isClient()) {
+            Entity attackAction = new Entity();
+            attackAction.addComponent(new PlayerActionComponent(playerId), engine);
+            attackAction.addComponent(new AttackActionComponent(unitId, targetId), engine);
+            clientStream.sendPacket(new EntityPacket(attackAction, true));
         }
     }
 
@@ -156,10 +163,6 @@ public class GameManager {
         return engine.getWorld();
     }
 
-    public static @interface BroadcastUpdate {
-
-    }
-
     private static void addSharedSystems(ACEngine engine, World world) {
         engine.registerSystem(new VisibilitySystem());
         engine.registerSystem(new BuildingManagementSystem());
@@ -168,7 +171,8 @@ public class GameManager {
     }
     public static ACEngine createClientEngine(GameScreen screen, World world) {
         ACEngine engine = new ACEngine();
-        engine.registerSystem(new RenderSystem(world));
+        engine.setWorld(world);
+        engine.registerSystem(new RenderSystem(screen));
         engine.registerSystem(new SelectionSystem());
         engine.registerSystem(new ResourceSystem(screen));
 
@@ -177,9 +181,11 @@ public class GameManager {
     }
     public static ACEngine createServerEngine(GameServer server, World world) {
         ACEngine engine = new ACEngine();
+        engine.setWorld(world);
         engine.registerSystem(new ResourceSystem());
         engine.registerSystem(new TurnSystem(server));
         engine.registerSystem(new MovementSystem());
+        engine.registerSystem(new CombatSystem());;
 
         addSharedSystems(engine, world);
         return engine;

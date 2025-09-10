@@ -10,10 +10,12 @@ public class Tile implements Cloneable {
     int x, y;
     UUID buildingEntityID;
     UUID unitEntityID;
+    private transient World world;
 
     public Tile() { }
 
-    public Tile(WorldFeature feature, int x, int y) {
+    public Tile(World world, WorldFeature feature, int x, int y) {
+        this.world = world;
         this.feature = feature;
         this.x = x;
         this.y = y;
@@ -42,9 +44,11 @@ public class Tile implements Cloneable {
     }
     public void setBuildingSlotID(UUID id) {
         this.buildingEntityID = id;
+        world.onTileChange(this);
     }
     public void setUnitSlotID(UUID id) {
         this.unitEntityID = id;
+        world.onTileChange(this);
     }
 
     @Override

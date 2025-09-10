@@ -1,5 +1,7 @@
 package net.cmr.alchemycompany.helper;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import com.badlogic.gdx.Gdx;
@@ -13,13 +15,17 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 
 import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.IsometricHelper;
+import net.cmr.alchemycompany.component.AttackComponent;
 import net.cmr.alchemycompany.component.BuildingComponent;
+import net.cmr.alchemycompany.component.DefenseComponent;
+import net.cmr.alchemycompany.component.HealthComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.Family;
 import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.system.SelectionSystem;
+import net.cmr.alchemycompany.world.Tile;
 import net.cmr.alchemycompany.world.TilePoint;
 
 public class InputHelper extends ScreenHelper {
@@ -84,7 +90,7 @@ public class InputHelper extends ScreenHelper {
                 boolean multiple = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT);
                 Button selectedShopButton = screen.menuHelper.shopGroup.getChecked();
                 
-                if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+                if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
                     
                     if (selectedShopButton != null) {
                         String buildingId = selectedShopButton.getName();
@@ -101,17 +107,34 @@ public class InputHelper extends ScreenHelper {
                 gameManager.getEngine().getSystem(SelectionSystem.class).deselect();
             }
 
-            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
                 SelectionSystem selectionSystem = gameManager.getEngine().getSystem(SelectionSystem.class);
+                List<Entity> hoverEntities = getHoveredEntities(tileCoords);
                 if (selectionSystem.getSelectedId() != null) {
-                    gameManager.tryMoveUnit(playerUUID, selectionSystem.getSelectedId(), tileCoords.getX(), tileCoords.getY());
+                    Entity selectedEntity = gameManager.getEngine().getEntity(selectionSystem.getSelectedId());
+                    boolean attacked = false;
+                    if (hoverEntities.size() > 0) {
+                        if (selectedEntity.hasComponent(AttackComponent.class)) {
+                            for (Entity hoverEntity : hoverEntities) {
+                                if (hoverEntity.hasComponent(HealthComponent.class)) {
+                                    // Try attacking it
+                                    gameManager.tryAttackUnit(playerUUID, selectionSystem.getSelectedId(), hoverEntity.getID());
+                                    attacked = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!attacked) {
+                        gameManager.tryMoveUnit(playerUUID, selectionSystem.getSelectedId(), tileCoords.getX(), tileCoords.getY());
+                    }
                 }
             }
         }
     }
 
     public void updatePanCamera() {
-        if (Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
             // Store previous mouse position between frames
             if (lastMouseX == -1 && lastMouseY == -1) {
                 lastMouseX = Gdx.input.getX();
@@ -153,6 +176,30 @@ public class InputHelper extends ScreenHelper {
                 }
             }
         }
+    }
+
+    public List<Entity> getHoveredEntities() {
+        Vector3 screenCoords = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+        Vector3 worldCoords = worldViewport.unproject(screenCoords);
+        TilePoint tileCoords = IsometricHelper.worldToIsometricTile(worldCoords, gameManager.getWorld());
+        return getHoveredEntities(tileCoords);
+    }
+
+    public List<Entity> getHoveredEntities(TilePoint tp) {
+        if (tp == null || !gameManager.getWorld().isInWorld(tp)) {
+            return new ArrayList<>();
+        }
+        Tile tile = gameManager.getWorld().getTile(tp.getX(), tp.getY());
+        UUID buildingId = tile.getBuildingSlotID();
+        UUID unitId = tile.getUnitSlotID();
+        List<Entity> entitiesList = new ArrayList<>();
+        if (buildingId != null) {
+            entitiesList.add(gameManager.getEngine().getEntity(buildingId));
+        }
+        if (unitId != null) {
+            entitiesList.add(gameManager.getEngine().getEntity(unitId));
+        }
+        return entitiesList;
     }
     
 }

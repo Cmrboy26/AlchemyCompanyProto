@@ -1,10 +1,13 @@
 package net.cmr.alchemycompany.world;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Json;
@@ -51,6 +54,7 @@ public class World implements Cloneable, Serializable {
     private Tile[][] tiles;
     private long seed;
     public transient OpenSimplexNoise noise;
+    private Set<Consumer<Tile>> tileChangeListeners;
 
     public World() { } // serialization
 
@@ -61,6 +65,7 @@ public class World implements Cloneable, Serializable {
         this.tiles = new Tile[width][height];
         this.seed = seed;
         this.noise = new OpenSimplexNoise(seed);
+        this.tileChangeListeners = new HashSet<>();
         generateWorld();
     }
 
@@ -97,13 +102,13 @@ public class World implements Cloneable, Serializable {
             double scale = 0.5f;
             int landFeatureIndex = (int) ((noise.eval(x * scale, y * scale, 0) + 1) / 2 * landFeature.length);
             landFeatureIndex = Math.max(0, Math.min(landFeatureIndex, landFeature.length - 1));
-            return new Tile(landFeature[landFeatureIndex], x, y);
+            return new Tile(this, landFeature[landFeatureIndex], x, y);
         });
         worldFeatureList.add((Integer x, Integer y) -> {
             double scale = 0.3f;
             double output = noise.eval(x * scale, y * scale, 5);
             if (output <= -.35) {
-                return new Tile(WorldFeature.WATER, x, y);
+                return new Tile(this, WorldFeature.WATER, x, y);
             }
             return null;
         });
@@ -139,7 +144,7 @@ public class World implements Cloneable, Serializable {
                     double iterateSize = size[index];
                     double distance = Math.sqrt(Math.pow(x - iteratePosition.x, 2) + Math.pow(y - iteratePosition.y, 2));
                     if (distance <= iterateSize) {
-                        return new Tile(specialFeature[i], x, y);
+                        return new Tile(this, specialFeature[i], x, y);
                     }
                     index++;
                 }
@@ -155,9 +160,12 @@ public class World implements Cloneable, Serializable {
     public Tile getTile(int x, int y) {
         return tiles[x][y];
     }
-    public void setTileFeature(WorldFeature feature, int x, int y) {
-        // debug
-        tiles[x][y].feature = feature;
+    /**
+     * This is only to be used when the client recieves a TilePacket and is updating their local state
+     * @param tile
+     */
+    public void setTile(Tile tile) {
+        tiles[tile.x][tile.y] = tile;
     }
     public static int getSpiralRadius(final int radius) {
         return (int) (Math.pow((radius) * 2 + 1, 2));
@@ -256,5 +264,15 @@ public class World implements Cloneable, Serializable {
     public boolean isInWorld(TilePoint tile) {
         return tile.getX() >= 0 && tile.getX() < width && tile.getY() >= 0 && tile.getY() < height;
     } 
+
+    public void addTileChangeListener(Consumer<Tile> consumer) {
+        this.tileChangeListeners.add(consumer);
+    }
+
+    public void onTileChange(Tile tile) {
+        for (Consumer<Tile> listener : tileChangeListeners) {
+            listener.accept(tile);
+        }
+    }
 
 }

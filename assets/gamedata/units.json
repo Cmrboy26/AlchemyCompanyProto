@@ -43,23 +43,24 @@
             },
             {
                 "class": "net.cmr.alchemycompany.component.DefenseComponent",
-                "baseDefense": 5,
                 "typeMultipliers": {
                     "NORMAL": 1.0
                 }
             },
             {
                 "class": "net.cmr.alchemycompany.component.AttackComponent",
-                "baseAttack": 5,
-                "typeMultipliers": {
-                    "NORMAL": 1.0
-                }
+                "baseAttack": 5.0,
+                "attackType": "NORMAL"
             },
             {
                 "class": "net.cmr.alchemycompany.component.ConsumerComponent",
                 "consumption": {
                     "GOLD": 1.0
                 }
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.HoverInfoComponent",
+                "hoverText": "$net.cmr.alchemycompany.component.HealthComponent@health&round=2"
             }
         ]
     }

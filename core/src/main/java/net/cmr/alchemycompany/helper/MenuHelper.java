@@ -42,6 +42,7 @@ import net.cmr.alchemycompany.component.AvailableRecipesComponent;
 import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.ConsumerComponent;
+import net.cmr.alchemycompany.component.HealthComponent;
 import net.cmr.alchemycompany.component.LabelComponent;
 import net.cmr.alchemycompany.component.MovementComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
@@ -367,83 +368,7 @@ public class MenuHelper extends ScreenHelper {
                         index++;
                     }
                 }
-
-                
             })));
-
-            
-
-            /*Label name = new Label(lc.name, skin);
-            name.setAlignment(Align.center);
-            button.add(name).left().growX();
-
-            Label cost = new Label("Cost", skin);
-            cost.setFontScale(0.75f);
-            cost.setAlignment(Align.center);
-            button.add(cost).right().growX().row();
-
-            Image buildingImage = new Image(Sprites.getSprite(rc.spriteType));
-            button.add(buildingImage).left().expandX();
-
-            Table costTable = new Table(skin);
-            cost.setWrap(true);
-            costTable.addAction(Actions.forever(Actions.run(() -> {
-                costTable.clearChildren();
-                boolean researchMet = rrc == null || hasResearchFunction.apply(rrc.technologiesRequired);
-                buildingImage.setVisible(researchMet);
-
-                if (!researchMet) {
-                    cost.setText("");
-                    String researchRequirementString = "Requires:\n";
-                    for (String techId : rrc.technologiesRequired) {
-                        Technology tech = Registry.getInstance().getRegistry(Technology.class).get(techId);
-                        if (tech != null) {
-                            researchRequirementString += "- " + tech.getName();
-                        } else {
-                            researchRequirementString += "- " + techId;
-                        }
-                        researchRequirementString += "\n";
-                    }
-                    Label label = new Label(researchRequirementString, skin);
-                    label.setFontScale(0.6f);
-                    label.setColor(Color.RED);
-                    costTable.add(label);
-                } else {
-                    cost.setText("Cost");
-                    cost.setFontScale(0.75f);
-                    final int columns = (int) Math.floor(pcc.getResourceCost(playerUUID, buildingId, gameManager.getEngine()).size() / 3) + 1;
-                    int index = 0;
-                    ResourceSystem resourceSystem = gameManager.getEngine().getSystem(ResourceSystem.class);
-                    Map<String, Float> cachedStoredResources = resourceSystem.getCachedStoredResources(playerUUID);
-                    for (Entry<String, Float> entry : pcc.getResourceCost(playerUUID, buildingId, gameManager.getEngine()).entrySet()) {
-                        Table entryTable = getResourceSection(entry.getKey(), entry.getValue());
-                        if (cachedStoredResources != null) {
-                            boolean enoughResources = cachedStoredResources.getOrDefault(entry.getKey(), 0f) >= entry.getValue();
-                            entryTable.findActor("image").setColor(enoughResources ? Color.WHITE : Color.GRAY);
-                            entryTable.findActor("amount").setColor(enoughResources ? Color.WHITE : Color.RED);
-                        }
-                        costTable.add(entryTable);
-                        if (index % columns == columns - 1) {
-                            costTable.row();
-                        }
-                        index++;
-                    }
-                }
-            })));
-
-            button.add(costTable).center().growX().row();
-
-            button.pad(3);
-            button.setName(buildingId);
-
-            button.addAction(Actions.forever(Actions.run(() -> {
-                boolean technologyMet = rrc == null || hasResearchFunction.apply(rrc.technologiesRequired);
-                button.setDisabled(!technologyMet);
-                button.getColor().a = technologyMet ? 1f : 0.5f;
-            })));
-
-            shopGroup.add(button);
-            shopEntries.add(button).growX().spaceBottom(2).row();*/
         }
         shopMenu.add(scrollEntries).height(200).width(200).expandX();
 
@@ -557,9 +482,6 @@ public class MenuHelper extends ScreenHelper {
                                 }
                                 index++;
                             }
-                            // ResearchSystem researchSystem = gameManager.getEngine().getSystem(ResearchSystem.class);
-                            // ResearchManagementComponent rmc = researchSystem.getPlayerResearchManager(playerUUID.toString());
-                            // button.setDisabled(rmc == null || rmc.hasResearched(tech.getId()));
                         };
                         researchResourceCompletionTable.addAction(Actions.forever(Actions.run(recalculateResearchTable)));
                         researchDisplayTable.add(researchResourceCompletionTable).row();
@@ -697,6 +619,7 @@ public class MenuHelper extends ScreenHelper {
                 AvailableRecipesComponent arc = selectedEntity.getComponent(AvailableRecipesComponent.class);
                 SelectedRecipeComponent src = selectedEntity.getComponent(SelectedRecipeComponent.class);
                 ConstructionComponent constc = selectedEntity.getComponent(ConstructionComponent.class);
+                HealthComponent hc = selectedEntity.getComponent(HealthComponent.class);
 
                 boolean underConstruction = constc != null && constc.turns > 0;
                 boolean producing = gameManager.getEngine().getSystem(ResourceSystem.class).getActiveEntities(playerUUID)
@@ -752,6 +675,29 @@ public class MenuHelper extends ScreenHelper {
                                 Table resourceSection = getResourceSection(entry.getKey(), entry.getValue(), 1);
                                 resourceSection.setColor(producingColor);
                                 productionTable.add(resourceSection);
+                            }
+                        }
+
+                        if (hc != null) {
+                            Table healthTable = new Table(skin);
+                            statsSections.add(healthTable);
+                            Callable<String> healthString = () -> {
+                                HealthComponent thc = gameManager.getEngine().getEntity(selectedEntityId).getComponent(HealthComponent.class);
+                                return thc.health + " / " + thc.maxHealth + " HP";
+                            };
+                            Label name;
+                            try {
+                                name = new Label(healthString.call(), skin);
+                                healthTable.add(name);
+                                name.addAction(Actions.forever(Actions.run(() -> {
+                                    try {
+                                        name.setText(healthString.call());
+                                    } catch (Exception e) {
+
+                                    }
+                                })));
+                            } catch (Exception e) {
+
                             }
                         }
                         

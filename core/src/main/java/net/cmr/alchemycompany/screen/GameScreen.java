@@ -33,6 +33,7 @@ import net.cmr.alchemycompany.network.Stream;
 import net.cmr.alchemycompany.network.Stream.StreamState;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.network.packet.Packet;
+import net.cmr.alchemycompany.network.packet.TilePacket;
 import net.cmr.alchemycompany.network.packet.TurnStatePacket;
 import net.cmr.alchemycompany.network.packet.TurnStatePacket.TurnState;
 import net.cmr.alchemycompany.network.packet.UUIDPacket;
@@ -88,6 +89,7 @@ public class GameScreen implements Screen {
                 } else {
                     gameManager.getEngine().removeEntity(entity);
                 }
+                //System.out.println("Current entities size: " + gameManager.getEngine().getEntities().size() + "\t Entity "+entity.getID()+" added? "+added);
             }
             if (packet instanceof TurnStatePacket) {
                 TurnStatePacket tsp = (TurnStatePacket) packet;
@@ -106,6 +108,10 @@ public class GameScreen implements Screen {
                     endTurnButton.setDisabled(true);
                     endTurnButton.setText("Please Wait...");
                 }
+            }
+            if (packet instanceof TilePacket) {
+                TilePacket tp = (TilePacket) packet;
+                gameManager.getWorld().setTile(tp.tile);
             }
         }
 
@@ -186,6 +192,13 @@ public class GameScreen implements Screen {
             if (packet instanceof TurnStatePacket) {
                 TurnStatePacket tsp = (TurnStatePacket) packet;
                 turn = tsp.getTurn();
+            }
+        }
+        // After world has been initialized, then add tile packet changes
+        for (Packet packet : polledPackets) {
+            if (packet instanceof TilePacket) {
+                TilePacket tp = (TilePacket) packet;
+                world.setTile(tp.tile);
             }
         }
 

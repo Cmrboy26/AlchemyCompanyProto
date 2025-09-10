@@ -2,12 +2,15 @@ package net.cmr.alchemycompany.component;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.UUID;
 
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.Json.Serializable;
 import com.badlogic.gdx.utils.JsonValue;
 
 public abstract class Component implements Serializable {
+
+    public Component() { }
 
     @Override
     public String toString() {
@@ -48,6 +51,12 @@ public abstract class Component implements Serializable {
             result.put(key, value);
         }
         return result;
+    }
+
+    public <T extends Component> T cloneComponent(Class<T> componentClass) {
+        Json json = new Json();
+        String jsonString = json.toJson(this, componentClass);
+        return (T) json.fromJson(componentClass, jsonString);
     }
 
 }

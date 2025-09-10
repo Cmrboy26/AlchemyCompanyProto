@@ -28,6 +28,7 @@ import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.network.Stream.StreamState;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.network.packet.Packet;
+import net.cmr.alchemycompany.network.packet.TilePacket;
 import net.cmr.alchemycompany.network.packet.TurnStatePacket.TurnState;
 import net.cmr.alchemycompany.network.packet.UUIDPacket;
 import net.cmr.alchemycompany.system.TurnSystem;
@@ -68,9 +69,7 @@ public class GameServer implements PlayerStateListener {
                 return;
             }
             EntityPacket packet = new EntityPacket(entity, added);
-            synchronized (broadcastLock) {
-                queuedBroadcasts.add(packet);
-            }
+            broadcastPacket(packet);
         });
         gameManager = new GameManager(null, engine, getWorld());
         try {
@@ -78,6 +77,9 @@ public class GameServer implements PlayerStateListener {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        world.addTileChangeListener((tile) -> {
+            broadcastPacket(new TilePacket(tile));
+        });
     }
 
     private void initializeNetworkServer() throws IOException {
@@ -286,7 +288,7 @@ public class GameServer implements PlayerStateListener {
         }
     }
 
-    protected void broadcastPacket(Packet packet) {
+    public void broadcastPacket(Packet packet) {
         synchronized (broadcastLock) {
             queuedBroadcasts.add(packet);
         }

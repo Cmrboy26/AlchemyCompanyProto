@@ -5,7 +5,7 @@ import com.badlogic.gdx.utils.JsonValue;
 
 public class HealthComponent extends Component {
     
-    public float health, maxHealth;
+    public Float health, maxHealth;
 
     public HealthComponent() {}
 
@@ -23,7 +23,11 @@ public class HealthComponent extends Component {
     @Override
     public void read(Json json, JsonValue jsonData) {
         this.maxHealth = json.readValue("maxHealth", Float.class, jsonData);
-        this.health = json.readValue("health", Float.class, health, jsonData);
-    }
+        this.health = json.readValue("health", Float.class, jsonData);
+        if (this.health == null) {
+            this.health = maxHealth;
+        }
+        System.out.println(maxHealth + ", "+ health);
+    }  
 
 }

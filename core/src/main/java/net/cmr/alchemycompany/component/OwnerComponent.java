@@ -9,9 +9,10 @@ public class OwnerComponent extends Component {
 
     public String playerID;
 
-    public OwnerComponent() {}
+    public OwnerComponent() { super(); }
 
     public OwnerComponent(UUID playerID) {
+        super();
         this.playerID = playerID.toString();
     }
 

@@ -27,6 +27,7 @@ import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
+import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.world.Tile;
 import net.cmr.alchemycompany.world.TilePoint;
 import net.cmr.alchemycompany.world.World;
@@ -34,14 +35,7 @@ import net.cmr.alchemycompany.world.World;
 public class MovementSystem extends EntitySystem implements IUpdateSystem, ITurnSystem {
     
     Family movementFamily;
-    //GameServer server;
-
-    public MovementSystem() { }
-
-    /*public MovementSystem(GameServer server) {
-        this();
-        this.server = server;
-    }*/
+    GameServer server;
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -79,12 +73,15 @@ public class MovementSystem extends EntitySystem implements IUpdateSystem, ITurn
         TilePositionComponent tpc = entity.getComponent(TilePositionComponent.class);
         MovementComponent mc = entity.getComponent(MovementComponent.class);
         List<TilePoint> pathList = path.getMovementPath();
+        World world = engine.as(ACEngine.class).getWorld();
+        world.getTile(tpc.tileX, tpc.tileY).setUnitSlotID(null);
         for (int i = 1; i < pathList.size() && mc.movesRemaining > 0; i++) {
             tpc.tileX = pathList.get(i).getX();
             tpc.tileY = pathList.get(i).getY();
             // TODO: Increase movement cost for certain world features like mountains
             mc.movesRemaining--;
         }
+        world.getTile(tpc.tileX, tpc.tileY).setUnitSlotID(entity.getID());
         engine.changedEntity(entity);
         GameManager.onPlacementChange(playerUUID, tpc.tileX, tpc.tileY, engine);
     }
@@ -94,6 +91,7 @@ public class MovementSystem extends EntitySystem implements IUpdateSystem, ITurn
         Tile tile = world.getTile(tp.getX(), tp.getY());
         if (!entity.hasComponent(PlacementComponent.class)) { return false; }
         if (tile == null) { return false; }
+        if (!tile.canPlaceUnit()) { return false; }
         return entity.getComponent(PlacementComponent.class).getValidPlacement().contains(tile.getFeature());
     }
 
@@ -178,7 +176,9 @@ public class MovementSystem extends EntitySystem implements IUpdateSystem, ITurn
             if (!world.isInWorld(endTile)) {
                 throw new IOException("End tile must be in world.");
             }
-            if (!pc.getValidPlacement().contains(world.getTile(endTile).getFeature())) {
+            boolean endIsTraversable = !pc.getValidPlacement().contains(world.getTile(endTile).getFeature());
+            boolean endIsOccupied = !world.getTile(endTile).canPlaceUnit();
+            if (endIsTraversable || endIsOccupied) {
                 throw new IOException("End tile must be traversable.");
             }
 
