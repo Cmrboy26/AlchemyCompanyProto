@@ -1,5 +1,6 @@
 package net.cmr.alchemycompany.world;
 
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.Json.Serializable;
 import com.badlogic.gdx.utils.JsonValue;
@@ -31,6 +32,10 @@ public class TilePoint implements Serializable {
 
     public void setY(int y) {
         this.y = y;
+    }
+
+    public Vector2 toVector() {
+        return new Vector2(x, y);
     }
 
     @Override

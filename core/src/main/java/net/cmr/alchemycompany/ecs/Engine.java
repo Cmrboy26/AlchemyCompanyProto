@@ -1,7 +1,6 @@
 package net.cmr.alchemycompany.ecs;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -12,19 +11,22 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import net.cmr.alchemycompany.component.Component;
+import net.cmr.alchemycompany.network.packet.EntityPacket.EntityState;
 
 public abstract class Engine {
 
     private Map<UUID, Entity> entities;
     private Map<Class<? extends Component>, Set<Entity>> componentIndex;
     private Map<Class<? extends EntitySystem>, EntitySystem> systemMap;
-    private Set<BiConsumer<Entity, Boolean>> entityChangeListeners;
+    private Set<BiConsumer<Entity, EntityState>> entityChangeListeners;
+    private Set<BiConsumer<Entity, Class<? extends Component>>> componentChangeListeners;
 
     public Engine() {
         this.entities = new ConcurrentHashMap<>();
         this.componentIndex = new ConcurrentHashMap<>();
         this.systemMap = new ConcurrentHashMap<>();
         this.entityChangeListeners = new HashSet<>();
+        this.componentChangeListeners = new HashSet<>();
     }
 
     public void addEntity(Entity entity) {
@@ -51,11 +53,23 @@ public abstract class Engine {
         }
         onEntityRemoved(entity);
     }
+    /*@Deprecated
     public void changedEntity(Entity entity) {
         onEntityAdded(entity);
+    }*/
+    public void changedComponent(Entity entity, Class<? extends Component> componentClass) {
+        onComponentChanged(entity, componentClass);
     }
+    /**
+     * Finds the entity with the current ID.
+     * @param id UUID of the entity
+     * @return entity specified, otherwise null if not found
+     */
     public Entity getEntity(UUID id) {
-        return this.entities.get(id);
+        if (id == null) {
+            return null;
+        }
+        return this.entities.getOrDefault(id, null);
     }
     public Entity getSingletonEntity(Class<? extends Component> componentClass) {
         Iterator<Entity> iterator = componentIndex.get(componentClass).iterator();
@@ -116,6 +130,7 @@ public abstract class Engine {
             indexed.remove(entity);
         }
         // notify listeners
+        onComponentChanged(entity, component.getClass());
     }
     protected void onAddComponent(Entity entity, Component component) {
         Set<Entity> indexed = getComponentIndex().get(component.getClass());
@@ -123,19 +138,28 @@ public abstract class Engine {
             indexed.add(entity);
         }
         // notify listeners
+        onComponentChanged(entity, component.getClass());
     }
     protected void onEntityAdded(Entity entity) {
-        for (BiConsumer<Entity, Boolean> listener : entityChangeListeners) {
-            listener.accept(entity, true);
+        for (BiConsumer<Entity, EntityState> listener : entityChangeListeners) {
+            listener.accept(entity, EntityState.ADDED);
         }
     }
     protected void onEntityRemoved(Entity entity) {
-        for (BiConsumer<Entity, Boolean> listener : entityChangeListeners) {
-            listener.accept(entity, false);
+        for (BiConsumer<Entity, EntityState> listener : entityChangeListeners) {
+            listener.accept(entity, EntityState.REMOVED);
         }
     }
-    public void addEntityChangeListener(BiConsumer<Entity, Boolean> listener) {
+    protected void onComponentChanged(Entity entity, Class<? extends Component> componentClass) {
+        for (BiConsumer<Entity, Class<? extends Component>> listener : componentChangeListeners) {
+            listener.accept(entity, componentClass);
+        }
+    }
+    public void addEntityChangeListener(BiConsumer<Entity, EntityState> listener) {
         entityChangeListeners.add(listener);
+    }
+    public void addComponentChangeListener(BiConsumer<Entity, Class<? extends Component>> listener) {
+        componentChangeListeners.add(listener);
     }
     public <T extends Engine> T as(Class<T> clazz) {
         return clazz.cast(this);

@@ -108,7 +108,8 @@ public class UnitManagementSystem extends EntitySystem implements IUpdateSystem,
             if (cc.turns <= 0) {
                 entity.removeComponent(ConstructionComponent.class, engine);
             }
-            engine.changedEntity(entity);
+            //engine.changedEntity(entity);
+            engine.changedComponent(entity, ConstructionComponent.class);
         }
     }
 

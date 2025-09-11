@@ -1,6 +1,7 @@
 package net.cmr.alchemycompany.system;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -18,6 +19,7 @@ import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.ITurnSystem;
 import net.cmr.alchemycompany.IUpdateSystem;
 import net.cmr.alchemycompany.component.MovementComponent;
+import net.cmr.alchemycompany.component.MovementPathComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.PlacementComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
@@ -28,6 +30,7 @@ import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
 import net.cmr.alchemycompany.network.GameServer;
+import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.world.Tile;
 import net.cmr.alchemycompany.world.TilePoint;
 import net.cmr.alchemycompany.world.World;
@@ -35,7 +38,11 @@ import net.cmr.alchemycompany.world.World;
 public class MovementSystem extends EntitySystem implements IUpdateSystem, ITurnSystem {
     
     Family movementFamily;
-    GameServer server;
+    boolean isClient;
+
+    public MovementSystem(boolean isClient) {
+        this.isClient = isClient;
+    }
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -67,6 +74,13 @@ public class MovementSystem extends EntitySystem implements IUpdateSystem, ITurn
                 e.printStackTrace();
             }
         });
+        if (isClient) {
+            for (Entity entity : engine.getComponentMapper(MovementPathComponent.class)) {
+                MovementPathComponent mpc = entity.getComponent(MovementPathComponent.class);
+                mpc.elapsedTime += delta;
+                //System.out.println(mpc.getOffsetVisualPosition(1f));
+            }
+        }
     }
 
     private void followMovementPath(UUID playerUUID, Entity entity, MovementPath path) {
@@ -75,14 +89,24 @@ public class MovementSystem extends EntitySystem implements IUpdateSystem, ITurn
         List<TilePoint> pathList = path.getMovementPath();
         World world = engine.as(ACEngine.class).getWorld();
         world.getTile(tpc.tileX, tpc.tileY).setUnitSlotID(null);
+        LinkedList<TilePoint> movedTile = new LinkedList<>();
+        movedTile.add(pathList.get(0));
         for (int i = 1; i < pathList.size() && mc.movesRemaining > 0; i++) {
             tpc.tileX = pathList.get(i).getX();
             tpc.tileY = pathList.get(i).getY();
+            movedTile.add(pathList.get(i));
+
             // TODO: Increase movement cost for certain world features like mountains
             mc.movesRemaining--;
         }
         world.getTile(tpc.tileX, tpc.tileY).setUnitSlotID(entity.getID());
-        engine.changedEntity(entity);
+        if (pathList.size() > 1)  {
+            entity.setComponent(new MovementPathComponent(MovementPath.fromPath(movedTile)), engine);
+        }
+        engine.changedComponent(entity, MovementPathComponent.class);
+        engine.changedComponent(entity, TilePositionComponent.class);
+        engine.changedComponent(entity, MovementComponent.class);
+
         GameManager.onPlacementChange(playerUUID, tpc.tileX, tpc.tileY, engine);
     }
 
@@ -102,9 +126,13 @@ public class MovementSystem extends EntitySystem implements IUpdateSystem, ITurn
 
     @Override
     public void onTurn() {
+        for (Entity entity : engine.getEntities(Family.all(MovementPathComponent.class))) {
+            //entity.removeComponent(MovementPathComponent.class, engine);
+        }
         for (Entity entity : engine.getEntities(movementFamily)) {
             entity.getComponent(MovementComponent.class).resetMovement();
-            engine.changedEntity(entity);
+            engine.changedComponent(entity, MovementComponent.class);
+            // engine.changedEntity(entity);
         }
     }
 
@@ -114,10 +142,16 @@ public class MovementSystem extends EntitySystem implements IUpdateSystem, ITurn
         transient Entity entity;
         transient ACEngine engine;
 
+        public MovementPath() { }
+
         public MovementPath(Entity entity, ACEngine engine) {
             this.movementPath = new LinkedList<>();
             this.entity = entity;
             this.engine = engine;
+        }
+
+        public MovementPath(LinkedList<TilePoint> tp) {
+            this.movementPath = tp;
         }
 
         private class AStarCell {
@@ -139,6 +173,10 @@ public class MovementSystem extends EntitySystem implements IUpdateSystem, ITurn
          */
         public List<TilePoint> getMovementPath() {
             return movementPath;
+        }
+
+        public static MovementPath fromPath(LinkedList<TilePoint> tilePointList) {
+            return new MovementPath(tilePointList);
         }
 
         /**
@@ -233,7 +271,6 @@ public class MovementSystem extends EntitySystem implements IUpdateSystem, ITurn
             TilePoint backtrackPoint = endTile;
             movementPath.clear();
             do {
-                System.out.println(backtrackPoint);
                 movementPath.add(backtrackPoint);
                 backtrackPoint = cameFrom.get(backtrackPoint);
             } while (backtrackPoint != null);

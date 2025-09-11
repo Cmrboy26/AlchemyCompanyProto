@@ -54,7 +54,7 @@ public class World implements Cloneable, Serializable {
     private Tile[][] tiles;
     private long seed;
     public transient OpenSimplexNoise noise;
-    private Set<Consumer<Tile>> tileChangeListeners;
+    private transient Set<Consumer<Tile>> tileChangeListeners;
 
     public World() { } // serialization
 

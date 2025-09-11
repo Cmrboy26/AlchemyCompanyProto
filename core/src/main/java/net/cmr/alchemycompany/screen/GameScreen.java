@@ -23,6 +23,7 @@ import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.IsometricHelper;
 import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.BuildingComponent;
+import net.cmr.alchemycompany.component.Component;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
@@ -31,7 +32,9 @@ import net.cmr.alchemycompany.helper.MenuHelper;
 import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.network.Stream;
 import net.cmr.alchemycompany.network.Stream.StreamState;
+import net.cmr.alchemycompany.network.packet.ComponentPacket;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
+import net.cmr.alchemycompany.network.packet.EntityPacket.EntityState;
 import net.cmr.alchemycompany.network.packet.Packet;
 import net.cmr.alchemycompany.network.packet.TilePacket;
 import net.cmr.alchemycompany.network.packet.TurnStatePacket;
@@ -82,9 +85,9 @@ public class GameScreen implements Screen {
             if (packet instanceof EntityPacket) {
                 EntityPacket ep = (EntityPacket) packet;
                 Entity entity = ep.entity;
-                boolean added = ep.added;
+                EntityState entityState = ep.entityState;
                 //System.out.println("[DEBUG] Client recieved "+entity.toShortString());
-                if (added) {
+                if (entityState == EntityState.ADDED) {
                     gameManager.getEngine().addEntity(entity);
                 } else {
                     gameManager.getEngine().removeEntity(entity);
@@ -112,6 +115,27 @@ public class GameScreen implements Screen {
             if (packet instanceof TilePacket) {
                 TilePacket tp = (TilePacket) packet;
                 gameManager.getWorld().setTile(tp.tile);
+            }
+            if (packet instanceof ComponentPacket) {
+                ComponentPacket cp = (ComponentPacket) packet;
+                
+                Entity targetEntity = gameManager.getEngine().getEntity(UUID.fromString(cp.entityId));
+                if (targetEntity != null) {
+                    if (cp.component == null) {
+                        // removed
+                        try {
+                            Class<?> clazz = Class.forName(cp.className);
+                            if (clazz != null && Component.class.isAssignableFrom(clazz)) {
+                                Class<? extends Component> componentClass = (Class<? extends Component>) clazz;
+                                targetEntity.removeComponent(componentClass, gameManager.getEngine());
+                            }
+                        } catch (ClassNotFoundException e) {
+                            e.printStackTrace();
+                        } 
+                    } else {
+                        targetEntity.setComponent(cp.component, gameManager.getEngine());
+                    }
+                }
             }
         }
 
@@ -177,6 +201,7 @@ public class GameScreen implements Screen {
         List<Packet> polledPackets = stream.pollAllPackets();
 
         List<EntityPacket> entityList = new ArrayList<>();
+        List<ComponentPacket> componentList = new ArrayList<>();
         World world = null;
         for (Packet packet : polledPackets) {
             System.out.println("Recieved packet: "+packet.toString());
@@ -188,6 +213,9 @@ public class GameScreen implements Screen {
             }
             if (packet instanceof EntityPacket) {
                 entityList.add((EntityPacket) packet);
+            }
+            if (packet instanceof ComponentPacket) {
+                componentList.add((ComponentPacket) packet);
             }
             if (packet instanceof TurnStatePacket) {
                 TurnStatePacket tsp = (TurnStatePacket) packet;
@@ -207,7 +235,7 @@ public class GameScreen implements Screen {
             engine.getSystem(ResourceSystem.class).calculateTurn(true);
         });
         for (EntityPacket entityPacket : entityList) {
-            if (entityPacket.added) {
+            if (entityPacket.entityState == EntityState.ADDED) {
                 engine.addEntity(entityPacket.entity);
                 BuildingComponent bc = entityPacket.entity.getComponent(BuildingComponent.class);
                 OwnerComponent oc = entityPacket.entity.getComponent(OwnerComponent.class);
@@ -219,60 +247,26 @@ public class GameScreen implements Screen {
                 engine.removeEntity(entityPacket.entity);
             }
         }
-        gameManager = new GameManager(stream, engine, world);
-
-        /*for (int i = 0; i < 1; i++) {
-            stream = new LocalStream(server, true);
-            server.addClientStream((LocalStream) stream, false);
-
-            while (stream.getState() != StreamState.PLAYING) {
-                try {
-                    stream.updateStream();
-                    System.out.println("Updating stream, current state: " + stream.getState());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    throw new RuntimeException("Forcibly disconnected.");
-                }
-            }
-
-            // Connected. Process packets.
-            List<Packet> polledPackets = stream.pollAllPackets();
-            List<EntityPacket> entityList = new ArrayList<>();
-            World world = null;
-            for (Packet packet : polledPackets) {
-                if (packet instanceof WorldPacket) {
-                    world = ((WorldPacket) packet).world;
-                }
-                if (packet instanceof UUIDPacket) {
-                    playerUUID = ((UUIDPacket) packet).id;
-                }
-                if (packet instanceof EntityPacket) {
-                    entityList.add((EntityPacket) packet);
-                    //System.out.println("Recieved entity: "+((EntityPacket) packet).entity);
-                }
-            }
-
-            ACEngine engine = GameManager.createClientEngine(this, world);
-            engine.addEntityChangeListener((e, added) -> {
-                engine.getSystem(ResourceSystem.class).calculateTurn(true);
-            });
-            for (EntityPacket entityPacket : entityList) {
-                if (entityPacket.added) {
-                    engine.addEntity(entityPacket.entity);
-                    BuildingComponent bc = entityPacket.entity.getComponent(BuildingComponent.class);
-                    if (bc != null && bc.buildingId.equals("HEADQUARTERS")) {
-                        TilePositionComponent tpc = entityPacket.entity.getComponent(TilePositionComponent.class);
-                        focusOnTile(tpc.tileX, tpc.tileY);
+        for (ComponentPacket cp : componentList) {
+            Entity targetEntity = engine.getEntity(UUID.fromString(cp.entityId));
+            if (targetEntity != null) {
+                if (cp.component == null) {
+                    // removed
+                    try {
+                        Class<?> clazz = Class.forName(cp.className);
+                        if (clazz != null && Component.class.isAssignableFrom(clazz)) {
+                            Class<? extends Component> componentClass = (Class<? extends Component>) clazz;
+                            targetEntity.removeComponent(componentClass, engine);
+                        }
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
                     }
                 } else {
-                    engine.removeEntity(entityPacket.entity);
+                    targetEntity.setComponent(cp.component, engine);
                 }
             }
-            if (i == 0) {      
-                gameManager = new GameManager(stream, engine, world);
-            }
-            
-        }*/
+        }
+        gameManager = new GameManager(stream, engine, world);
     }
 
     private void prepareUI() {

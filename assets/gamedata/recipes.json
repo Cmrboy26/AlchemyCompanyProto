@@ -97,21 +97,21 @@
         },
         {
             "id": "REFINE_IRON",
-            "icon": "IRON_INGOT_ICON",
+            "icon": "IRON_ICON",
             "input": { "IRON_ORE": 1.0 },
             "output": { "IRON": 1.0 },
             "requiredTechnologies": ["PROCESSING"]
         },
         {
             "id": "REFINE_COPPER",
-            "icon": "COPPER_INGOT_ICON",
+            "icon": "COPPER_ICON",
             "input": { "COPPER_ORE": 1.0 },
             "output": { "COPPER": 1.0 },
             "requiredTechnologies": ["PROCESSING"]
         },
         {
             "id": "REFINE_TITANIUM",
-            "icon": "TITANIUM_INGOT_ICON",
+            "icon": "TITANIUM_ICON",
             "input": { "TITANIUM_ORE": 1.0, "COAL": 1.0 },
             "output": { "TITANIUM": 1.0 },
             "requiredTechnologies": ["ADVANCED_PROCESSING"]

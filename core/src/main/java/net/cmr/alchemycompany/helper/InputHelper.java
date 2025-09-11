@@ -33,6 +33,8 @@ public class InputHelper extends ScreenHelper {
     Viewport worldViewport;
     int lastMouseX = -1;
     int lastMouseY = -1;
+    boolean leftDown = false;
+    boolean leftMoved = false;
 
     public InputHelper(GameScreen screen, GameManager gameManager, UUID playerUUID, Viewport worldViewport) {
         super(screen, gameManager, playerUUID);
@@ -90,7 +92,7 @@ public class InputHelper extends ScreenHelper {
                 boolean multiple = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT);
                 Button selectedShopButton = screen.menuHelper.shopGroup.getChecked();
                 
-                if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
+                if (!Gdx.input.isButtonPressed(Input.Buttons.LEFT) && leftDown && !leftMoved) {
                     
                     if (selectedShopButton != null) {
                         String buildingId = selectedShopButton.getName();
@@ -109,7 +111,7 @@ public class InputHelper extends ScreenHelper {
 
             if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
                 SelectionSystem selectionSystem = gameManager.getEngine().getSystem(SelectionSystem.class);
-                List<Entity> hoverEntities = getHoveredEntities(tileCoords);
+                List<Entity> hoverEntities = getHoveredEntities(tileCoords, true);
                 if (selectionSystem.getSelectedId() != null) {
                     Entity selectedEntity = gameManager.getEngine().getEntity(selectionSystem.getSelectedId());
                     boolean attacked = false;
@@ -131,10 +133,17 @@ public class InputHelper extends ScreenHelper {
                 }
             }
         }
+        if (Math.abs(Gdx.input.getDeltaX()) > 1 || Math.abs(Gdx.input.getDeltaY()) > 1) {
+            leftMoved = true;
+        }
+        leftDown = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+        if (!leftDown) {
+            leftMoved = false;
+        }
     }
 
     public void updatePanCamera() {
-        if (Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
+        if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
             // Store previous mouse position between frames
             if (lastMouseX == -1 && lastMouseY == -1) {
                 lastMouseX = Gdx.input.getX();
@@ -178,14 +187,14 @@ public class InputHelper extends ScreenHelper {
         }
     }
 
-    public List<Entity> getHoveredEntities() {
+    public List<Entity> getHoveredEntities(boolean anyOwner) {
         Vector3 screenCoords = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
         Vector3 worldCoords = worldViewport.unproject(screenCoords);
         TilePoint tileCoords = IsometricHelper.worldToIsometricTile(worldCoords, gameManager.getWorld());
-        return getHoveredEntities(tileCoords);
+        return getHoveredEntities(tileCoords, anyOwner);
     }
 
-    public List<Entity> getHoveredEntities(TilePoint tp) {
+    public List<Entity> getHoveredEntities(TilePoint tp, boolean anyOwner) {
         if (tp == null || !gameManager.getWorld().isInWorld(tp)) {
             return new ArrayList<>();
         }
@@ -194,10 +203,20 @@ public class InputHelper extends ScreenHelper {
         UUID unitId = tile.getUnitSlotID();
         List<Entity> entitiesList = new ArrayList<>();
         if (buildingId != null) {
-            entitiesList.add(gameManager.getEngine().getEntity(buildingId));
+            Entity buildingEntity = gameManager.getEngine().getEntity(buildingId);
+            if (buildingEntity != null) {
+                if (anyOwner || (buildingEntity.hasComponent(OwnerComponent.class) && buildingEntity.getComponent(OwnerComponent.class).playerID.equals(playerUUID.toString()))) {
+                    entitiesList.add(gameManager.getEngine().getEntity(buildingId));
+                }
+            }
         }
         if (unitId != null) {
-            entitiesList.add(gameManager.getEngine().getEntity(unitId));
+            Entity unitEntity = gameManager.getEngine().getEntity(unitId);
+            if (unitEntity != null) {
+                if (anyOwner || (unitEntity.hasComponent(OwnerComponent.class) && unitEntity.getComponent(OwnerComponent.class).playerID.equals(playerUUID.toString()))) {
+                    entitiesList.add(gameManager.getEngine().getEntity(unitId));
+                }
+            }
         }
         return entitiesList;
     }

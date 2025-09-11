@@ -58,9 +58,10 @@ public class CombatSystem extends EntitySystem implements IUpdateSystem, ITurnSy
 
     @Override
     public void onTurn() {
-        for (Entity entity : new HashSet<>(engine.getComponentMapper(AttackCooldownComponent.class))) {
-            entity.removeComponent(AttackActionComponent.class, engine);
-            engine.changedEntity(entity);
+        for (Entity entity : engine.getEntities()) {
+            if (entity.hasComponent(AttackCooldownComponent.class)) {
+                entity.removeComponent(AttackCooldownComponent.class, engine);
+            }
         }
     }
 
@@ -95,7 +96,9 @@ public class CombatSystem extends EntitySystem implements IUpdateSystem, ITurnSy
                 if (attackingEntity.hasComponent(MovementComponent.class)) {
                     attackingEntity.getComponent(MovementComponent.class).movesRemaining = 0;
                 }
-                engine.changedEntity(attackingEntity);
+                //engine.changedEntity(attackingEntity);
+                engine.changedComponent(attackingEntity, HealthComponent.class);
+                engine.changedComponent(attackingEntity, MovementComponent.class);
             }
             for (Component component : defenderModifiedComponents) {
                 defendingEntity.setComponent(component, engine);
@@ -106,7 +109,9 @@ public class CombatSystem extends EntitySystem implements IUpdateSystem, ITurnSy
                 /*if (defendingEntity.hasComponent(MovementComponent.class)) {
                     defendingEntity.getComponent(MovementComponent.class).movesRemaining = 0;
                 }*/
-                engine.changedEntity(defendingEntity);
+                //engine.changedEntity(defendingEntity);
+                engine.changedComponent(defendingEntity, HealthComponent.class);
+                engine.changedComponent(defendingEntity, MovementComponent.class);
             }
         }
 

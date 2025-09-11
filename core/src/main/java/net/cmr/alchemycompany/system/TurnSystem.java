@@ -20,6 +20,7 @@ import net.cmr.alchemycompany.network.PlayerStateListener;
 import net.cmr.alchemycompany.network.Stream;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.network.packet.TurnStatePacket;
+import net.cmr.alchemycompany.network.packet.EntityPacket.EntityState;
 import net.cmr.alchemycompany.network.packet.TurnStatePacket.TurnState;
 
 public class TurnSystem extends EntitySystem implements IUpdateSystem, PlayerStateListener {
@@ -47,7 +48,7 @@ public class TurnSystem extends EntitySystem implements IUpdateSystem, PlayerSta
         Entity entity = new Entity();
         entity.addComponent(new TurnActionComponent(turnFinished), null);
         entity.addComponent(new PlayerActionComponent(currentPlayer), null);
-        stream.sendPacket(new EntityPacket(entity, true));
+        stream.sendPacket(new EntityPacket(entity, EntityState.ADDED));
     }
 
     private void postProcessTurn() {

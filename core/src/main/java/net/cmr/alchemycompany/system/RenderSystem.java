@@ -4,7 +4,11 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -16,10 +20,10 @@ import java.util.UUID;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -27,20 +31,22 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
 import net.cmr.alchemycompany.ACEngine;
 import net.cmr.alchemycompany.IsometricHelper;
 import net.cmr.alchemycompany.Sprites;
+import net.cmr.alchemycompany.Sprites.RenderType;
 import net.cmr.alchemycompany.component.Component;
 import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.HoverInfoComponent;
+import net.cmr.alchemycompany.component.MovementPathComponent;
 import net.cmr.alchemycompany.component.RenderComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
+import net.cmr.alchemycompany.network.packet.EntityPacket.EntityState;
 import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.world.Tile;
 import net.cmr.alchemycompany.world.TilePoint;
@@ -53,30 +59,34 @@ public class RenderSystem extends EntitySystem {
     private GameScreen screen;
     private World world;
     private Family renderFamily;
-    private Stage stage;
-    private Skin skin;
-    private Map<UUID, Actor> uiDisplayLabelCache;
+    private Map<UUID, Table> uiDisplayLabelCache;
 
     public RenderSystem(GameScreen screen) {
         this.screen = screen;
         this.renderFamily = Family.all(TilePositionComponent.class, RenderComponent.class);
-        this.stage = new Stage(new ScreenViewport());
-        this.skin = Sprites.getSkin();
         this.uiDisplayLabelCache = new HashMap<>();
     }
 
     @Override
     public void addedToEngine(Engine engine) {
         this.world = engine.as(ACEngine.class).getWorld();
-        engine.addEntityChangeListener((entity, added) -> {
-            if (added) {
+        engine.addEntityChangeListener((entity, state) -> {
+            if (state == EntityState.ADDED) {
                 if (entity.hasComponent(HoverInfoComponent.class)) {
                     HoverInfoComponent hic = entity.getComponent(HoverInfoComponent.class);
-                    Table table = createHoverTable(entity, hic);
+                    Table table = createHoverTable(entity, hic, this);
                     uiDisplayLabelCache.put(entity.getID(), table);
                 }
             } else {
                 uiDisplayLabelCache.remove(entity.getID());
+            }
+        });
+        engine.addComponentChangeListener((entity, componentClass) -> {
+            if (entity == null) return;
+            if (entity.hasComponent(HoverInfoComponent.class)) {
+                HoverInfoComponent hic = entity.getComponent(HoverInfoComponent.class);
+                Table table = createHoverTable(entity, hic, this);
+                uiDisplayLabelCache.put(entity.getID(), table);
             }
         });
     }
@@ -86,84 +96,222 @@ public class RenderSystem extends EntitySystem {
         super.removedFromEngine(engine);
     }
 
+    float tileElapsedTime = 0;
     public void render(UUID playerUUID, SpriteBatch batch, float delta) {
         int mapWidth = world.width;
         int mapHeight = world.height;
+        tileElapsedTime += delta;
 
-        // List<Entity> lists = new ArrayList<>(engine.getEntities(renderFamily));
         Set<Entity> renderEntities = engine.getEntities(renderFamily);
-        Map<TilePoint, List<Entity>> map = new HashMap<>();
-        for (Entity entity : renderEntities) {
-            TilePositionComponent tpc = entity.getComponent(TilePositionComponent.class);
-            TilePoint point = new TilePoint(tpc.tileX, tpc.tileY);
-            map.putIfAbsent(point, new ArrayList<>());
-            map.get(point).add(entity);
-        }
         VisibilitySystem visibilitySystem = engine.getSystem(VisibilitySystem.class);
 
+        List<SpriteRender> list = new ArrayList<>();
         for (int sum = mapWidth + mapHeight - 2; sum >= 0; sum--) {
             for (int x = 0; x <= sum; x++) {
                 int y = sum - x;
                 if (x < mapWidth && y < mapHeight) {
-                    TilePoint point = new TilePoint(x, y);
                     if (visibilitySystem != null && !visibilitySystem.wasVisiblePreviously(playerUUID, x, y)) {
                         continue;
                     }
                     boolean isVisibleCurrently = visibilitySystem.isVisibleCurrently(playerUUID, x, y);
-
-                    Vector3 iso = IsometricHelper.project(x, y);
-                    boolean invert = isInvert(x, y);
-                    Sprite sprite = getSprite(world.getTile(x, y), x, y);
-
+                    TilePoint tp = new TilePoint(x, y);
+                    String spriteId = getSprite(world.getTile(x, y), x, y);
+                    Vector2 isoPosition = SpriteRender.calculateSpriteCenter(tp.toVector());
+                    isoPosition.add(0, -2);
+                    isoPosition.scl(1, 1 / 4f);
+                    SpriteRender tileRender = new SpriteRender(spriteId, RenderType.SPRITE, isoPosition, false, tileElapsedTime);
                     if (!isVisibleCurrently) {
-                        batch.setColor(Color.GRAY);
+                        tileRender.setColor(Color.GRAY);
                     }
+                    list.add(tileRender);
+                }
+            }
+        }
 
-                    if (sprite != null) {
-                        SpriteRender render = new SpriteRender(sprite);
-                        render.renderSprite(batch, iso, invert, true);
-                    }
-                    if (!isVisibleCurrently) {
-                        batch.setColor(Color.WHITE);
-                    } else {
-                        List<Entity> currentEntities = map.get(point);
-                        if (currentEntities != null) {
-                            for (Entity entity : currentEntities) {
-                                RenderComponent rc = entity.getComponent(RenderComponent.class);
-                                Sprite entitySprite = Sprites.getSprite(rc.spriteType);
-                                SpriteRender spriteRender = new SpriteRender(entitySprite);
-                                spriteRender.renderSprite(batch, iso, rc.invertable && invert, false);
+        for (Entity entity : renderEntities) {
+            
+            TilePositionComponent tpc = entity.getComponent(TilePositionComponent.class);
+            TilePoint tp = new TilePoint(tpc.tileX, tpc.tileY);
+            if (entity.hasComponent(MovementPathComponent.class)) {
+                if (entity.getComponent(MovementPathComponent.class).isFinished(2)) {
+                    entity.removeComponent(MovementPathComponent.class, engine);
+                } else {
+                    tp = entity.getComponent(MovementPathComponent.class).getVisiualPosition(2f);
+                    tp.setX(tp.getX());
+                    tp.setY(tp.getY());
+                }
+            }
+            // TODO: Check if visible, if not dont render      
 
-                                if (entity.hasComponent(ConstructionComponent.class)) {
-                                    SpriteRender constructionRender = new SpriteRender("CONSTRUCTION_SCAFFOLD");
-                                    constructionRender.renderSprite(batch, iso, rc.invertable && invert, false);
-                                }
+            entity.getComponent(RenderComponent.class).elapsedTime += delta;
+            Vector2 tpVector = tp.toVector();
+            if (entity.hasComponent(MovementPathComponent.class)) {
+                tpVector.add(entity.getComponent(MovementPathComponent.class).getOffsetVisualPosition(2));
+            }
+            Vector2 isoPosition = SpriteRender.calculateSpriteCenter(tpVector);
+            isoPosition.scl(1, 1 / 4f);
+            
+            RenderComponent rc = entity.getComponent(RenderComponent.class);
+
+            String currentRenderId = rc.renderId;
+            RenderType renderType = entity.getComponent(RenderComponent.class).getRenderType();
+            
+            if (rc.variants != null && rc.variants.size() > 0) {
+                // Variant mode
+                Map<Class<? extends Component>, String> variantMap = new LinkedHashMap<>();
+                variantMap.put(MovementPathComponent.class, "moving");
+                variantMap.put(null, "idle");
+
+                for (Entry<Class<? extends Component>, String> entry : variantMap.entrySet()) {
+                    if (entry.getKey() == null || entity.hasComponent(entry.getKey())) {
+                        String componentVariant = entry.getValue();
+                        String renderComponentVariantId = rc.variants.get(componentVariant);
+                        if (renderComponentVariantId != null) {
+                            // Entity has this variant
+                            if (renderComponentVariantId.equals(currentRenderId)) {
+                                // Nothing changed, just set it and move on
+                                break;
+                            } else {
+                                rc.renderId = renderComponentVariantId;
+                                rc.elapsedTime = 0;
+                                break;
                             }
                         }
                     }
                 }
             }
+
+
+            SpriteRender entityRender = new SpriteRender(currentRenderId, renderType, isoPosition, false, 
+                    entity.getComponent(RenderComponent.class).elapsedTime);
+            entityRender.zOffset = -1 / 2f;
+            if (entity.hasComponent(MovementPathComponent.class)) {
+                entityRender.zOffset = -1 / 1.5f;
+            }
+            list.add(entityRender);
+
+            if (entity.hasComponent(ConstructionComponent.class)) {
+                SpriteRender constructionScaffold = new SpriteRender("CONSTRUCTION_SCAFFOLD", RenderType.SPRITE, isoPosition.cpy(), false,
+                    entity.getComponent(RenderComponent.class).elapsedTime);
+                constructionScaffold.zOffset = -1 / 2f;
+                list.add(constructionScaffold);
+            }
+
+
+            /*int insertIndex = Collections.binarySearch(list, tileRender.getZ());
+            if (insertIndex < 0) {
+                list.add(- 1 - insertIndex, tileRender);
+            } else {
+                list.add(insertIndex, tileRender);
+            }*/
         }
 
-        for (Entity entity : screen.inputHelper.getHoveredEntities()) {
-            if (entity.hasComponent(HoverInfoComponent.class) && entity.hasComponent(TilePositionComponent.class)) {
-                TilePositionComponent tpc = entity.getComponent(TilePositionComponent.class);
-                Vector3 iso = IsometricHelper.project(tpc.tileX, tpc.tileY);
+        Collections.sort(list, Comparator.comparingDouble(SpriteRender::getZ));
 
-                Vector2 centerPosition = SpriteRender.getTileCenterPosition(iso, 0, 0);
-                Actor display = uiDisplayLabelCache.get(entity.getID());
-                if (display != null) {
-                    float tileOffset = TILE_SIZE / 2;
-                    display.setPosition(centerPosition.x, centerPosition.y + tileOffset, Align.bottom);
-                    display.draw(batch, 1f);
-                }
+        for (SpriteRender render : list) {
+            render.render(batch);
+        }
+
+
+        SelectionSystem ss = engine.getSystem(SelectionSystem.class);
+        List<Entity> hoveredEntities = screen.inputHelper.getHoveredEntities(false);
+        hoveredEntities.removeIf((entity) -> {
+            return !(entity.hasComponent(HoverInfoComponent.class) && entity.hasComponent(TilePositionComponent.class));
+        });
+        int selectedEntityIndex = hoveredEntities.indexOf(engine.getEntity(ss.getSelectedId()));
+
+        Set<Entity> renderHoverEntities = new HashSet<>();
+        if (ss.getSelectedId() != null) {
+            renderHoverEntities.add(engine.getEntity(ss.getSelectedId()));
+            if (selectedEntityIndex == -1 && hoveredEntities.size() > 0) {
+                int index = (int) (System.currentTimeMillis() / 1000L) % hoveredEntities.size();
+                renderHoverEntities.add(hoveredEntities.get(index));
+            }
+        } else {
+            if (hoveredEntities.size() > 0) {
+                int index = (int) (System.currentTimeMillis() / 1000L) % hoveredEntities.size();
+                renderHoverEntities.add(hoveredEntities.get(index));
+            }
+        }
+
+        for (Entity entity : renderHoverEntities) {
+            if (entity == null) continue;
+            TilePositionComponent tpc = entity.getComponent(TilePositionComponent.class);
+            TilePoint tp = new TilePoint(tpc.tileX, tpc.tileY);
+            Vector2 isoPosition = SpriteRender.calculateSpriteCenter(tp.toVector());
+            isoPosition.scl(1, 1 / 4f);
+            Table display = uiDisplayLabelCache.get(entity.getID());
+            if (display != null) {
+                float tileOffset = TILE_SIZE / 1.25f;
+                display.setPosition(isoPosition.x * TILE_SIZE, (isoPosition.y * TILE_SIZE) + tileOffset, Align.bottom);
+                display.act(delta);
+                display.draw(batch, 1f);
             }
         }
     }
 
-    private static class SpriteRender {
+    private static class SpriteRender implements Comparable<Float> {
+
+        Vector2 spriteCenter; // where the bottom of the sprite will be rendered, isometric/world coordinates
+        float zOffset = 0; // how far up from the bottom of the sprite the z point is from the sprite, world coordinates
+        String renderId;
+        RenderType renderType;
+        boolean centerY;
+        float renderDelta = 0;
+        Color color = Color.WHITE;
+
+        public SpriteRender(String renderId, RenderType renderType, Vector2 spriteCenter, boolean centerY, float renderDelta) {
+            this.renderId = renderId;
+            this.renderType = renderType;
+            this.spriteCenter = spriteCenter;
+            this.centerY = centerY;
+            this.renderDelta = renderDelta;
+        }
+
+        public float getZ() {
+            return -(spriteCenter.y + zOffset);
+        }
+
+        @Override
+        public int compareTo(Float o) {
+            // TODO: this might need to be flipped
+            return (int) Math.signum(getZ() - o);
+        }
+
+        public static Vector2 calculateSpriteCenter(Vector2 standardTileCoords) {
+            Vector3 iso3 = IsometricHelper.project(standardTileCoords);
+            return new Vector2(iso3.x, iso3.y);
+        }
+
+        public void render(SpriteBatch batch) {
+            // TODO MAKE ANIMATIONS WORK
+            TextureRegion texture = Sprites.getTexture(renderId, renderType, renderDelta);
+
+            float displayX = spriteCenter.x * TILE_SIZE;
+            float displayY = spriteCenter.y * TILE_SIZE;
+            float width = texture.getRegionWidth() * 4f;
+            float height = texture.getRegionHeight() * 4f;
+            displayX -= width / 2f;
+            if (centerY) {
+                displayY -= height / 2f;
+            }
+            batch.setColor(color);
+            batch.draw(texture, displayX, displayY, width, height);
+            batch.setColor(Color.WHITE);
+        }
+
+        public void setColor(Color color) {
+            this.color = color;
+        }
+
+    }
+
+    /*private static class SpriteRender implements Comparable<Float> {
 
         private Sprite sprite;
+        private Vector2 tileCenterPosition; // world coordinates, isometric
+
+        SpriteRender()
 
         SpriteRender(Sprite sprite) {
             this.sprite = sprite;
@@ -173,12 +321,14 @@ public class RenderSystem extends EntitySystem {
             this.sprite = Sprites.getSprite(spriteId);
         }
 
-        void renderSprite(SpriteBatch batch, Vector3 iso, boolean invert, boolean tile) {
+        void renderSprite(SpriteBatch batch, TilePoint tilePoint, boolean invert, boolean tile) {
+
+            //Vector3 iso = IsometricHelper.project(new Vector2(tilePoint.getX(), tilePoint.getY()));
             float width = sprite.getWidth() * 4f;
             float height = sprite.getHeight() * 4f;
-            Vector2 tileCenterPosition = getTileCenterPosition(iso, sprite.getWidth(), sprite.getHeight());
+            Vector2 tileCenterPosition = getTileCenterPosition(tilePoint, sprite.getWidth(), sprite.getHeight());
             float displayX = tileCenterPosition.x;
-            float displayY =  tileCenterPosition.y;
+            float displayY = tileCenterPosition.y;
             if (invert) {
                 width *= -1;
             }
@@ -191,7 +341,8 @@ public class RenderSystem extends EntitySystem {
             batch.draw(sprite, displayX, displayY, width, height);
         }
 
-        public static Vector2 getTileCenterPosition(Vector3 iso, float width, float height) {
+        public static Vector2 getTileCenterPosition(TilePoint tilePoint, float width, float height) {
+            Vector3 iso = IsometricHelper.project(new Vector2(tilePoint.getX(), tilePoint.getY()));
             width = width * 4f;
             height = height * 4f;
             float displayX = iso.x * TILE_SIZE;
@@ -199,20 +350,30 @@ public class RenderSystem extends EntitySystem {
             return new Vector2(displayX, displayY);
         }
 
-    }
+        public float getZ() {
+            return getTileCenterPosition(, TILE_SIZE, TILE_SIZE)
+        }
 
-    private static Table createHoverTable(Entity entity, HoverInfoComponent hic) {
+        @Override
+        public int compareTo(Float o) {
+            return 
+        }
+
+    }*/
+
+    private static Table createHoverTable(Entity entity, HoverInfoComponent hic, RenderSystem renderSystem) {
         /*
-            HOVER TEXT is a string that can request certain information from components.
-            All next lines will be ignored
-            If you want to display a variable from a component, use the following
-
-                $net.cmr.alchemycompany.component.ComponentClassName@variableName
-            
-            If you want to round the amount of decimal places in something like a float, append.
-
-                &round=2
-
+         * HOVER TEXT is a string that can request certain information from components.
+         * All next lines will be ignored
+         * If you want to display a variable from a component, use the following
+         * 
+         * $net.cmr.alchemycompany.component.ComponentClassName@variableName
+         * 
+         * If you want to round the amount of decimal places in something like a float,
+         * append.
+         * 
+         * &round=2
+         * 
          */
         Skin skin = Sprites.getSkin();
         Map<String, JsonValue> componentStringMap = new HashMap<>();
@@ -225,81 +386,155 @@ public class RenderSystem extends EntitySystem {
         }
 
         String hoverText = hic.hoverText;
+        int indexOfAutoCommand = hoverText.indexOf("$autofill");
+        if (indexOfAutoCommand != -1) {
+            String autocompleted = HoverInfoComponent.getAutomaticHoverString(renderSystem.screen.getPlayerUUID(), entity);
+            hoverText = hoverText.replace("$autofill", autocompleted);
+        }
         Table table = new Table(Sprites.getSkin());
+        table.debugAll();
+        table.setBackground("window");
+        table.pad(5);
         try (Scanner inputText = new Scanner(hoverText)) {
             StringBuilder inputBuilder = new StringBuilder();
+            inputText.useDelimiter(" ");
             while (inputText.hasNext()) {
                 String next = inputText.next();
-                if (next.charAt(0) == '$') {
-                    // Special event, make label with previous and continue
-                    if (!inputBuilder.isEmpty()) {
+                if (next.length() == 0) {
+                    inputBuilder.append(" ");
+                } else if (next.charAt(0) == '$') {
+                    // Special event
+
+                    /*if (!inputBuilder.isEmpty()) {
                         Label label = new Label(inputBuilder.toString(), skin);
                         inputBuilder = new StringBuilder();
-                        table.add(label).row();
+                        table.add(label);
+                    }*/
+
+                    if (next.length() == 1) {
+                        // Missing command
+                        throw new IOException("Missing special action for HoverActionEntity.");
                     }
-                    // split 0 will be component class
-                    // split 1 will be the variable name
+
+                    // If $\n is the next token, create a label with the string builder (if any is
+                    // in there) and next row the table
+                    if (next.length() > 1) {
+                        if (next.charAt(1) == '\n') {
+                            if (!inputBuilder.isEmpty()) {
+                                Label label = new Label(inputBuilder.toString(), skin);
+                                inputBuilder = new StringBuilder();
+                                table.add(label);
+                            }
+                            table.row();
+                            continue;
+                        }
+                    }
+
+                    // split 0 will be action/component class
+                    // split 1 will be the target/variable name
                     // split 2, 3... will be modifiers (rounding, truncating, etc...)
                     String[] split = next.substring(1).split("[@&]");
                     if (split.length < 2) {
-                        throw new IOException("Missing essential information for special HoverEvent description with text: "+next);
+                        throw new IOException(
+                                "Missing essential information for special HoverEvent description with text: " + next);
                     }
-                    JsonValue componentJson = componentStringMap.get(split[0]);
-                    if (componentJson == null) {
-                        // Doesn't have a component of this type, or it's formatted improperly. Either way, don't display it
-                        continue;
-                    }
-                    JsonValue value = componentJson.get(split[1]);
-                    if (value == null) {
-                        // Value doesn't exist in component. 
-                        continue;
-                    }
-                    // Modifier values
-                    int roundAmount = -1;
-                    int truncateAmount = -1;
 
-                    for (int i = 2; i < split.length; i++) {
-                        String modifierRaw = split[i];
-                        String[] modifierTokens = modifierRaw.split("=");
-                        if (modifierTokens.length != 2) {
-                            throw new IOException("Improperly formatted modifier token: "+modifierRaw);
+                    if (split[0].equals("image")) {
+                        // Create an image object
+                        Sprite sprite = Sprites.getSprite(split[1]);
+                        if (!inputBuilder.isEmpty()) {
+                            Label label = new Label(inputBuilder.toString(), skin);
+                            inputBuilder = new StringBuilder();
+                            table.add(label);
                         }
-                        String modifierKey = modifierTokens[0];
-                        String modifierValue = modifierTokens[1];
 
-                        try {
-                            switch (modifierKey) {
-                                case "round" -> roundAmount = Integer.parseInt(modifierValue);
-                                case "truncate" -> truncateAmount = Integer.parseInt(modifierValue);
-                                default -> throw new IOException("Modifier "+modifierKey+" not found");
+                        float width = sprite.getWidth();
+                        float height = sprite.getHeight();
+                        float pad = 2;
+                        for (int i = 2; i < split.length; i++) {
+                            String modifierRaw = split[i];
+                            String[] modifierTokens = modifierRaw.split("=");
+                            if (modifierTokens.length != 2) {
+                                throw new IOException("Improperly formatted modifier token: " + modifierRaw);
                             }
-                        } catch (Exception e) {
-                            throw new IOException("Error parsing modifier "+modifierRaw, e);
-                        }
-                    }
+                            String modifierKey = modifierTokens[0];
+                            String modifierValue = modifierTokens[1];
 
-                    String displayText = value.asString();
-
-                    if (roundAmount != -1) {
-                        Double doubleValue = null;
-                        try {
-                            doubleValue = Double.valueOf(displayText);
-                        } catch (NumberFormatException nfe) {
-                            throw new IOException("Cannot round value "+value.name+" if it is not a double");
+                            try {
+                                switch (modifierKey) {
+                                    case "width" -> width = Float.parseFloat(modifierValue);
+                                    case "height" -> height = Float.parseFloat(modifierValue);
+                                    case "pad" -> pad = Float.parseFloat(modifierValue);
+                                    default -> throw new IOException("Modifier " + modifierKey + " not found");
+                                }
+                            } catch (Exception e) {
+                                throw new IOException("Error parsing modifier " + modifierRaw, e);
+                            }
                         }
-                        StringBuilder rounderFormat = new StringBuilder("#.");
-                        for (int i = 0; i < roundAmount; i++) {
-                            rounderFormat.append("#");
+                        
+                        Image image = new Image(sprite);
+                        table.add(image).size(width, height);
+                    } else {
+                        // Assume it is a component
+                        JsonValue componentJson = componentStringMap.get(split[0]);
+                        if (componentJson == null) {
+                            // Doesn't have a component of this type, or it's formatted improperly. Either
+                            // way, don't display it
+                            continue;
                         }
-                        NumberFormat numberFormat = new DecimalFormat(rounderFormat.toString());
-                        displayText = numberFormat.format(doubleValue);
-                    }
-                    if (truncateAmount != -1) {
-                        displayText = displayText.substring(0, Math.min(displayText.length(), truncateAmount));
-                    }
+                        JsonValue value = componentJson.get(split[1]);
+                        if (value == null) {
+                            // Value doesn't exist in component.
+                            continue;
+                        }
+                        // Modifier values
+                        int roundAmount = -1;
+                        int truncateAmount = -1;
 
-                    Label label = new Label(displayText, skin);
-                    table.add(label);
+                        for (int i = 2; i < split.length; i++) {
+                            String modifierRaw = split[i];
+                            String[] modifierTokens = modifierRaw.split("=");
+                            if (modifierTokens.length != 2) {
+                                throw new IOException("Improperly formatted modifier token: " + modifierRaw);
+                            }
+                            String modifierKey = modifierTokens[0];
+                            String modifierValue = modifierTokens[1];
+
+                            try {
+                                switch (modifierKey) {
+                                    case "round" -> roundAmount = Integer.parseInt(modifierValue);
+                                    case "truncate" -> truncateAmount = Integer.parseInt(modifierValue);
+                                    default -> throw new IOException("Modifier " + modifierKey + " not found");
+                                }
+                            } catch (Exception e) {
+                                throw new IOException("Error parsing modifier " + modifierRaw, e);
+                            }
+                        }
+
+                        String displayText = value.asString();
+
+                        if (roundAmount != -1) {
+                            Double doubleValue = null;
+                            try {
+                                doubleValue = Double.valueOf(displayText);
+                            } catch (NumberFormatException nfe) {
+                                throw new IOException("Cannot round value " + value.name + " if it is not a double");
+                            }
+                            StringBuilder rounderFormat = new StringBuilder("#.");
+                            for (int i = 0; i < roundAmount; i++) {
+                                rounderFormat.append("#");
+                            }
+                            NumberFormat numberFormat = new DecimalFormat(rounderFormat.toString());
+                            displayText = numberFormat.format(doubleValue);
+                        }
+                        if (truncateAmount != -1) {
+                            displayText = displayText.substring(0, Math.min(displayText.length(), truncateAmount));
+                        }
+
+                        /*Label label = new Label(displayText, skin);
+                        table.add(label);*/
+                        inputBuilder.append(displayText);
+                    }
                 } else {
                     inputBuilder.append(next).append(" ");
                 }
@@ -312,7 +547,7 @@ public class RenderSystem extends EntitySystem {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+        table.pack();
 
         return table;
     }
@@ -320,14 +555,16 @@ public class RenderSystem extends EntitySystem {
     private boolean isInvert(int x, int y) {
         return (generateNoise(x, y) * 31) % 2 == 1;
     }
+
     private int generateNoise(int x, int y) {
         return (int) (x * 341873128712L + y * 132897987541L);
     }
+
     private int getNumberBetween(int x, int y, int min, int max) {
-        return new Random(generateNoise(x, y)).nextInt((max- min) + 1) + min;
+        return new Random(generateNoise(x, y)).nextInt((max - min) + 1) + min;
     }
 
-    private Sprite getSprite(Tile tile, int x, int y) {
+    private String getSprite(Tile tile, int x, int y) {
         WorldFeature feature = tile.getFeature();
         String spriteType = null;
         switch (feature) {
@@ -347,7 +584,7 @@ public class RenderSystem extends EntitySystem {
                 spriteType = "CRYSTAL_VALLEY";
                 break;
             case SWAMP:
-                String[] options = new String[] {"SWAMP1", "SWAMP2", "SWAMP3", "SWAMP4", "SWAMP5"};
+                String[] options = new String[] { "SWAMP1", "SWAMP2", "SWAMP3", "SWAMP4", "SWAMP5" };
                 int option = getNumberBetween(x, y, 0, 4);
                 spriteType = options[option];
                 break;
@@ -357,7 +594,7 @@ public class RenderSystem extends EntitySystem {
         if (spriteType == null) {
             return null;
         }
-        return Sprites.getSprite(spriteType);
+        return spriteType;
     }
 
 }

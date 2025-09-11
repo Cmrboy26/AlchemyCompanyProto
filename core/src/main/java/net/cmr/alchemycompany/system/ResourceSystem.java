@@ -136,7 +136,10 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
             buildingsToBroadcast.addAll(activeEntities);
             buildingsToBroadcast.addAll(storageBuildings);
             for (Entity building : buildingsToBroadcast) {
-                engine.changedEntity(building);
+                //engine.changedEntity(building);
+                engine.changedComponent(building, ProducerComponent.class);
+                engine.changedComponent(building, ConsumerComponent.class);
+                engine.changedComponent(building, StorageComponent.class);
             }
         }
 
@@ -403,7 +406,8 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
                     storage.consumeAmount(resource, amountInThisStorage);
                     toUse -= amountInThisStorage;
                 }
-                engine.changedEntity(building);
+                //engine.changedEntity(building);
+                engine.changedComponent(building, StorageComponent.class);
                 if (toUse == 0) break;
             }
         }

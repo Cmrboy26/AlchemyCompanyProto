@@ -95,7 +95,8 @@ public class VisibilitySystem extends EntitySystem {
             }
         }
         previousVisibleCoordinates.addAll(visibleTileCoordinates);
-        engine.changedEntity(getFogHolderEntity(playerID));
+        //engine.changedEntity(getFogHolderEntity(playerID));
+        engine.changedComponent(getFogHolderEntity(playerID), FogOfWarComponent.class);
     }
 
 }

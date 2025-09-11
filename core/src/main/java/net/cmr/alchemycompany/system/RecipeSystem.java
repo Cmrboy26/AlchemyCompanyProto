@@ -109,7 +109,10 @@ public class RecipeSystem extends EntitySystem implements IUpdateSystem {
         }
 
         // Update clients on new components, recalculate resources
-        engine.changedEntity(buildingEntity);
+        //engine.changedEntity(buildingEntity);
+        engine.changedComponent(buildingEntity, ProducerComponent.class);
+        engine.changedComponent(buildingEntity, ConsumerComponent.class);
+        engine.changedComponent(buildingEntity, SelectedRecipeComponent.class);
         return true;
     }
 

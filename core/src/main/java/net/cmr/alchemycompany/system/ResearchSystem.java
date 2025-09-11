@@ -32,8 +32,8 @@ public class ResearchSystem extends EntitySystem implements IUpdateSystem {
             if (rmc.getCurrentResearch() != null && rmc.getCurrentResearch().equals(tech)) {
                 // Already researching this technology, ignore
                 if (!rac.isStarts()) {
-                    rmc.stopResearch();
-                    engine.changedEntity(rmcEntity);
+                    rmc.stopResearch(); 
+                    engine.changedComponent(entity, ResearchManagementComponent.class);
                     System.out.println("STOPPEDs RESEARCH "+rmc.isResearching());
                 }
                 return;
@@ -50,7 +50,7 @@ public class ResearchSystem extends EntitySystem implements IUpdateSystem {
             if (rac.isStarts()) {
                 rmc.startResearch(tech.getId());
             }
-            engine.changedEntity(rmcEntity);
+            engine.changedComponent(entity, ResearchManagementComponent.class);
             System.out.println("QUEUED RESEARCH "+rmc.isResearching());
         });
     }
@@ -94,7 +94,8 @@ public class ResearchSystem extends EntitySystem implements IUpdateSystem {
                 rmc.setResearched(rmc.getCurrentResearchID());
                 rmc.stopResearch();
             }
-            this.engine.changedEntity(getPlayerResearchManagerEntity(playerUUID.toString()));
+            this.engine.changedComponent(getPlayerResearchManagerEntity(playerUUID.toString()), ResearchManagementComponent.class);
+            //this.engine.changedEntity(getPlayerResearchManagerEntity(playerUUID.toString()));
         }
     }
     

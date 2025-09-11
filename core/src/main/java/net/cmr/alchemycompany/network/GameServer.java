@@ -26,6 +26,7 @@ import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
 import net.cmr.alchemycompany.component.actions.TurnActionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.network.Stream.StreamState;
+import net.cmr.alchemycompany.network.packet.ComponentPacket;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.network.packet.Packet;
 import net.cmr.alchemycompany.network.packet.TilePacket;
@@ -59,7 +60,7 @@ public class GameServer implements PlayerStateListener {
         computerPlayerStreams = new HashMap<>();
         queuedActions = new HashMap<>();
 
-        World world = new World(WorldType.MINI, System.currentTimeMillis());
+        World world = new World(WorldType.SMALL, System.currentTimeMillis());
         ACEngine engine = GameManager.createServerEngine(this, world);
         this.engine = engine;
         this.engine.setWorld(world);
@@ -69,6 +70,10 @@ public class GameServer implements PlayerStateListener {
                 return;
             }
             EntityPacket packet = new EntityPacket(entity, added);
+            broadcastPacket(packet);
+        });
+        engine.addComponentChangeListener((entity, componentClass) -> {
+            ComponentPacket packet = new ComponentPacket(entity, componentClass, entity.getComponent(componentClass));
             broadcastPacket(packet);
         });
         gameManager = new GameManager(null, engine, getWorld());

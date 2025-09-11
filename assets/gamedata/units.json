@@ -20,8 +20,13 @@
             },
             {
                 "class": "net.cmr.alchemycompany.component.RenderComponent",
-                "spriteType": "SCOUT",
-                "invertable": true
+                "renderId": "TROOP_IDLE",
+                "renderType": "ANIMATION",
+                "invertable": false,
+                "variants": {
+                    "idle": "TROOP_IDLE",
+                    "moving": "TROOP_MOVE"
+                }
             },
             {
                 "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
@@ -60,7 +65,8 @@
             },
             {
                 "class": "net.cmr.alchemycompany.component.HoverInfoComponent",
-                "hoverText": "$net.cmr.alchemycompany.component.HealthComponent@health&round=2"
+                "hoverText": "$autofill",
+                "hoverTextOld": "$image@hp&width=24&height=24&pad=2 $net.cmr.alchemycompany.component.HealthComponent@health&round=1  / $net.cmr.alchemycompany.component.HealthComponent@maxHealth&round=1 $\n $image@strength&width=24&height=24&pad=2 $net.cmr.alchemycompany.component.AttackComponent@baseAttack&round=1 $\n $image@movement&width=24&height=24&pad=2 $net.cmr.alchemycompany.component.MovementComponent@movesRemaining&round=1"
             }
         ]
     }

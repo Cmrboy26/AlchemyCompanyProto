@@ -1,8 +1,16 @@
 {
     "animations": {
-        "troop_idle": {
+        "MISSING_ANIMATION": {
+            "frameDuration": 0.5,
+            "playMode": "LOOP"
+        },
+        "TROOP_MOVE": {
             "frameDuration": 0.1,
-            "animationType": "LOOP"
+            "playMode": "LOOP"
+        },
+        "TROOP_IDLE": {
+            "frameDuration": 0.4,
+            "playMode": "LOOP"
         }
     }
 }

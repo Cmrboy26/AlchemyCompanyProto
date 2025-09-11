@@ -38,12 +38,16 @@
                 "class": "net.cmr.alchemycompany.component.ProducerComponent",
                 "production": {
                     "GOLD": 3.0,
-                    "SCIENCE": 100.0
+                    "SCIENCE": 5.0
                 }
             },
             {
                 "class": "net.cmr.alchemycompany.component.SightComponent",
                 "radius": 3
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.HoverInfoComponent",
+                "hoverText": "$autofill"
             }
         ]
     },
@@ -109,6 +113,10 @@
                     "EXTRACT_CRYSTAL": ["MOUNTAINS"],
                     "EXTRACT_MYTHRIL": ["MOUNTAINS"]
                 }
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.HoverInfoComponent",
+                "hoverText": "$autofill"
             }
         ]
     },
@@ -173,6 +181,10 @@
                     "STARDUST_TO_SUNSTONE",
                     "STARDUST_TO_MOONSTONE"
                 ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.HoverInfoComponent",
+                "hoverText": "$autofill"
             }
         ]
     },
@@ -234,6 +246,10 @@
                     "PRODUCE_BATTERY",
                     "PRODUCE_BATTERY_MAGIC_STONE"
                 ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.HoverInfoComponent",
+                "hoverText": "$autofill"
             }
         ]
     },
@@ -282,6 +298,10 @@
                     "EXTRACT_SULFUR",
                     "EXTRACT_TITANIUM_ORE"
                 ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.HoverInfoComponent",
+                "hoverText": "$autofill"
             }
         ]
     }

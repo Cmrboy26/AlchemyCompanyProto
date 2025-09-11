@@ -16,6 +16,7 @@ import com.esotericsoftware.kryonet.Listener;
 
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
+import net.cmr.alchemycompany.network.packet.EntityPacket.EntityState;
 import net.cmr.alchemycompany.network.packet.Packet;
 import net.cmr.alchemycompany.network.packet.UUIDPacket;
 import net.cmr.alchemycompany.network.packet.WorldPacket;
@@ -65,7 +66,7 @@ public class OnlineStream extends Stream {
             waitUntilPacketRecieved(WorldPacket.class);
         } else {
             for (Entity entity : getServer().getEngine().getEntities()) {
-                EntityPacket entityPacket = new EntityPacket(entity, true);
+                EntityPacket entityPacket = new EntityPacket(entity, EntityState.ADDED);
                 sendPacket(entityPacket);
             }
             WorldPacket packet = new WorldPacket(server.getWorld());

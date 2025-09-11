@@ -64,6 +64,7 @@ import net.cmr.alchemycompany.game.Resource;
 import net.cmr.alchemycompany.game.Resources;
 import net.cmr.alchemycompany.game.Technology;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
+import net.cmr.alchemycompany.network.packet.EntityPacket.EntityState;
 import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.system.ResearchSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
@@ -281,7 +282,7 @@ public class MenuHelper extends ScreenHelper {
             Label name = new Label(lc.name, skin);
             name.setAlignment(Align.center);
             textTable.add(name).grow().pad(2).row();
-            Image image = new Image(Sprites.getSprite(rc.spriteType));
+            Image image = new Image(Sprites.getSprite(rc.renderId));
             button.add(image).left().pad(4).colspan(1);
             button.add(textTable).left().growX().colspan(1).padRight(scrollEntries.getScrollBarWidth() + 4);
             button.pack();
@@ -450,7 +451,7 @@ public class MenuHelper extends ScreenHelper {
                         gameManager.getEngine().addEntity(researchAction);
                         researchAction.addComponent(new PlayerActionComponent(playerUUID), gameManager.getEngine());
                         researchAction.addComponent(new ResearchActionComponent(tech.getId(), button.isChecked()), gameManager.getEngine());
-                        screen.getStream().sendPacket(new EntityPacket(researchAction, true));
+                        screen.getStream().sendPacket(new EntityPacket(researchAction, EntityState.ADDED));
 
                         // Update research display table
                         researchDisplayTable.clearChildren();
@@ -683,11 +684,13 @@ public class MenuHelper extends ScreenHelper {
                             statsSections.add(healthTable);
                             Callable<String> healthString = () -> {
                                 HealthComponent thc = gameManager.getEngine().getEntity(selectedEntityId).getComponent(HealthComponent.class);
-                                return thc.health + " / " + thc.maxHealth + " HP";
+                                return thc.health + " / " + thc.maxHealth;
                             };
                             Label name;
                             try {
                                 name = new Label(healthString.call(), skin);
+                                Image hpImage = new Image(Sprites.getDrawable("hp"));
+                                healthTable.add(hpImage).size(24).pad(2);
                                 healthTable.add(name);
                                 name.addAction(Actions.forever(Actions.run(() -> {
                                     try {
@@ -706,11 +709,13 @@ public class MenuHelper extends ScreenHelper {
                             statsSections.add(movementTable);
                             Callable<String> turnString = () -> {
                                 MovementComponent tmc = gameManager.getEngine().getEntity(selectedEntityId).getComponent(MovementComponent.class);
-                                return tmc.movesRemaining + "/"+ tmc.movesPerTurn + " Turn" + (tmc.movesPerTurn != 1 ? "s" : "");
+                                return tmc.movesRemaining + " / "+ tmc.movesPerTurn;
                             };
                             Label name;
                             try {
                                 name = new Label(turnString.call(), skin);
+                                Image hpImage = new Image(Sprites.getDrawable("movement"));
+                                movementTable.add(hpImage).size(24).pad(2);
                                 movementTable.add(name);
                                 name.addAction(Actions.forever(Actions.run(() -> {
                                     try {

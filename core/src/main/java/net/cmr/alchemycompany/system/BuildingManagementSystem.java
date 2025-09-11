@@ -113,7 +113,8 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
             if (cc.turns <= 0) {
                 entity.removeComponent(ConstructionComponent.class, engine);
             }
-            engine.changedEntity(entity);
+            //engine.changedEntity(entity);
+            engine.changedComponent(entity, ConstructionComponent.class);
         }
     }
 

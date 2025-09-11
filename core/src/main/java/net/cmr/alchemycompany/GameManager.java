@@ -20,6 +20,7 @@ import net.cmr.alchemycompany.entity.UnitFactory;
 import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.network.Stream;
 import net.cmr.alchemycompany.network.packet.EntityPacket;
+import net.cmr.alchemycompany.network.packet.EntityPacket.EntityState;
 import net.cmr.alchemycompany.network.packet.TilePacket;
 import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.system.BuildingManagementSystem;
@@ -89,7 +90,7 @@ public class GameManager {
             Entity buildAction = new Entity();
             buildAction.addComponent(new PlayerActionComponent(playerId), getEngine());
             buildAction.addComponent(new BuildingActionComponent(type, x, y), getEngine());
-            clientStream.sendPacket(new EntityPacket(buildAction, true));
+            clientStream.sendPacket(new EntityPacket(buildAction, EntityState.ADDED));
             return true;
         } else {
             boolean result = BuildingManagementSystem.tryPlaceBuilding(playerId, type, x, y, ignoreVisibility, engine);
@@ -102,7 +103,7 @@ public class GameManager {
             Entity buildAction = new Entity();
             buildAction.addComponent(new PlayerActionComponent(playerId), getEngine());
             buildAction.addComponent(new BuildingActionComponent(null, x, y), getEngine());
-            clientStream.sendPacket(new EntityPacket(buildAction, true));
+            clientStream.sendPacket(new EntityPacket(buildAction, EntityState.ADDED));
             return true;
         } else {
             boolean result = BuildingManagementSystem.tryRemoveBuilding(playerId, x, y, engine);
@@ -115,7 +116,7 @@ public class GameManager {
             Entity recipeAction = new Entity();
             recipeAction.addComponent(new PlayerActionComponent(playerId), getEngine());
             recipeAction.addComponent(new SelectRecipeActionComponent(recipeId, buildingId), getEngine());
-            clientStream.sendPacket(new EntityPacket(recipeAction, true));
+            clientStream.sendPacket(new EntityPacket(recipeAction, EntityState.ADDED));
             return true;
         } else {
             boolean result = RecipeSystem.trySelectRecipe(playerId, engine.getEntity(buildingId), recipeId, engine);
@@ -128,7 +129,7 @@ public class GameManager {
             Entity moveAction = new Entity();
             moveAction.addComponent(new PlayerActionComponent(playerId), engine);
             moveAction.addComponent(new MovementActionComponent(unitId, x, y), engine);
-            clientStream.sendPacket(new EntityPacket(moveAction, true));
+            clientStream.sendPacket(new EntityPacket(moveAction, EntityState.ADDED));
         }
     }
 
@@ -137,7 +138,7 @@ public class GameManager {
             Entity attackAction = new Entity();
             attackAction.addComponent(new PlayerActionComponent(playerId), engine);
             attackAction.addComponent(new AttackActionComponent(unitId, targetId), engine);
-            clientStream.sendPacket(new EntityPacket(attackAction, true));
+            clientStream.sendPacket(new EntityPacket(attackAction, EntityState.ADDED));
         }
     }
 
@@ -175,6 +176,7 @@ public class GameManager {
         engine.registerSystem(new RenderSystem(screen));
         engine.registerSystem(new SelectionSystem());
         engine.registerSystem(new ResourceSystem(screen));
+        engine.registerSystem(new MovementSystem(true));
 
         addSharedSystems(engine, world);
         return engine;
@@ -184,8 +186,8 @@ public class GameManager {
         engine.setWorld(world);
         engine.registerSystem(new ResourceSystem());
         engine.registerSystem(new TurnSystem(server));
-        engine.registerSystem(new MovementSystem());
-        engine.registerSystem(new CombatSystem());;
+        engine.registerSystem(new CombatSystem());
+        engine.registerSystem(new MovementSystem(false));
 
         addSharedSystems(engine, world);
         return engine;

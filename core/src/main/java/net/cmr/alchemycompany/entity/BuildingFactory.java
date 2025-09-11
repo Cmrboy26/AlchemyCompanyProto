@@ -23,12 +23,16 @@ public class BuildingFactory {
 
     private static EntityReader<String> reader;
 
-    public static Entity createEmptyBuilding(String unitId) {
+    public static EntityReader<String> getReader() {
         if (reader == null) {
             reader = new EntityReader<>();
             reader.readEntities(Gdx.files.internal("gamedata/buildings.json"), (e) -> { return e.getComponent(BuildingComponent.class).buildingId; });
         }
-        return reader.getEntity(unitId);
+        return reader;
+    }
+
+    public static Entity createEmptyBuilding(String unitId) {
+        return getReader().getEntity(unitId);
     }    
 
     public static Entity createBuilding(UUID playerID, String buildingId, int x, int y) {
@@ -43,7 +47,7 @@ public class BuildingFactory {
     }
 
     public static Map<String, Entity> getRegisteredBuildingEntities() {
-        return reader.cloneEntityMap();
+        return getReader().cloneEntityMap();
     }
 
 }
