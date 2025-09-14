@@ -34,6 +34,7 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
 
     private Map<UUID, Map<String, Float>> cachedGenerationPerSecond = new HashMap<>();
     private Map<UUID, Map<String, Float>> cachedStoredResources = new HashMap<>();
+    private Map<UUID, Map<String, Float>> cachedTotalStorageCapacity = new HashMap<>();
     private Map<UUID, List<Entity>> activeEntities = new HashMap<>();
     private final @Null GameScreen playerScreen;
 
@@ -44,6 +45,7 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
         this.playerScreen = screen;
         this.cachedStoredResources = new HashMap<>();
         this.cachedGenerationPerSecond = new HashMap<>();
+        this.cachedTotalStorageCapacity = new HashMap<>();
     }
 
     @Override
@@ -172,6 +174,7 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
         this.cachedGenerationPerSecond.put(playerUUID, new HashMap<>(generationPerSecond));
         this.activeEntities.put(playerUUID, new ArrayList<>(activeEntities));
         this.cachedStoredResources.put(playerUUID, new HashMap<>(trueResourcesInStorage));
+        this.cachedTotalStorageCapacity.put(playerUUID, new HashMap<>(calculatedTotalStorageCapacity));
         //}
     }
 
@@ -416,11 +419,14 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
         return true;
     }
 
-    public Map<String, Float> getDisplayResourcePerSecond(UUID playerUUID) {
+    public Map<String, Float> getCachedResourcePerSecond(UUID playerUUID) {
         return cachedGenerationPerSecond.get(playerUUID);
     }
     public Map<String, Float> getCachedStoredResources(UUID playerUUID) {
         return cachedStoredResources.get(playerUUID);
+    }
+    public Map<String, Float> getCachedTotalStorageCapacity(UUID playerUUID) {
+        return cachedTotalStorageCapacity.get(playerUUID);
     }
 
     public List<Entity> getActiveEntities(UUID playerUUID) {

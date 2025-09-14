@@ -10,10 +10,10 @@ import net.cmr.alchemycompany.screen.GameScreen;
 
 public abstract class ScreenHelper {
     
-    protected UUID playerUUID;
-    protected GameScreen screen;
-    protected GameManager gameManager;
-    protected Skin skin;
+    public UUID playerUUID;
+    public GameScreen screen;
+    public GameManager gameManager;
+    public Skin skin;
 
     public ScreenHelper(GameScreen screen, GameManager gameManager, UUID playerUUID) {
         this.screen = screen;

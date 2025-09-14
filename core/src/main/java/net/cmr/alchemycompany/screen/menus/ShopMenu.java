@@ -1,0 +1,264 @@
+package net.cmr.alchemycompany.screen.menus;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.function.Predicate;
+
+import com.badlogic.gdx.scenes.scene2d.ui.Button;
+import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+
+import net.cmr.alchemycompany.Sprites;
+import net.cmr.alchemycompany.component.AvailableRecipesComponent;
+import net.cmr.alchemycompany.component.ConstructionComponent;
+import net.cmr.alchemycompany.component.LabelComponent;
+import net.cmr.alchemycompany.component.PurchaseCostComponent;
+import net.cmr.alchemycompany.component.RenderComponent;
+import net.cmr.alchemycompany.component.ResearchRequirementComponent;
+import net.cmr.alchemycompany.ecs.Entity;
+import net.cmr.alchemycompany.entity.BuildingFactory;
+import net.cmr.alchemycompany.helper.ScreenHelper;
+import net.cmr.alchemycompany.system.ResourceSystem;
+import net.cmr.alchemycompany.world.Tile;
+import net.cmr.alchemycompany.world.TilePoint;
+
+public class ShopMenu extends GameMenu {
+
+    private Table categoryTable;
+    private Table entryTable;
+    private ScrollPane entryScrollPane;
+
+    private ButtonGroup<ShopEntry> entryButtonGroup;
+
+    public ShopMenu(int align, ScreenHelper screenHelper) {
+        super(align, screenHelper);
+    }
+
+    @Override
+    public void construct() {
+        entryButtonGroup = new ButtonGroup<>();
+        entryButtonGroup.setMaxCheckCount(1);
+        entryButtonGroup.setMinCheckCount(0);
+
+        categoryTable = new Table(skin);
+        entryTable = new Table(skin);
+        entryScrollPane = new ScrollPane(entryTable, skin);
+
+        List<ShopCategory> categoriesList = new ArrayList<>();
+        categoriesList.add(new ShopCategory("Production", entity -> entity.hasComponent(AvailableRecipesComponent.class), "TITANIUM_ICON"));
+        ShopCategory miscCategory = new ShopCategory("Miscellaneous", entity -> true, "IRON_ORE_ICON");
+        categoriesList.add(miscCategory);
+
+        for (ShopCategory category : categoriesList) {
+            categoryTable.add(category).pad(5);
+        }
+    
+        for (Entry<String, Entity> buildingEntry : BuildingFactory.getRegisteredBuildingEntities().entrySet()) {
+            ShopCategory category = categoriesList.stream()
+                .filter(entry -> entry.getPredicate().test(buildingEntry.getValue()))
+                .findFirst()
+                .orElse(miscCategory);
+            try {
+                ShopEntry shopEntry = new ShopEntry(category, buildingEntry.getValue()) {
+                    @Override
+                    public String getNotAllowedReason() {
+                        // Implement game logic checks here, e.g., technology requirements, resource availability
+                        PurchaseCostComponent pcc = shopEntity.getComponent(PurchaseCostComponent.class);
+                        ResearchRequirementComponent rrc = shopEntity.getComponent(ResearchRequirementComponent.class);
+                        if (pcc != null) {
+                            int existingCount = getExistingCount();
+                            ResourceSystem resourceSystem = screenHelper.gameManager.getEngine().getSystem(ResourceSystem.class);
+                            for (Entry<String, Float> costEntry : pcc.getResourceCost(existingCount).entrySet()) {
+                                String resourceId = costEntry.getKey();
+                                Float costAmount = costEntry.getValue();
+                                float storageAmount = resourceSystem.getCachedStoredResources(screenHelper.playerUUID).getOrDefault(resourceId, 0f);
+                                if (storageAmount < costAmount) {
+                                    return "Insufficient resources: " + resourceId;
+                                }
+                            }
+                        }
+                        /*if (rrc != null) {
+                            ResearchSystem researchSystem = screenHelper.gameManager.getEngine().getSystem(ResearchSystem.class);
+                            for (String techId : rrc.technologiesRequired) {
+                                if (!researchSystem.getPlayerResearchManager(screenHelper.playerUUID.toString()).hasResearched(techId)) {
+                                    return "Requires technology: " + techId;
+                                }
+                            }
+                        }*/
+                        return "";
+                    }
+
+                    @Override
+                    public int getExistingCount() {
+                        return 0;
+                    }
+
+                    @Override
+                    public void onPlace(TilePoint tilePoint) {
+                        String buildingId = buildingEntry.getKey();
+
+                        screenHelper.gameManager.tryPlaceBuilding(screenHelper.playerUUID, buildingId, tilePoint.getX(), tilePoint.getY(), false);
+                    }
+                };
+                entryButtonGroup.add(shopEntry);
+                entryTable.add(shopEntry).growX().space(2).row();
+            } catch (IllegalArgumentException e) {
+                System.err.println("Error creating shop entry for building " + buildingEntry.getKey() + ": " + e.getMessage());
+            }
+        }
+
+        add(categoryTable).row();
+        add(entryScrollPane).height(200).width(200).row();
+    }
+
+    public ButtonGroup<ShopEntry> getShopEntryGroup() {
+        return entryButtonGroup;
+    }
+
+    public abstract class ShopEntry extends Button {
+
+        Label nameLabel, warningLabel;
+        Image iconImage;
+        float elapsedTime = 0;
+        ShopCategory category;
+        Entity shopEntity;
+
+        public ShopEntry(ShopCategory category, Entity entity) throws IllegalArgumentException {
+            super(skin, "toggle");
+            this.category = category;
+            this.shopEntity = entity;
+            PurchaseCostComponent pcc = entity.getComponent(PurchaseCostComponent.class);
+            if (pcc == null) {
+                throw new IllegalArgumentException("Entity must have PurchaseCostComponent");
+            }
+            ConstructionComponent cc = entity.getComponent(ConstructionComponent.class);
+            if (cc == null) {
+                throw new IllegalArgumentException("Entity must have ConstructionComponent");
+            }
+            RenderComponent rc = entity.getComponent(RenderComponent.class);
+            if (rc == null) {
+                throw new IllegalArgumentException("Entity must have RenderComponent");
+            }
+            LabelComponent lc = entity.getComponent(LabelComponent.class);
+            if (lc == null) {
+                throw new IllegalArgumentException("Entity must have LabelComponent");
+            }
+
+            iconImage = new Image();
+            nameLabel = new Label(lc.name, skin);
+            warningLabel = new Label(null, skin);
+            warningLabel.setEllipsis(true);
+            //warningLabel.setWrap(true);
+            warningLabel.setFontScale(.6f);
+
+            Table costTable = new Table(skin);
+            Table descriptionTable = new Table(skin);
+            GameMenu.addContinuousUpdate(this, () -> {
+                String renderId = rc.renderId;
+                if (renderId == null && rc.variants != null && !rc.variants.containsKey("idle")) {
+                    renderId = rc.variants.get("idle");
+                }
+                iconImage.setDrawable(Sprites.getTextureDrawable(rc.renderId, rc.getRenderType(), elapsedTime));
+
+                costTable.clearChildren();
+                int count = getExistingCount();
+                costTable.add(new Image(Sprites.getSprite("TIME"))).size(16).pad(1);
+                costTable.add(new Label(cc.turns + "", skin)).pad(1).row();
+                for (Entry<String, Float> costEntry : pcc.getResourceCost(count).entrySet()) {
+                    Image costIcon = new Image(Sprites.getSprite(costEntry.getKey() + "_ICON"));
+                    Label costLabel = new Label(costEntry.getValue().intValue() + "", skin);
+                    costTable.add(costIcon).size(16).pad(1);
+                    costTable.add(costLabel).pad(1).row();
+                }
+
+                setDisabled(!isPurchaseAllowed());
+                if (isChecked() && isDisabled()) {
+                    setChecked(false);
+                }
+                String message = getNotAllowedReason();
+                if (message.isEmpty() && isChecked()) {
+                    message = "Click to place, Shift for multiple";
+                }
+                descriptionTable.removeActor(warningLabel);
+                warningLabel.setText(message);
+                if (warningLabel.getText().isEmpty()) {
+                    warningLabel.setVisible(false);
+                } else {
+                    warningLabel.setVisible(true);
+                    descriptionTable.add(warningLabel).growX().row();
+                }
+            });
+            
+            descriptionTable.add(nameLabel).fillX().padBottom(3).row();
+            descriptionTable.add(warningLabel).growX();
+
+            add(iconImage).pad(2).padRight(8).left();
+            add(descriptionTable).expandX().left();
+            add(costTable).expandX().right();
+        }
+
+        @Override
+        public void act(float delta) {
+            super.act(delta);
+            elapsedTime += delta;
+            setDisabled(!isPurchaseAllowed());
+        }
+
+        /**
+         * Check if the purchase is allowed based on game logic (e.g., technology requirement met, sufficient resources), as implemented by 
+         * @return true if purchase is allowed, false otherwise.
+         */
+        public final boolean isPurchaseAllowed() {
+            return getNotAllowedReason().isEmpty();
+        }
+        /**
+         * Get the reason why the purchase is not allowed, if applicable.
+         * @return a string explaining the reason, or an empty string if the purchase is allowed.
+         */
+        public abstract String getNotAllowedReason();
+
+        /**
+         * Get the existing count of this entity type owned by the player.
+         * @return the existing count.
+         */
+        public abstract int getExistingCount();
+
+        /**
+         * Action to perform when the player places this entity in the game world.
+         */
+        public abstract void onPlace(TilePoint tilePoint);
+    }
+
+    public class ShopCategory extends Button {
+        String name;
+        Predicate<Entity> filter;
+        String renderId;
+
+        public ShopCategory(String name, Predicate<Entity> filter, String renderId) {
+            super(skin, "toggle");
+            Image icon = new Image(Sprites.getSprite(renderId));
+            this.name = name;
+            this.filter = filter;
+            this.renderId = renderId;
+            add(icon).size(16).pad(1);
+            pack();
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Predicate<Entity> getPredicate() {
+            return filter;
+        }
+
+        public String getRenderId() {
+            return renderId;
+        }
+    }
+
+}

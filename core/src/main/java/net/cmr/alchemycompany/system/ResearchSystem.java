@@ -7,6 +7,7 @@ import java.util.UUID;
 import net.cmr.alchemycompany.IUpdateSystem;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.ResearchManagementComponent;
+import net.cmr.alchemycompany.component.ResearchRequirementComponent;
 import net.cmr.alchemycompany.component.actions.IActionComponent;
 import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
 import net.cmr.alchemycompany.component.actions.ResearchActionComponent;
@@ -97,6 +98,20 @@ public class ResearchSystem extends EntitySystem implements IUpdateSystem {
             this.engine.changedComponent(getPlayerResearchManagerEntity(playerUUID.toString()), ResearchManagementComponent.class);
             //this.engine.changedEntity(getPlayerResearchManagerEntity(playerUUID.toString()));
         }
+    }
+
+    public boolean hasMetRequirements(UUID playerUUID, ResearchRequirementComponent rrc) {
+        // Check if the player has met all research requirements
+        ResearchManagementComponent rmc = getPlayerResearchManager(playerUUID.toString());
+        if (rmc == null) {
+            return false;
+        }
+        for (String req : rrc.technologiesRequired) {
+            if (!rmc.hasResearched(req)) {
+                return false;
+            }
+        }
+        return true;
     }
     
 }

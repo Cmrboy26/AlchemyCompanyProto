@@ -133,6 +133,7 @@ public class GameScreen implements Screen {
                             e.printStackTrace();
                         } 
                     } else {
+                        //System.out.println("Got component "+cp.component.getClass().getSimpleName()+" for entity "+targetEntity.getID());
                         targetEntity.setComponent(cp.component, gameManager.getEngine());
                     }
                 }
@@ -232,6 +233,9 @@ public class GameScreen implements Screen {
 
         ACEngine engine = GameManager.createClientEngine(this, world);
         engine.addEntityChangeListener((e, added) -> {
+            engine.getSystem(ResourceSystem.class).calculateTurn(true);
+        });
+        engine.addComponentChangeListener((e, componentClass) -> {
             engine.getSystem(ResourceSystem.class).calculateTurn(true);
         });
         for (EntityPacket entityPacket : entityList) {

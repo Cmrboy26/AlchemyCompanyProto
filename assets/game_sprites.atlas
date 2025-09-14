@@ -103,6 +103,8 @@ swamp5
 bounds:104,28,48,48
 tile_highlight
 bounds:204,78,48,48
+time
+bounds:404,28,12,12
 titanium_icon
 bounds:512,42,16,16
 titanium_ore_icon

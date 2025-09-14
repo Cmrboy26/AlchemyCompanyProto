@@ -38,7 +38,8 @@
                 "class": "net.cmr.alchemycompany.component.ProducerComponent",
                 "production": {
                     "GOLD": 3.0,
-                    "SCIENCE": 5.0
+                    "SCIENCE": 5.0,
+                    "WATER": 1.0
                 }
             },
             {

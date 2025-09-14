@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonReader;
@@ -32,11 +33,12 @@ public class Sprites {
     public static void load() {
         skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         skin.get("font", BitmapFont.class).setUseIntegerPositions(false);
+        
         initialized = true;
 
         spriteAtlas = new TextureAtlas(Gdx.files.internal("game_sprites.atlas"));
         animationAtlas = new TextureAtlas(Gdx.files.internal("game_animations.atlas"));
-        //patchAtlas = new TextureAtlas(Gdx.files.internal("game_patches.atlas"));
+        patchAtlas = new TextureAtlas(Gdx.files.internal("game_patches.atlas"));
 
         for (AtlasRegion region : spriteAtlas.getRegions()) {
             Sprite sprite = spriteAtlas.createSprite(region.name);
@@ -46,7 +48,9 @@ public class Sprites {
 
         Json json = new Json();
         FileHandle animationsJson = Gdx.files.internal("texture_info/animations.json");
+        FileHandle patchesJson = Gdx.files.internal("texture_info/patches.json");
         JsonValue animationInformation = new JsonReader().parse(animationsJson.readString());
+        JsonValue patchInformation = new JsonReader().parse(patchesJson.readString());
 
         if (!animationInformation.hasChild("animations") || !animationInformation.getChild("animations").isObject()) {
             throw new RuntimeException("Animation file must have object called \"animations\"");
@@ -59,19 +63,28 @@ public class Sprites {
             PlayMode playMode = PlayMode.valueOf(playModeString);
             if (frameDuration == 0) {
                 frameDuration = 1 / 10f;
-                System.out.println("Frame duration is 0.");
             }
-            System.out.println(animationAtlas.createSprites(name.toLowerCase()));
-
-            for (AtlasRegion region : animationAtlas.getRegions()) {
-                System.out.println(region.name);
-            }
-            System.out.println(name.toLowerCase());
 
             Animation<TextureRegion> animation = new Animation<TextureRegion>(frameDuration, animationAtlas.findRegions(name.toLowerCase()));
             animation.setPlayMode(playMode);
             animationMap.put(name.toUpperCase(), animation);
             System.out.println("Loaded animation: " + name.toUpperCase() + " from animation atlas");
+        }
+
+        if (!patchInformation.hasChild("patches") || !patchInformation.getChild("patches").isObject()) {
+            throw new RuntimeException("Patches file must have object called \"patches\"");
+        }
+
+        for (JsonValue entry = patchInformation.get("patches").child; entry != null; entry = entry.next) {
+            String name = entry.name;
+            int left = entry.getInt("left", 0);
+            int right = entry.getInt("right", 0);
+            int top = entry.getInt("top", 0);
+            int bottom = entry.getInt("bottom", 0);
+
+            NinePatch patch = new NinePatch(patchAtlas.findRegion(name.toLowerCase()), left, right, top, bottom);
+            patchMap.put(name.toUpperCase(), patch);
+            System.out.println("Loaded patch: " + name.toUpperCase() + " from patch atlas");
         }
 
         /*for (AtlasRegion region : animationAtlas.) {
@@ -124,6 +137,13 @@ public class Sprites {
         return null;
     }
 
+    public static Drawable getTextureDrawable(String renderId, RenderType type, float elapsedTime) {
+        if (!initialized) {
+            load();
+        }
+        return new TextureRegionDrawable(getTexture(renderId, type, elapsedTime));
+    }
+
     public enum RenderType {
         SPRITE,
         ANIMATION
@@ -137,8 +157,8 @@ public class Sprites {
         if (!initialized) return;
 
         spriteAtlas.dispose();
-        //animationAtlas.dispose();
-        //patchAtlas.dispose();
+        animationAtlas.dispose();
+        patchAtlas.dispose();
 
         spritesMap.clear();
         animationMap.clear();

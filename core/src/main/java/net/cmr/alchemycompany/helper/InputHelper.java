@@ -10,20 +10,20 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.IsometricHelper;
 import net.cmr.alchemycompany.component.AttackComponent;
 import net.cmr.alchemycompany.component.BuildingComponent;
-import net.cmr.alchemycompany.component.DefenseComponent;
 import net.cmr.alchemycompany.component.HealthComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.TilePositionComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.Family;
 import net.cmr.alchemycompany.screen.GameScreen;
+import net.cmr.alchemycompany.screen.menus.ShopMenu;
+import net.cmr.alchemycompany.screen.menus.ShopMenu.ShopEntry;
 import net.cmr.alchemycompany.system.SelectionSystem;
 import net.cmr.alchemycompany.world.Tile;
 import net.cmr.alchemycompany.world.TilePoint;
@@ -87,23 +87,27 @@ public class InputHelper extends ScreenHelper {
         Vector3 worldCoords = worldViewport.unproject(screenCoords);
 
         TilePoint tileCoords = IsometricHelper.worldToIsometricTile(worldCoords, gameManager.getWorld());
+        ShopEntry selectedShopButton = screen.menuHelper.getMenu(ShopMenu.class).getShopEntryGroup().getChecked();
         if (tileCoords != null) {
             if (!screen.menuHelper.isOverUI()) {
                 boolean multiple = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT);
-                Button selectedShopButton = screen.menuHelper.shopGroup.getChecked();
-                
+
                 if (!Gdx.input.isButtonPressed(Input.Buttons.LEFT) && leftDown && !leftMoved) {
                     
                     if (selectedShopButton != null) {
-                        String buildingId = selectedShopButton.getName();
-                        gameManager.tryPlaceBuilding(playerUUID, buildingId, tileCoords.getX(), tileCoords.getY(), false);
-                        if (!multiple) screen.menuHelper.shopGroup.uncheckAll();
-                        // if (!multiple) screen.menuHelper.menusGroup.uncheckAll();
+                        /*String buildingId = selectedShopButton.getName();
+                        gameManager.tryPlaceBuilding(playerUUID, buildingId, tileCoords.getX(), tileCoords.getY(), false);*/
+                        selectedShopButton.onPlace(tileCoords);
+                        if (!multiple) screen.menuHelper.getMenu(ShopMenu.class).getShopEntryGroup().uncheckAll();
                     } else {
                         gameManager.getEngine().getSystem(SelectionSystem.class).select(playerUUID, tileCoords.getX(), tileCoords.getY());
                     }
                 }
             }
+
+                if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) && selectedShopButton != null) {
+                    selectedShopButton.setChecked(false);
+                }
 
             if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
                 gameManager.getEngine().getSystem(SelectionSystem.class).deselect();

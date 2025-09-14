@@ -9,7 +9,7 @@
             "playMode": "LOOP"
         },
         "TROOP_IDLE": {
-            "frameDuration": 0.4,
+            "frameDuration": 0.5,
             "playMode": "LOOP"
         }
     }

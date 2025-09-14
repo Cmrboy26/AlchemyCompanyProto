@@ -98,14 +98,24 @@ public class RenderSystem extends EntitySystem {
 
     float tileElapsedTime = 0;
     public void render(UUID playerUUID, SpriteBatch batch, float delta) {
+        tileElapsedTime += delta;
+        List<SpriteRender> tileRenders = renderTiles(playerUUID);
+        List<SpriteRender> entityRenders = renderEntities(delta);
+        List<SpriteRender> allRenders = new ArrayList<>();
+        allRenders.addAll(tileRenders);
+        allRenders.addAll(entityRenders);
+        Collections.sort(allRenders, Comparator.comparingDouble(SpriteRender::getZ));
+        for (SpriteRender render : allRenders) {
+            render.render(batch);
+        }
+        renderHoverUI(batch, delta);
+    }
+
+    private List<SpriteRender> renderTiles(UUID playerUUID) {
         int mapWidth = world.width;
         int mapHeight = world.height;
-        tileElapsedTime += delta;
-
-        Set<Entity> renderEntities = engine.getEntities(renderFamily);
         VisibilitySystem visibilitySystem = engine.getSystem(VisibilitySystem.class);
-
-        List<SpriteRender> list = new ArrayList<>();
+        List<SpriteRender> tileRenders = new ArrayList<>();
         for (int sum = mapWidth + mapHeight - 2; sum >= 0; sum--) {
             for (int x = 0; x <= sum; x++) {
                 int y = sum - x;
@@ -123,15 +133,23 @@ public class RenderSystem extends EntitySystem {
                     if (!isVisibleCurrently) {
                         tileRender.setColor(Color.GRAY);
                     }
-                    list.add(tileRender);
+                    tileRenders.add(tileRender);
                 }
             }
         }
+        return tileRenders;
+    }
 
+    private List<SpriteRender> renderEntities(float delta) {
+        Set<Entity> renderEntities = engine.getEntities(renderFamily);
+        List<SpriteRender> entityRenders = new ArrayList<>();
+        VisibilitySystem visibilitySystem = engine.getSystem(VisibilitySystem.class);
         for (Entity entity : renderEntities) {
-            
             TilePositionComponent tpc = entity.getComponent(TilePositionComponent.class);
             TilePoint tp = new TilePoint(tpc.tileX, tpc.tileY);
+            if (visibilitySystem != null && !visibilitySystem.wasVisiblePreviously(screen.getPlayerUUID(), tpc.tileX, tpc.tileY)) {
+                continue;
+            }
             if (entity.hasComponent(MovementPathComponent.class)) {
                 if (entity.getComponent(MovementPathComponent.class).isFinished(2)) {
                     entity.removeComponent(MovementPathComponent.class, engine);
@@ -141,35 +159,27 @@ public class RenderSystem extends EntitySystem {
                     tp.setY(tp.getY());
                 }
             }
-            // TODO: Check if visible, if not dont render      
-
             entity.getComponent(RenderComponent.class).elapsedTime += delta;
             Vector2 tpVector = tp.toVector();
             if (entity.hasComponent(MovementPathComponent.class)) {
                 tpVector.add(entity.getComponent(MovementPathComponent.class).getOffsetVisualPosition(2));
             }
+            
             Vector2 isoPosition = SpriteRender.calculateSpriteCenter(tpVector);
             isoPosition.scl(1, 1 / 4f);
-            
             RenderComponent rc = entity.getComponent(RenderComponent.class);
-
             String currentRenderId = rc.renderId;
-            RenderType renderType = entity.getComponent(RenderComponent.class).getRenderType();
-            
+            RenderType renderType = rc.getRenderType();
             if (rc.variants != null && rc.variants.size() > 0) {
-                // Variant mode
                 Map<Class<? extends Component>, String> variantMap = new LinkedHashMap<>();
                 variantMap.put(MovementPathComponent.class, "moving");
                 variantMap.put(null, "idle");
-
                 for (Entry<Class<? extends Component>, String> entry : variantMap.entrySet()) {
                     if (entry.getKey() == null || entity.hasComponent(entry.getKey())) {
                         String componentVariant = entry.getValue();
                         String renderComponentVariantId = rc.variants.get(componentVariant);
                         if (renderComponentVariantId != null) {
-                            // Entity has this variant
                             if (renderComponentVariantId.equals(currentRenderId)) {
-                                // Nothing changed, just set it and move on
                                 break;
                             } else {
                                 rc.renderId = renderComponentVariantId;
@@ -180,46 +190,28 @@ public class RenderSystem extends EntitySystem {
                     }
                 }
             }
-
-
-            SpriteRender entityRender = new SpriteRender(currentRenderId, renderType, isoPosition, false, 
-                    entity.getComponent(RenderComponent.class).elapsedTime);
+            SpriteRender entityRender = new SpriteRender(currentRenderId, renderType, isoPosition, false, rc.elapsedTime);
             entityRender.zOffset = -1 / 2f;
             if (entity.hasComponent(MovementPathComponent.class)) {
                 entityRender.zOffset = -1 / 1.5f;
             }
-            list.add(entityRender);
-
+            entityRenders.add(entityRender);
             if (entity.hasComponent(ConstructionComponent.class)) {
-                SpriteRender constructionScaffold = new SpriteRender("CONSTRUCTION_SCAFFOLD", RenderType.SPRITE, isoPosition.cpy(), false,
-                    entity.getComponent(RenderComponent.class).elapsedTime);
+                SpriteRender constructionScaffold = new SpriteRender("CONSTRUCTION_SCAFFOLD", RenderType.SPRITE, isoPosition.cpy(), false, rc.elapsedTime);
                 constructionScaffold.zOffset = -1 / 2f;
-                list.add(constructionScaffold);
+                entityRenders.add(constructionScaffold);
             }
-
-
-            /*int insertIndex = Collections.binarySearch(list, tileRender.getZ());
-            if (insertIndex < 0) {
-                list.add(- 1 - insertIndex, tileRender);
-            } else {
-                list.add(insertIndex, tileRender);
-            }*/
         }
+        return entityRenders;
+    }
 
-        Collections.sort(list, Comparator.comparingDouble(SpriteRender::getZ));
-
-        for (SpriteRender render : list) {
-            render.render(batch);
-        }
-
-
+    private void renderHoverUI(SpriteBatch batch, float delta) {
         SelectionSystem ss = engine.getSystem(SelectionSystem.class);
         List<Entity> hoveredEntities = screen.inputHelper.getHoveredEntities(false);
         hoveredEntities.removeIf((entity) -> {
             return !(entity.hasComponent(HoverInfoComponent.class) && entity.hasComponent(TilePositionComponent.class));
         });
         int selectedEntityIndex = hoveredEntities.indexOf(engine.getEntity(ss.getSelectedId()));
-
         Set<Entity> renderHoverEntities = new HashSet<>();
         if (ss.getSelectedId() != null) {
             renderHoverEntities.add(engine.getEntity(ss.getSelectedId()));
@@ -233,7 +225,6 @@ public class RenderSystem extends EntitySystem {
                 renderHoverEntities.add(hoveredEntities.get(index));
             }
         }
-
         for (Entity entity : renderHoverEntities) {
             if (entity == null) continue;
             TilePositionComponent tpc = entity.getComponent(TilePositionComponent.class);
@@ -274,7 +265,6 @@ public class RenderSystem extends EntitySystem {
 
         @Override
         public int compareTo(Float o) {
-            // TODO: this might need to be flipped
             return (int) Math.signum(getZ() - o);
         }
 
@@ -284,7 +274,6 @@ public class RenderSystem extends EntitySystem {
         }
 
         public void render(SpriteBatch batch) {
-            // TODO MAKE ANIMATIONS WORK
             TextureRegion texture = Sprites.getTexture(renderId, renderType, renderDelta);
 
             float displayX = spriteCenter.x * TILE_SIZE;
