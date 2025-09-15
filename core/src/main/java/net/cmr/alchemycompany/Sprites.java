@@ -5,6 +5,7 @@ import java.util.Map;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Texture.TextureFilter;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Animation.PlayMode;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -31,14 +32,19 @@ public class Sprites {
     private static TextureAtlas spriteAtlas, animationAtlas, patchAtlas;
 
     public static void load() {
-        skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
-        skin.get("font", BitmapFont.class).setUseIntegerPositions(false);
+        skin = new Skin(Gdx.files.internal("ui/newskin/skin.json"));
+        TextureAtlas ta = skin.getAtlas();
+        /*ta.getTextures().forEach(t -> {
+            t.setFilter(TextureFilter.MipMapNearestNearest, TextureFilter.MipMapNearestNearest);
+        });*/
+        skin.get("default-font", BitmapFont.class).setUseIntegerPositions(false);
+        //skin.get("font", BitmapFont.class).setUseIntegerPositions(false);
         
         initialized = true;
 
         spriteAtlas = new TextureAtlas(Gdx.files.internal("game_sprites.atlas"));
         animationAtlas = new TextureAtlas(Gdx.files.internal("game_animations.atlas"));
-        patchAtlas = new TextureAtlas(Gdx.files.internal("game_patches.atlas"));
+        //patchAtlas = new TextureAtlas(Gdx.files.internal("game_patches.atlas"));
 
         for (AtlasRegion region : spriteAtlas.getRegions()) {
             Sprite sprite = spriteAtlas.createSprite(region.name);
@@ -50,7 +56,7 @@ public class Sprites {
         FileHandle animationsJson = Gdx.files.internal("texture_info/animations.json");
         FileHandle patchesJson = Gdx.files.internal("texture_info/patches.json");
         JsonValue animationInformation = new JsonReader().parse(animationsJson.readString());
-        JsonValue patchInformation = new JsonReader().parse(patchesJson.readString());
+        //JsonValue patchInformation = new JsonReader().parse(patchesJson.readString());
 
         if (!animationInformation.hasChild("animations") || !animationInformation.getChild("animations").isObject()) {
             throw new RuntimeException("Animation file must have object called \"animations\"");
@@ -71,7 +77,7 @@ public class Sprites {
             System.out.println("Loaded animation: " + name.toUpperCase() + " from animation atlas");
         }
 
-        if (!patchInformation.hasChild("patches") || !patchInformation.getChild("patches").isObject()) {
+        /*if (!patchInformation.hasChild("patches") || !patchInformation.getChild("patches").isObject()) {
             throw new RuntimeException("Patches file must have object called \"patches\"");
         }
 
@@ -85,7 +91,7 @@ public class Sprites {
             NinePatch patch = new NinePatch(patchAtlas.findRegion(name.toLowerCase()), left, right, top, bottom);
             patchMap.put(name.toUpperCase(), patch);
             System.out.println("Loaded patch: " + name.toUpperCase() + " from patch atlas");
-        }
+        }*/
 
         /*for (AtlasRegion region : animationAtlas.) {
             JsonValue information = animationInformation.get("animations").get(region.name.toUpperCase());
@@ -158,7 +164,7 @@ public class Sprites {
 
         spriteAtlas.dispose();
         animationAtlas.dispose();
-        patchAtlas.dispose();
+        //patchAtlas.dispose();
 
         spritesMap.clear();
         animationMap.clear();

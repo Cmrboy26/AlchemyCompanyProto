@@ -14,6 +14,8 @@ import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.PlacementComponent;
 import net.cmr.alchemycompany.component.PurchaseCostComponent;
+import net.cmr.alchemycompany.component.ResearchManagementComponent;
+import net.cmr.alchemycompany.component.ResearchRequirementComponent;
 import net.cmr.alchemycompany.component.actions.BuildingActionComponent;
 import net.cmr.alchemycompany.component.actions.IActionComponent;
 import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
@@ -85,7 +87,17 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
                 BuildingComponent bc = building.getComponent(BuildingComponent.class);
                 PurchaseCostComponent pcc = building.getComponent(PurchaseCostComponent.class);
                 PlacementComponent pc = building.getComponent(PlacementComponent.class);
+                ResearchSystem rs = engine.getSystem(ResearchSystem.class);
+                ResearchRequirementComponent rrc = building.getComponent(ResearchRequirementComponent.class);
+                ResearchManagementComponent rmc = rs.getPlayerResearchManager(playerID.toString());
                 if (pc.getValidPlacement().contains(tile.getFeature())) {
+                    if (rrc != null) {
+                        for (String technologyId : rrc.technologiesRequired) {
+                            if (!rmc.hasResearched(technologyId)) {
+                                return false;
+                            }
+                        }
+                    }
                     if (pcc != null) {
                         ResourceSystem resourceSystem = engine.getSystem(ResourceSystem.class);
                         if (resourceSystem != null) {

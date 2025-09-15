@@ -1,0 +1,189 @@
+{
+"com.badlogic.gdx.graphics.g2d.BitmapFont": {
+	"default-font": {
+		"file": "C&C Red Alert [INET].fnt",
+		"scaledSize": -1,
+		"markupEnabled": false,
+		"flip": false
+	}
+},
+"com.badlogic.gdx.graphics.Color": {
+	"RGBA_0_0_0_255": {
+		"r": 0,
+		"g": 0,
+		"b": 0,
+		"a": 1
+	},
+	"RGBA_255_255_255_126": {
+		"r": 1,
+		"g": 1,
+		"b": 1,
+		"a": 0.497191
+	},
+	"RGBA_255_255_255_255": {
+		"r": 1,
+		"g": 1,
+		"b": 1,
+		"a": 1
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable": {
+	"WHITE": {
+		"name": "white-pixel",
+		"color": "RGBA_255_255_255_255"
+	},
+	"TRANSLUCENT": {
+		"name": "white-pixel",
+		"color": "RGBA_255_255_255_126"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.Button$ButtonStyle": {
+	"default": {
+		"up": "button_1",
+		"down": "button_3",
+		"over": "button_2",
+		"focused": "button_2",
+		"disabled": "button_0"
+	},
+	"toggle": {
+		"parent": "default",
+		"checked": "button_2",
+		"checkedOver": "button_3",
+		"checkedDown": "button_4",
+		"checkedFocused": "button_3"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.CheckBox$CheckBoxStyle": {
+	"default": {
+		"checkboxOn": "check",
+		"checkboxOff": "cross",
+		"font": "default-font",
+		"up": "button_1",
+		"down": "button_3",
+		"over": "button_2",
+		"disabled": "button_0"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.ImageButton$ImageButtonStyle": {
+	"default": {
+		"parent": "default",
+		"up": "button_1",
+		"down": "button_3",
+		"over": "button_2",
+		"disabled": "button_0"
+	},
+	"toggle": {
+		"parent": "toggle"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.ImageTextButton$ImageTextButtonStyle": {
+	"default": {
+		"parent": "default",
+		"font": "default-font"
+	},
+	"toggle": {
+		"parent": "toggle",
+		"font": "default-font"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.Label$LabelStyle": {
+	"default": {
+		"font": "default-font",
+		"fontColor": "RGBA_255_255_255_255"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.List$ListStyle": {
+	"default": {
+		"font": "default-font",
+		"fontColorSelected": "RGBA_255_255_255_255",
+		"fontColorUnselected": "RGBA_255_255_255_255",
+		"selection": "button_3",
+		"down": "button_4",
+		"over": "button_2",
+		"background": "button_1"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.ScrollPane$ScrollPaneStyle": {
+	"default": {
+		"hScrollKnob": "slider",
+		"vScrollKnob": "slider"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.SelectBox$SelectBoxStyle": {
+	"default": {
+		"font": "default-font",
+		"fontColor": "RGBA_255_255_255_255",
+		"background": "button_1",
+		"scrollStyle": "default",
+		"listStyle": "default",
+		"backgroundOver": "button_2",
+		"backgroundOpen": "button_3",
+		"backgroundDisabled": "button_0"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.Slider$SliderStyle": {
+	"default-horizontal": {
+		"background": "button_1",
+		"disabledBackground": "button_0",
+		"knob": "slider",
+		"disabledKnob": "cross"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.SplitPane$SplitPaneStyle": {
+	"default-horizontal": {
+		"handle": "button_4"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.TextButton$TextButtonStyle": {
+	"default": {
+		"parent": "default",
+		"font": "default-font"
+	},
+	"toggle": {
+		"parent": "toggle",
+		"font": "default-font",
+		"checked": "button_2",
+		"checkedOver": "button_3",
+		"checkedDown": "button_4",
+		"checkedFocused": "button_3"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.TextField$TextFieldStyle": {
+	"default": {
+		"font": "default-font",
+		"fontColor": "RGBA_255_255_255_255",
+		"background": "button_1",
+		"focusedBackground": "button_2",
+		"cursor": "WHITE",
+		"selection": "TRANSLUCENT"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.TextTooltip$TextTooltipStyle": {
+	"default": {
+		"label": "default",
+		"background": "button_1",
+		"wrapWidth": -1
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.Touchpad$TouchpadStyle": {
+	"default": {
+		"background": "button_1",
+		"knob": "slider"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.Tree$TreeStyle": {
+	"default": {
+		"plus": "plus",
+		"minus": "minus",
+		"over": "button_2",
+		"background": "button_1"
+	}
+},
+"com.badlogic.gdx.scenes.scene2d.ui.Window$WindowStyle": {
+	"default": {
+		"background": "window",
+		"titleFont": "default-font",
+		"titleFontColor": "RGBA_255_255_255_255"
+	}
+}
+}

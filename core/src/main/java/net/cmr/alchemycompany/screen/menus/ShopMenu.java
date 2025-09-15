@@ -22,8 +22,8 @@ import net.cmr.alchemycompany.component.ResearchRequirementComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.entity.BuildingFactory;
 import net.cmr.alchemycompany.helper.ScreenHelper;
+import net.cmr.alchemycompany.system.ResearchSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
-import net.cmr.alchemycompany.world.Tile;
 import net.cmr.alchemycompany.world.TilePoint;
 
 public class ShopMenu extends GameMenu {
@@ -81,14 +81,14 @@ public class ShopMenu extends GameMenu {
                                 }
                             }
                         }
-                        /*if (rrc != null) {
+                        if (rrc != null) {
                             ResearchSystem researchSystem = screenHelper.gameManager.getEngine().getSystem(ResearchSystem.class);
                             for (String techId : rrc.technologiesRequired) {
                                 if (!researchSystem.getPlayerResearchManager(screenHelper.playerUUID.toString()).hasResearched(techId)) {
                                     return "Requires technology: " + techId;
                                 }
                             }
-                        }*/
+                        }
                         return "";
                     }
 

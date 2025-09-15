@@ -70,7 +70,7 @@ public class MenuHelper extends ScreenHelper {
         stage.addActor(topMenu);
 
         Table hudTable = new Table(skin);
-        hudTable.setBackground(skin.getDrawable("window"));
+        //hudTable.setBackground(skin.getDrawable("window"));
         Label turnLabel = new Label("Turn: " + screen.getTurn(), skin);
         topMenu.add(hudTable).growX().right().space(8);
         hudTable.addAction(Actions.forever(Actions.run(() -> {
