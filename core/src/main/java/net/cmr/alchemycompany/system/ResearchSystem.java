@@ -76,6 +76,11 @@ public class ResearchSystem extends EntitySystem implements IUpdateSystem {
         return rmc.hasResearched(technologyId);
     }
 
+    public boolean canResearchTechnology(String playerId, String technologyId) {
+        ResearchManagementComponent rmc = getPlayerResearchManager(playerId);
+        return rmc.prerequisitesMet(technologyId);
+    }
+
     public void consumeAvailableResources(UUID playerUUID, final Map<String, Float> storedResources) {
         ResearchManagementComponent rmc = getPlayerResearchManager(playerUUID.toString());
         if (rmc.isResearching()) {

@@ -5,27 +5,30 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
-import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.utils.Align;
 
 import net.cmr.alchemycompany.GameManager;
-import net.cmr.alchemycompany.game.Registry;
-import net.cmr.alchemycompany.game.Resource;
+import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.game.Resources;
 import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.screen.menus.GameMenu;
 import net.cmr.alchemycompany.screen.menus.ShopMenu;
+import net.cmr.alchemycompany.screen.menus.TechnologyMenu;
 import net.cmr.alchemycompany.system.ResourceSystem;
 import net.cmr.alchemycompany.system.TurnSystem;
 
@@ -33,7 +36,7 @@ public class MenuHelper extends ScreenHelper {
 
     Stage stage;
     //ButtonGroup<Button> shopGroup = new ButtonGroup<>();
-    //ButtonGroup<Button> menusGroup = new ButtonGroup<>();
+    ButtonGroup<TextButton> menuSelectorGroup = new ButtonGroup<>();
     TextButton endTurnButton = null;
     private Map<Class<? extends GameMenu>, GameMenu> menus = new HashMap<>();
 
@@ -49,15 +52,71 @@ public class MenuHelper extends ScreenHelper {
     }
 
     public void build() {
-        Table menuTable = new Table();
-        menuTable.setFillParent(true);
-        menuTable.left().pad(10);
-        stage.addActor(menuTable);
+        Table shopMenuTable = new Table();
+        shopMenuTable.left().pad(10);
+        shopMenuTable.setVisible(false);
+        stage.addActor(shopMenuTable);
 
         GameMenu shopMenu = new ShopMenu(Align.left, this);
         shopMenu.setVisible(true);
         menus.put(ShopMenu.class, shopMenu);
-        menuTable.add(shopMenu).left().expand().space(10);
+        shopMenuTable.add(shopMenu).left().expand().space(10);
+
+        Table technologyMenuTable = new Table();
+        technologyMenuTable.left().pad(10);
+        technologyMenuTable.setVisible(false);
+        stage.addActor(technologyMenuTable);
+
+        GameMenu technologyMenu = new TechnologyMenu(Align.left, this);
+        technologyMenu.setVisible(true);
+        menus.put(TechnologyMenu.class, technologyMenu);
+        technologyMenuTable.add(technologyMenu).left().expand().space(10);
+
+        Table menuSelectorTable = new Table();
+        menuSelectorTable.setFillParent(true);
+        menuSelectorTable.left().pad(10).padLeft(0);
+        stage.addActor(menuSelectorTable);
+
+        menuSelectorGroup.setMaxCheckCount(1);
+        menuSelectorGroup.setMinCheckCount(0);
+
+        Consumer<GameMenu> onMenuClosed = (menuInstance) -> {
+            menuSelectorTable.setVisible(true);
+            menuSelectorTable.toFront();
+            menuInstance.getParent().addAction(Actions.sequence(
+                Actions.moveToAligned(0, stage.getHeight() / 2, Align.right, 0.25f, Interpolation.sineOut),
+                Actions.visible(false)
+            ));
+        };
+
+        for (Entry<Class<? extends GameMenu>, GameMenu> entry : menus.entrySet()) {
+            Class<? extends GameMenu> menuClass = entry.getKey();
+            GameMenu menuInstance = entry.getValue();
+            TextButton button = new TextButton(menuInstance.name, Sprites.getSkin());
+            button.getLabel().setWrap(true);
+            menuInstance.setOnClose(onMenuClosed);
+            button.addListener(new InputListener() {
+                @Override
+                public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                    menuSelectorTable.setVisible(false);
+                    menuInstance.getParent().addAction(Actions.sequence(
+                        Actions.visible(true),
+                        Actions.moveToAligned(0, stage.getHeight() / 2, Align.left, 0.25f, Interpolation.sineOut)
+                    ));
+                    System.out.println(menuInstance.getParent().getX() + " " + menuInstance.getParent().getY());
+                    menuInstance.toFront();
+                    return true;
+                }
+            });
+            button.pack();
+            menuSelectorTable.add(button).width(70).pad(2).row();
+            menuSelectorGroup.add(button);
+            
+            ((Table) menuInstance.getParent()).pack();
+            ((Table) menuInstance.getParent()).setPosition(0, stage.getHeight() / 2, Align.right);
+        }
+    
+        menuSelectorTable.toBack();
 
         Table rightBottom = new Table();
         rightBottom.setFillParent(true);

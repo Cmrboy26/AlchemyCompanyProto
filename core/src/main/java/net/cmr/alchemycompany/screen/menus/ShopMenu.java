@@ -11,6 +11,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.utils.Align;
 
 import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.AvailableRecipesComponent;
@@ -35,7 +36,7 @@ public class ShopMenu extends GameMenu {
     private ButtonGroup<ShopEntry> entryButtonGroup;
 
     public ShopMenu(int align, ScreenHelper screenHelper) {
-        super(align, screenHelper);
+        super(align, screenHelper, "Shop");
     }
 
     @Override
@@ -111,9 +112,23 @@ public class ShopMenu extends GameMenu {
             }
         }
 
-        add(categoryTable).row();
-        add(entryScrollPane).height(200).width(200).row();
+        addContinuousUpdate(() -> {
+            if (lastUpdateSecond != (int)System.currentTimeMillis() / 10) {
+                lastUpdateSecond = (int)System.currentTimeMillis() / 10;
+                entryButtonGroup.getButtons().forEach(entry -> entry.recalculateShopMenu());
+            }
+        });
+
+        this.add(categoryTable).row();
+        this.add(entryScrollPane).height(200).width(200).row();
     }
+
+    @Override
+    public void onClose() {
+        entryButtonGroup.uncheckAll();
+    }
+
+    float lastUpdateSecond = 0;
 
     public ButtonGroup<ShopEntry> getShopEntryGroup() {
         return entryButtonGroup;
@@ -126,6 +141,7 @@ public class ShopMenu extends GameMenu {
         float elapsedTime = 0;
         ShopCategory category;
         Entity shopEntity;
+        Runnable recalculateShopMenu;
 
         public ShopEntry(ShopCategory category, Entity entity) throws IllegalArgumentException {
             super(skin, "toggle");
@@ -152,27 +168,36 @@ public class ShopMenu extends GameMenu {
             nameLabel = new Label(lc.name, skin);
             warningLabel = new Label(null, skin);
             warningLabel.setEllipsis(true);
-            //warningLabel.setWrap(true);
             warningLabel.setFontScale(.6f);
 
             Table costTable = new Table(skin);
             Table descriptionTable = new Table(skin);
-            GameMenu.addContinuousUpdate(this, () -> {
+            Runnable recalculateShopMenu = () -> {
                 String renderId = rc.renderId;
                 if (renderId == null && rc.variants != null && !rc.variants.containsKey("idle")) {
                     renderId = rc.variants.get("idle");
                 }
                 iconImage.setDrawable(Sprites.getTextureDrawable(rc.renderId, rc.getRenderType(), elapsedTime));
 
-                costTable.clearChildren();
+                // Only clear costTable if the cost has changed
                 int count = getExistingCount();
-                costTable.add(new Image(Sprites.getSprite("TIME"))).size(16).pad(1);
-                costTable.add(new Label(cc.turns + "", skin)).pad(1).row();
-                for (Entry<String, Float> costEntry : pcc.getResourceCost(count).entrySet()) {
-                    Image costIcon = new Image(Sprites.getSprite(costEntry.getKey() + "_ICON"));
-                    Label costLabel = new Label(costEntry.getValue().intValue() + "", skin);
-                    costTable.add(costIcon).size(16).pad(1);
-                    costTable.add(costLabel).pad(1).row();
+                List<Entry<String, Float>> currentCosts = new ArrayList<>(pcc.getResourceCost(count).entrySet());
+                Object lastCostsObj = costTable.getUserObject();
+                if (!(lastCostsObj instanceof List) || !currentCosts.equals(lastCostsObj)) {
+                    costTable.clearChildren();
+                    costTable.setUserObject(currentCosts);
+
+                    Image timeImage = new Image(Sprites.getSprite("TIME"));
+                    Label timeLabel = new Label(cc.turns + "", skin);
+
+                    costTable.add(timeImage).size(16).pad(1);
+                    costTable.add(timeLabel).pad(1).row();
+                    for (Entry<String, Float> costEntry : pcc.getResourceCost(count).entrySet()) {
+                        Image costIcon = new Image(Sprites.getSprite(costEntry.getKey() + "_ICON"));
+                        Label costLabel = new Label(costEntry.getValue().intValue() + "", skin);
+                        costTable.add(costIcon).size(16).pad(1);
+                        costTable.add(costLabel).pad(1).row();
+                    }
                 }
 
                 setDisabled(!isPurchaseAllowed());
@@ -183,6 +208,8 @@ public class ShopMenu extends GameMenu {
                 if (message.isEmpty() && isChecked()) {
                     message = "Click to place, Shift for multiple";
                 }
+
+                //warningLabel.setText(message);
                 descriptionTable.removeActor(warningLabel);
                 warningLabel.setText(message);
                 if (warningLabel.getText().isEmpty()) {
@@ -191,14 +218,20 @@ public class ShopMenu extends GameMenu {
                     warningLabel.setVisible(true);
                     descriptionTable.add(warningLabel).growX().row();
                 }
-            });
-            
+            };
+            this.recalculateShopMenu = recalculateShopMenu;
+            recalculateShopMenu.run();
+
             descriptionTable.add(nameLabel).fillX().padBottom(3).row();
             descriptionTable.add(warningLabel).growX();
 
             add(iconImage).pad(2).padRight(8).left();
             add(descriptionTable).expandX().left();
             add(costTable).expandX().right();
+        }
+
+        public void recalculateShopMenu() {
+            recalculateShopMenu.run();
         }
 
         @Override

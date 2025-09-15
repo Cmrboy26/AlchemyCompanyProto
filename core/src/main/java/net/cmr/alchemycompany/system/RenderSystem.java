@@ -193,7 +193,7 @@ public class RenderSystem extends EntitySystem {
             SpriteRender entityRender = new SpriteRender(currentRenderId, renderType, isoPosition, false, rc.elapsedTime);
             entityRender.zOffset = -1 / 2f;
             if (entity.hasComponent(MovementPathComponent.class)) {
-                entityRender.zOffset = -1 / 1.5f;
+                entityRender.zOffset = -1 / 1.4f;
             }
             entityRenders.add(entityRender);
             if (entity.hasComponent(ConstructionComponent.class)) {

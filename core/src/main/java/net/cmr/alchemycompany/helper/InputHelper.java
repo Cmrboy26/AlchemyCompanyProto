@@ -35,6 +35,7 @@ public class InputHelper extends ScreenHelper {
     int lastMouseY = -1;
     boolean leftDown = false;
     boolean leftMoved = false;
+    boolean clickedOnUI = false;
 
     public InputHelper(GameScreen screen, GameManager gameManager, UUID playerUUID, Viewport worldViewport) {
         super(screen, gameManager, playerUUID);
@@ -83,6 +84,12 @@ public class InputHelper extends ScreenHelper {
     }
 
     public void updateInput() {
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+            clickedOnUI = screen.menuHelper.isOverUI();
+        }
+        if (!Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
+            clickedOnUI = false;
+        }
         Vector3 screenCoords = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
         Vector3 worldCoords = worldViewport.unproject(screenCoords);
 
@@ -147,7 +154,7 @@ public class InputHelper extends ScreenHelper {
     }
 
     public void updatePanCamera() {
-        if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
+        if (!clickedOnUI && Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
             // Store previous mouse position between frames
             if (lastMouseX == -1 && lastMouseY == -1) {
                 lastMouseX = Gdx.input.getX();
