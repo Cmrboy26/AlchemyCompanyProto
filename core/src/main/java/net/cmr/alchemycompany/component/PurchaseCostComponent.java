@@ -58,7 +58,7 @@ public class PurchaseCostComponent extends Component {
         }
     }
 
-    public HashMap<String, Float> getResourceCost(UUID playerUUID, String buildingID, Engine engine) {
+    public int getExistingCount(UUID playerUUID, String buildingID, Engine engine) {
         int existingBuildings = 0;
         for (Entity entity : engine.getEntities(Family.all(BuildingComponent.class, OwnerComponent.class))) {
             OwnerComponent owner = entity.getComponent(OwnerComponent.class);
@@ -68,6 +68,11 @@ public class PurchaseCostComponent extends Component {
                 existingBuildings++;
             }
         }
+        return existingBuildings;
+    }
+
+    public HashMap<String, Float> getResourceCost(UUID playerUUID, String buildingID, Engine engine) {
+        int existingBuildings = getExistingCount(playerUUID, buildingID, engine);
         return getResourceCost(existingBuildings);
     }
 

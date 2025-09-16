@@ -11,10 +11,10 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.utils.Align;
 
 import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.AvailableRecipesComponent;
+import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.LabelComponent;
 import net.cmr.alchemycompany.component.PurchaseCostComponent;
@@ -22,6 +22,7 @@ import net.cmr.alchemycompany.component.RenderComponent;
 import net.cmr.alchemycompany.component.ResearchRequirementComponent;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.entity.BuildingFactory;
+import net.cmr.alchemycompany.game.Resources;
 import net.cmr.alchemycompany.helper.ScreenHelper;
 import net.cmr.alchemycompany.system.ResearchSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
@@ -34,6 +35,7 @@ public class ShopMenu extends GameMenu {
     private ScrollPane entryScrollPane;
 
     private ButtonGroup<ShopEntry> entryButtonGroup;
+    private ButtonGroup<ShopCategory> categoryButtonGroup;
 
     public ShopMenu(int align, ScreenHelper screenHelper) {
         super(align, screenHelper, "Shop");
@@ -45,17 +47,27 @@ public class ShopMenu extends GameMenu {
         entryButtonGroup.setMaxCheckCount(1);
         entryButtonGroup.setMinCheckCount(0);
 
+        categoryButtonGroup = new ButtonGroup<>();
+        categoryButtonGroup.setMaxCheckCount(1);
+        categoryButtonGroup.setMinCheckCount(0);
+
         categoryTable = new Table(skin);
         entryTable = new Table(skin);
         entryScrollPane = new ScrollPane(entryTable, skin);
+        entryScrollPane.setFadeScrollBars(false);
+        entryScrollPane.setForceScroll(false, true);
+        entryScrollPane.setScrollingDisabled(true, false);
+        entryScrollPane.pack();
 
         List<ShopCategory> categoriesList = new ArrayList<>();
+        categoriesList.add(new ShopCategory("Can Build", entity -> entity.hasComponent(AvailableRecipesComponent.class), "IRON_ORE_ICON"));
         categoriesList.add(new ShopCategory("Production", entity -> entity.hasComponent(AvailableRecipesComponent.class), "TITANIUM_ICON"));
         ShopCategory miscCategory = new ShopCategory("Miscellaneous", entity -> true, "IRON_ORE_ICON");
         categoriesList.add(miscCategory);
 
         for (ShopCategory category : categoriesList) {
             categoryTable.add(category).pad(5);
+            categoryButtonGroup.add(category);
         }
     
         for (Entry<String, Entity> buildingEntry : BuildingFactory.getRegisteredBuildingEntities().entrySet()) {
@@ -70,6 +82,14 @@ public class ShopMenu extends GameMenu {
                         // Implement game logic checks here, e.g., technology requirements, resource availability
                         PurchaseCostComponent pcc = shopEntity.getComponent(PurchaseCostComponent.class);
                         ResearchRequirementComponent rrc = shopEntity.getComponent(ResearchRequirementComponent.class);
+                        if (rrc != null) {
+                            ResearchSystem researchSystem = screenHelper.gameManager.getEngine().getSystem(ResearchSystem.class);
+                            for (String techId : rrc.technologiesRequired) {
+                                if (!researchSystem.getPlayerResearchManager(screenHelper.playerUUID.toString()).hasResearched(techId)) {
+                                    return "Requires technology: " + techId;
+                                }
+                            }
+                        }
                         if (pcc != null) {
                             int existingCount = getExistingCount();
                             ResourceSystem resourceSystem = screenHelper.gameManager.getEngine().getSystem(ResourceSystem.class);
@@ -82,19 +102,16 @@ public class ShopMenu extends GameMenu {
                                 }
                             }
                         }
-                        if (rrc != null) {
-                            ResearchSystem researchSystem = screenHelper.gameManager.getEngine().getSystem(ResearchSystem.class);
-                            for (String techId : rrc.technologiesRequired) {
-                                if (!researchSystem.getPlayerResearchManager(screenHelper.playerUUID.toString()).hasResearched(techId)) {
-                                    return "Requires technology: " + techId;
-                                }
-                            }
-                        }
                         return "";
                     }
 
                     @Override
                     public int getExistingCount() {
+                        BuildingComponent bc = shopEntity.getComponent(BuildingComponent.class);
+
+                        if (bc != null) {
+                            return shopEntity.getComponent(PurchaseCostComponent.class).getExistingCount(screenHelper.playerUUID, bc.buildingId, screenHelper.gameManager.getEngine());
+                        }
                         return 0;
                     }
 
@@ -120,7 +137,7 @@ public class ShopMenu extends GameMenu {
         });
 
         this.add(categoryTable).row();
-        this.add(entryScrollPane).height(200).width(200).row();
+        this.add(entryScrollPane).height(150).growX().row();
     }
 
     @Override
@@ -167,7 +184,7 @@ public class ShopMenu extends GameMenu {
             iconImage = new Image();
             nameLabel = new Label(lc.name, skin);
             warningLabel = new Label(null, skin);
-            warningLabel.setEllipsis(true);
+            warningLabel.setWrap(true);
             warningLabel.setFontScale(.6f);
 
             Table costTable = new Table(skin);
@@ -193,10 +210,8 @@ public class ShopMenu extends GameMenu {
                     costTable.add(timeImage).size(16).pad(1);
                     costTable.add(timeLabel).pad(1).row();
                     for (Entry<String, Float> costEntry : pcc.getResourceCost(count).entrySet()) {
-                        Image costIcon = new Image(Sprites.getSprite(costEntry.getKey() + "_ICON"));
-                        Label costLabel = new Label(costEntry.getValue().intValue() + "", skin);
-                        costTable.add(costIcon).size(16).pad(1);
-                        costTable.add(costLabel).pad(1).row();
+                        Table resourceEntry = Resources.createResourceTable(costEntry.getKey(), 12, costEntry.getValue(), null, null, false);
+                        costTable.add(resourceEntry).pad(1).colspan(2).row();
                     }
                 }
 
@@ -209,21 +224,21 @@ public class ShopMenu extends GameMenu {
                     message = "Click to place, Shift for multiple";
                 }
 
-                //warningLabel.setText(message);
-                descriptionTable.removeActor(warningLabel);
+                warningLabel.setText(message);
+                /*descriptionTable.removeActor(warningLabel);
                 warningLabel.setText(message);
                 if (warningLabel.getText().isEmpty()) {
                     warningLabel.setVisible(false);
                 } else {
                     warningLabel.setVisible(true);
                     descriptionTable.add(warningLabel).growX().row();
-                }
+                }*/
             };
             this.recalculateShopMenu = recalculateShopMenu;
             recalculateShopMenu.run();
 
             descriptionTable.add(nameLabel).fillX().padBottom(3).row();
-            descriptionTable.add(warningLabel).growX();
+            descriptionTable.add(warningLabel).width(125).growX();
 
             add(iconImage).pad(2).padRight(8).left();
             add(descriptionTable).expandX().left();

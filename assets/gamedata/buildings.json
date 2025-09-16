@@ -38,8 +38,7 @@
                 "class": "net.cmr.alchemycompany.component.ProducerComponent",
                 "production": {
                     "GOLD": 3.0,
-                    "SCIENCE": 5.0,
-                    "WATER": 1.0
+                    "SCIENCE": 5.0
                 }
             },
             {
@@ -246,6 +245,68 @@
                 "availableRecipes": [
                     "PRODUCE_BATTERY",
                     "PRODUCE_BATTERY_MAGIC_STONE"
+                ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.HoverInfoComponent",
+                "hoverText": "$autofill"
+            }
+        ]
+    },
+    "MARKET": {
+        "components": [
+            {
+                "class": "net.cmr.alchemycompany.component.BuildingComponent",
+                "buildingId": "MARKET"
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.PlacementComponent",
+                "validPlacement": [ "PLAINS", "FOREST"]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.LabelComponent",
+                "name": "Market",
+                "description": "A place to sell resources for gold."
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.SelectableComponent"
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.RenderComponent",
+                "spriteType": "MARKET",
+                "invertable": false
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.ConstructionComponent",
+                "turns": 3
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.PurchaseCostComponent",
+                "resourceCost": {
+                    "GOLD": 8.0
+                },
+                "resourceCostScale": {
+                    "GOLD": 4.0
+                }
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.ResearchRequirementComponent",
+                "technologiesRequired": [
+                    "ECONOMICS"
+                ]
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.DefenseComponent",
+                "baseDefense": 10,
+                "typeMultipliers": {
+                    "NORMAL": 1.0,
+                    "CORROSION": 2.0
+                }
+            },
+            {
+                "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",
+                "availableRecipes": [
+                    "SELL_IRON"
                 ]
             },
             {

@@ -90,6 +90,11 @@
 	"default": {
 		"font": "default-font",
 		"fontColor": "RGBA_255_255_255_255"
+	},
+	"dark": {
+		"font": "default-font",
+		"fontColor": "RGBA_255_255_255_255",
+		"background": "button_1"
 	}
 },
 "com.badlogic.gdx.scenes.scene2d.ui.List$ListStyle": {

@@ -2,6 +2,7 @@ package net.cmr.alchemycompany.system;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import net.cmr.alchemycompany.IUpdateSystem;
@@ -79,6 +80,40 @@ public class ResearchSystem extends EntitySystem implements IUpdateSystem {
     public boolean canResearchTechnology(String playerId, String technologyId) {
         ResearchManagementComponent rmc = getPlayerResearchManager(playerId);
         return rmc.prerequisitesMet(technologyId);
+    }
+
+    public int estimateTurnCount(UUID playerUUID, String technologyId) {
+        Technology technology = Registry.getInstance().getRegistry(Technology.class).get(technologyId);
+        return estimateTurnCount(playerUUID, technology.getCost());
+    }
+
+    public int estimateTurnCount(UUID playerUUID) {
+        ResearchManagementComponent rmc = getPlayerResearchManager(playerUUID.toString());
+        return estimateTurnCount(playerUUID, rmc.getCostRemaining());
+    }
+
+    public int estimateTurnCount(UUID playerUUID, Map<String, Float> costsRemaining) {
+        ResourceSystem rs = engine.getSystem(ResourceSystem.class);
+        Map<String, Float> expendableResources = new HashMap<>();
+        rs.getCachedResourcePerSecond(playerUUID).entrySet().stream().forEach((e) -> {
+            
+            expendableResources.put(e.getKey(), expendableResources.getOrDefault(e.getKey(), 0f) + e.getValue());
+        });
+        rs.getCachedStoredResources(playerUUID).entrySet().stream().forEach((e) -> {
+            expendableResources.put(e.getKey(), expendableResources.getOrDefault(e.getKey(), 0f) + e.getValue());
+        });
+        int maxTurns = -1;
+        for (Entry<String, Float> entry : costsRemaining.entrySet()) {
+            Float expendableAmount = expendableResources.getOrDefault(entry.getKey(), 0f);
+            if (expendableAmount == 0) {
+                return Integer.MAX_VALUE;
+            }
+            int turnCalculation = (int) Math.ceil(entry.getValue() / expendableAmount);
+            if (turnCalculation > maxTurns) {
+                maxTurns = turnCalculation;
+            }
+        }
+        return maxTurns;
     }
 
     public void consumeAvailableResources(UUID playerUUID, final Map<String, Float> storedResources) {

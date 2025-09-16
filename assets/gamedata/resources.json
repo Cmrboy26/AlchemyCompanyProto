@@ -50,6 +50,13 @@
             "perTurnResource": false
         },
         {
+            "id": "STEEL",
+            "name": "Steel",
+            "description": "An alloy of iron and carbon, stronger than iron alone.",
+            "icon": "STEEL_ICON",
+            "perTurnResource": false
+        },
+        {
             "id": "COPPER_ORE",
             "name": "Copper Ore",
             "description": "Raw ore containing copper, used for smelting into copper.",

@@ -5,7 +5,6 @@ import java.util.Map;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
-import com.badlogic.gdx.graphics.Texture.TextureFilter;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Animation.PlayMode;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -20,6 +19,9 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
+
+import net.cmr.alchemycompany.component.RenderComponent;
+import net.cmr.alchemycompany.screen.UpdatingImage.UpdatingImageProvider;
 
 public class Sprites {
 
@@ -172,6 +174,25 @@ public class Sprites {
 
         skin.dispose();
         initialized = false;
+    }
+
+    public static UpdatingImageProvider createUpdatingImageProvider(RenderComponent rc) {
+        return new UpdatingImageProvider() {
+            private float elapsedTime = 0;
+
+            @Override
+            public Drawable get() {
+                if (rc == null) {
+                    return getDrawable("MISSING_TEXTURE");
+                }
+                if (rc.getRenderType() == RenderType.ANIMATION) {
+                    elapsedTime += Gdx.graphics.getDeltaTime();
+                } else {
+                    elapsedTime = 0;
+                }
+                return getTextureDrawable(rc.renderId, rc.getRenderType(), elapsedTime);
+            }
+        };
     }
 
 }

@@ -9,15 +9,26 @@
             "cost": 5
         },
         {
-            "id": "ADVANCED_PROCESSING",
+            "id": "STEEL_PROCESSING",
             "prerequisites": [
                 "PROCESSING"
+            ],
+            "name": "Steel Processing",
+            "description": "Process steel from iron and carbon.",
+            "icon": "STEEL_PROCESSING_ICON",
+            "position": [1, 1],
+            "cost": 50
+        },
+        {
+            "id": "ADVANCED_PROCESSING",
+            "prerequisites": [
+                "STEEL_PROCESSING"
             ],
             "name": "Advanced Processing",
             "description": "Process new technologies.",
             "icon": "PROCESSING_2_ICON",
-            "position": [1, 1],
-            "cost": 25
+            "position": [1, 2],
+            "cost": 350
         },
         {
             "id": "ELECTRICITY",
@@ -27,7 +38,7 @@
             "name": "Electricity",
             "description": "Use the power of electricity",
             "icon": "ELECTRICITY_ICON",
-            "position": [0.5, 2],
+            "position": [0.5, 3],
             "cost": 250
         },
         {
@@ -38,7 +49,7 @@
             "name": "Electrolytic Processing",
             "description": "Use the power of electricity to make metals",
             "icon": "ELECTROLYTIC_PROCESSING_ICON",
-            "position": [0.5, 3],
+            "position": [0.5, 4],
             "cost": 500
         },
         {
@@ -80,6 +91,14 @@
             "icon": "MAGIC_2_ICON",
             "position": [2, 1],
             "cost": 25
+        },
+        {
+            "id": "ECONOMICS",
+            "name": "Economics",
+            "description": "Learn the secrets of economics.",
+            "icon": "GOLD_ICON",
+            "position": [3, 0],
+            "cost": 10
         }
     ]
 }

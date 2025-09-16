@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
+import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
@@ -42,7 +43,7 @@ public class TechnologyMenu extends GameMenu {
         scrollPane.setFadeScrollBars(false);
         scrollPane.setForceScroll(false, true);
         scrollPane.setScrollingDisabled(true, false);
-        this.add(scrollPane).size(200, 200);
+        this.add(scrollPane).size(225, 200);
         this.row();
 
         techButtonGroup = new ButtonGroup<>();
@@ -70,8 +71,11 @@ public class TechnologyMenu extends GameMenu {
                     color = Color.LIGHT_GRAY;
                 } else if (!hasPrerequisites) {
                     color = Color.DARK_GRAY;
+                    entry.icon.setVisible(false);
                 } else if (isResearching) {
                     color = Color.YELLOW;
+                } else {
+                    entry.icon.setVisible(true);
                 }
                 button.getColor().set(color);
             });
@@ -84,27 +88,24 @@ public class TechnologyMenu extends GameMenu {
 
     public class TechnologyEntry extends Button {
         private Technology tech;
+        public Image icon;
+        private Stack stack;
 
         public TechnologyEntry(Technology tech) {
             super(skin, "toggle");
             this.tech = tech;
-            Image icon = new Image(Sprites.getSprite(tech.getIcon()));
+            stack = new Stack();
+            icon = new Image(Sprites.getSprite(tech.getIcon()));
             Vector2 pos = tech.getPosition();
 
-            this.add(icon).size(32).pad(5);
-            this.setPosition(pos.x * 48, pos.y * 48);
+            stack.add(icon);
+            this.add(stack).size(24).pad(5);
+            this.setPosition(pos.x * 40, pos.y * 40);
             this.pack();
 
             addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
-                    /*if (isChecked()) {
-                        System.out.println("Selected technology: " + tech.getName());
-                        screenHelper.gameManager
-                    } else {
-                        System.out.println("Deselected technology: " + tech.getName());
-                        screenHelper.gameManager.sendResearchAction(tech.getId(), false);
-                    }*/
                     Entity researchAction = new Entity();
                     screenHelper.gameManager.getEngine().addEntity(researchAction);
                     researchAction.addComponent(new PlayerActionComponent(screenHelper.playerUUID), screenHelper.gameManager.getEngine());
@@ -117,5 +118,23 @@ public class TechnologyMenu extends GameMenu {
         public TechnologyEntry(String techId) {
             this(Registry.getInstance().getRegistry(Technology.class).get(techId));
         }
+    }
+
+    @Override
+    public String getQuickMessage() {
+        ResearchSystem researchSystem = screenHelper.gameManager.getEngine().getSystem(ResearchSystem.class);
+        
+        Technology currentResearch = researchSystem.getPlayerResearchManager(screenHelper.playerUUID.toString()).getCurrentResearch();
+        if (currentResearch != null) {
+            int turnsRemaining = researchSystem.estimateTurnCount(screenHelper.playerUUID);
+            return currentResearch.getName() + " ("+turnsRemaining+" turn(s))";
+        } else {
+            return "No technology being researched.";
+        }
+    }
+
+    @Override
+    public boolean isQuickMessageEnabled() {
+        return true;
     }
 }

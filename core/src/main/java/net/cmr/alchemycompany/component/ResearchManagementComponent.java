@@ -1,5 +1,6 @@
 package net.cmr.alchemycompany.component;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -62,6 +63,12 @@ public class ResearchManagementComponent extends Component {
     public boolean hasResearched(String technology) {
         //return true;
         return researchedTechnologies.contains(technology);
+    }
+    public boolean hasResearched(Collection<String> technologies) {
+        for (String tech : technologies) {
+            if (!hasResearched(tech)) return false;
+        }
+        return true;
     }
     public void setResearched(String technologyId) {
         researchedTechnologies.add(technologyId);

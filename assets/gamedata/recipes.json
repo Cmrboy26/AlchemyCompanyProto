@@ -110,6 +110,13 @@
             "requiredTechnologies": ["PROCESSING"]
         },
         {
+            "id": "REFINE_STEEL",
+            "icon": "STEEL_ICON",
+            "input": { "COAL": 1.0, "IRON": 1.0 },
+            "output": { "STEEL": 1.0 },
+            "requiredTechnologies": ["STEEL_PROCESSING"]
+        },
+        {
             "id": "REFINE_TITANIUM",
             "icon": "TITANIUM_ICON",
             "input": { "TITANIUM_ORE": 1.0, "COAL": 1.0 },
@@ -163,6 +170,17 @@
             "input": { "SUNSTONE": 1.0, "MOONSTONE": 1.0 },
             "output": { "BATTERY": 1.0 },
             "requiredTechnologies": ["ADVANCED_MAGIC", "ELECTRICITY"]
+        }
+
+
+        , {
+            "id": "SELL_IRON",
+            "name": "SELL IRON",
+            "description": "Sell iron for gold.",
+            "icon": "IRON_ICON",
+            "input": { "IRON": 5.0 },
+            "output": { "GOLD": 10.0 },
+            "requiredTechnologies": [ "ECONOMICS" ]
         }
 
     ]

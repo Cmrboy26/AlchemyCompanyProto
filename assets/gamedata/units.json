@@ -20,12 +20,12 @@
             },
             {
                 "class": "net.cmr.alchemycompany.component.RenderComponent",
-                "renderId": "TROOP_IDLE",
+                "renderId": "SCOUT_IDLE",
                 "renderType": "ANIMATION",
                 "invertable": false,
                 "variants": {
-                    "idle": "TROOP_IDLE",
-                    "moving": "TROOP_MOVE"
+                    "idle": "SCOUT_IDLE",
+                    "moving": "SCOUT_MOVE"
                 }
             },
             {

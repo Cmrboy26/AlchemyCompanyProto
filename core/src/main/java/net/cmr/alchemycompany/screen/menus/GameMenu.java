@@ -76,4 +76,11 @@ public abstract class GameMenu extends Table {
 
     }
 
+    public boolean isQuickMessageEnabled() {
+        return false;
+    }
+    public String getQuickMessage() {
+        return null;
+    }
+
 }

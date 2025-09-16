@@ -67,7 +67,7 @@ public class HoverInfoComponent extends Component {
                 Recipe recipe = Registry.getInstance().getRegistry(Recipe.class).get(src.selectedRecipe);
                 
                 intermediateBuilder.append("$image@" + recipe.getIcon() + "&width=24&height=24& ");
-                intermediateBuilder.append("Recipe: "+recipe.getName());
+                intermediateBuilder.append(recipe.getName());
             });
             processComponent(component, OwnerComponent.class, (oc) -> {
                 if (!oc.playerID.equals(playerUUID.toString())) {

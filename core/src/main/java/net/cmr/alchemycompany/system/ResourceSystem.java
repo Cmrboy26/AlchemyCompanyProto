@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.utils.Null;
@@ -19,7 +20,6 @@ import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.ConsumerComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.ProducerComponent;
-import net.cmr.alchemycompany.component.ResearchManagementComponent;
 import net.cmr.alchemycompany.component.StorageComponent;
 import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
@@ -27,8 +27,8 @@ import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
 import net.cmr.alchemycompany.game.Registry;
 import net.cmr.alchemycompany.game.Registry.ResourceFilter;
-import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.game.Resource;
+import net.cmr.alchemycompany.screen.GameScreen;
 
 public class ResourceSystem extends EntitySystem implements ITurnSystem {
 
@@ -36,6 +36,7 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
     private Map<UUID, Map<String, Float>> cachedStoredResources = new HashMap<>();
     private Map<UUID, Map<String, Float>> cachedTotalStorageCapacity = new HashMap<>();
     private Map<UUID, List<Entity>> activeEntities = new HashMap<>();
+    private Set<Consumer<ResourceSystem>> listeners = new HashSet<>();
     private final @Null GameScreen playerScreen;
 
     public ResourceSystem() {
@@ -46,6 +47,7 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
         this.cachedStoredResources = new HashMap<>();
         this.cachedGenerationPerSecond = new HashMap<>();
         this.cachedTotalStorageCapacity = new HashMap<>();
+        this.listeners = new HashSet<>();
     }
 
     @Override
@@ -74,6 +76,8 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
         for (UUID playerUUID : players) {
             calculateTurn(playerUUID, simulate);
         }
+
+        notifyListeners();
     }
 
     private void calculateTurn(UUID playerUUID, boolean simulate) {
@@ -345,40 +349,6 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
         return toBeActive;
     }
 
-    /**
-     * @param resourcesToStore
-     * @return remaining resources that could not be stored (all storage full)
-     */
-    /*public Map<String, Float> distributeStorage(Map<String, Float> resourcesToStore) {
-        // Clear all storage buildings
-        Set<Entity> storageBuildings = engine.getEntities(Family.all(StorageComponent.class, OwnerComponent.class));
-        // Distribute resources among storage buildings
-        for (Entity building : storageBuildings) {
-            StorageComponent storage = building.getComponent(StorageComponent.class);
-            for (String resourceID : storage.getMaxStorage().keySet()) {
-                storage.consumeAmount(resourceID, storage.getAmountStored(resourceID));
-            }
-        }
-        Map<String, Float> remainingResources = new HashMap<>();
-        for (String resourceID : resourcesToStore.keySet()) {
-            float toAdd = resourcesToStore.get(resourceID);
-            for (Entity building : storageBuildings) {
-                StorageComponent storage = building.getComponent(StorageComponent.class);
-                float remainingAfterAdd = storage.addAmount(resourceID, toAdd); 
-                toAdd = remainingAfterAdd;
-                if (toAdd == 0) break;
-            }
-            if (toAdd > 0) {
-                remainingResources.put(resourceID, toAdd);
-            }
-        }
-        // Update all storage buildings
-        for (Entity building : storageBuildings) {
-            engine.changedEntity(building);
-        }
-        return remainingResources;
-    }*/
-
     public boolean tryUseResources(UUID playerUUID, Map<String, Float> resourcesToUse) {
         Map<String, Float> storedResources = new HashMap<>(this.cachedStoredResources.getOrDefault(playerUUID, new HashMap<>()));
         // Check if enough resources are available
@@ -431,6 +401,18 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
 
     public List<Entity> getActiveEntities(UUID playerUUID) {
         return activeEntities.get(playerUUID);
+    }
+
+    public void addListener(Consumer<ResourceSystem> listener) {
+        listeners.add(listener);
+    }
+    public void removeListener(Consumer<ResourceSystem> listener) {
+        listeners.remove(listener);
+    }
+    public void notifyListeners() {
+        for (Consumer<ResourceSystem> listener : listeners) {
+            listener.accept(this);
+        }
     }
 
     public static Image getImageDisplay(Resource resource) {

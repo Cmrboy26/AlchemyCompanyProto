@@ -6,6 +6,8 @@ import java.util.Map;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.Tooltip;
+import com.badlogic.gdx.scenes.scene2d.ui.TooltipManager;
 import com.badlogic.gdx.utils.Null;
 
 import net.cmr.alchemycompany.Sprites;
@@ -105,14 +107,25 @@ public class Resources {
             String sign = "";
             if (productionAmount > 0) sign = "+";
             else if (productionAmount < 0) sign = "-";
-            Label productionLabel = new Label(sign + String.format("%.0f", productionAmount), Sprites.getSkin());
+            Label productionLabel = new Label(sign + String.format("%.0f", Math.abs(productionAmount)), Sprites.getSkin());
             productionLabel.setName("production");
             resourceTable.add(productionLabel).padLeft(2);
         }
+        
+        Table tooltipTable = new Table(Sprites.getSkin());
+        tooltipTable.setBackground(Sprites.getSkin().getDrawable("window"));
+        tooltipTable.pad(4);
+        Label nameLabel = new Label(resource.getName(), Sprites.getSkin());
+        nameLabel.setFontScale(0.75f);
+        tooltipTable.add(nameLabel).pad(2).row();
+        Tooltip<Table> tooltip = new Tooltip<Table>(tooltipTable);
+        tooltip.setInstant(true);
+        TooltipManager.getInstance().animations = false;
+        resourceTable.addListener(tooltip);
 
         resourceTable.pack();
-            
+        
         return resourceTable;
     }
 
-}
+}   
