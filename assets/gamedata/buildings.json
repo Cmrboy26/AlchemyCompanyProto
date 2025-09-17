@@ -306,7 +306,8 @@
             {
                 "class": "net.cmr.alchemycompany.component.AvailableRecipesComponent",
                 "availableRecipes": [
-                    "SELL_IRON"
+                    "SELL_IRON",
+                    "RESEARCH_SCIENCE"
                 ]
             },
             {

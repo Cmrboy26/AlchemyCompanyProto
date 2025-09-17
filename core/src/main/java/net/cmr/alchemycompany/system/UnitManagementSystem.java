@@ -5,7 +5,6 @@ import java.util.UUID;
 import net.cmr.alchemycompany.ACEngine;
 import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.ITurnSystem;
-import net.cmr.alchemycompany.IUpdateSystem;
 import net.cmr.alchemycompany.component.ConstructionComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
 import net.cmr.alchemycompany.component.PlacementComponent;
@@ -18,6 +17,7 @@ import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
+import net.cmr.alchemycompany.ecs.IUpdateSystem;
 import net.cmr.alchemycompany.entity.UnitFactory;
 import net.cmr.alchemycompany.world.Tile;
 
@@ -36,7 +36,7 @@ public class UnitManagementSystem extends EntitySystem implements IUpdateSystem,
             PlayerActionComponent pac = entity.getComponent(PlayerActionComponent.class);
             UnitActionComponent uac = entity.getComponent(UnitActionComponent.class);
 
-            UUID playerID = pac.playerUUID;
+            UUID playerUUID = pac.playerUUID;
             int x = uac.x;
             int y = uac.y;
             String type = uac.type;
@@ -44,25 +44,25 @@ public class UnitManagementSystem extends EntitySystem implements IUpdateSystem,
             System.out.println("UnitManagementSystem recieved action "+pac+"\n"+uac);
 
             if (type != null) {
-                if (tryPlaceUnit(playerID, type, x, y, false, engine.as(ACEngine.class))) {
-                    GameManager.onBuildingChange(playerID, entity, engine);
+                if (tryPlaceUnit(playerUUID, type, x, y, false, engine.as(ACEngine.class))) {
+                    GameManager.onBuildingChange(playerUUID, entity, engine);
                 }
             } else {
-                if (tryRemoveUnit(playerID, x, y, engine.as(ACEngine.class))) {
-                    GameManager.onPlacementChange(playerID, x, y, engine);
+                if (tryRemoveUnit(playerUUID, x, y, engine.as(ACEngine.class))) {
+                    GameManager.onPlacementChange(playerUUID, x, y, engine);
                 }
             }
         });
     }
 
-    public static boolean tryRemoveUnit(UUID playerID, int x, int y, ACEngine engine) {
+    public static boolean tryRemoveUnit(UUID playerUUID, int x, int y, ACEngine engine) {
         Tile tile = engine.as(ACEngine.class).getWorld().getTile(x, y);
         if (tile != null && !tile.canPlaceUnit()) {
             // Remove tile at location if it is the players
             Entity unit = engine.getEntity(tile.getUnitSlotID());
             UnitComponent uc = unit.getComponent(UnitComponent.class);
             UUID unitOwner = unit.getComponent(OwnerComponent.class).getUUID();
-            if (playerID.equals(unitOwner)) {
+            if (playerUUID.equals(unitOwner)) {
                 tile.setUnitSlotID(null); // set tile unoccupied
                 engine.removeEntity(unit);
                 return true;
@@ -71,12 +71,12 @@ public class UnitManagementSystem extends EntitySystem implements IUpdateSystem,
         return false;
     }
 
-    public static boolean tryPlaceUnit(UUID playerID, String type, int x, int y, boolean overrideVisibility, ACEngine engine) {
+    public static boolean tryPlaceUnit(UUID playerUUID, String type, int x, int y, boolean overrideVisibility, ACEngine engine) {
         Tile tile = engine.as(ACEngine.class).getWorld().getTile(x, y);
         if (tile != null && tile.canPlaceUnit()) {
             VisibilitySystem visibilitySystem = engine.getSystem(VisibilitySystem.class);
-            if (overrideVisibility || visibilitySystem == null || (visibilitySystem != null && visibilitySystem.isVisibleCurrently(playerID, x, y))) {
-                Entity unit = UnitFactory.createUnit(playerID, type, x, y);
+            if (overrideVisibility || visibilitySystem == null || (visibilitySystem != null && visibilitySystem.isVisibleCurrently(playerUUID, x, y))) {
+                Entity unit = UnitFactory.createUnit(playerUUID, type, x, y);
                 UnitComponent uc = unit.getComponent(UnitComponent.class);
                 PurchaseCostComponent pcc = unit.getComponent(PurchaseCostComponent.class);
                 PlacementComponent pc = unit.getComponent(PlacementComponent.class);
@@ -84,7 +84,7 @@ public class UnitManagementSystem extends EntitySystem implements IUpdateSystem,
                     if (pcc != null) {
                         ResourceSystem resourceSystem = engine.getSystem(ResourceSystem.class);
                         if (resourceSystem != null) {
-                            if (!resourceSystem.tryUseResources(playerID, pcc.getResourceCost(playerID, uc.unitId, engine))) {
+                            if (!resourceSystem.tryUseResources(playerUUID, pcc.getResourceCost(playerUUID, uc.unitId, engine))) {
                                 return false;
                             }
                         }

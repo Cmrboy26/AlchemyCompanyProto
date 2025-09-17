@@ -2,15 +2,21 @@ package net.cmr.alchemycompany.screen.menus;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.Tooltip;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.utils.Scaling;
 
 import net.cmr.alchemycompany.Sprites;
 import net.cmr.alchemycompany.component.AvailableRecipesComponent;
@@ -49,26 +55,42 @@ public class ShopMenu extends GameMenu {
 
         categoryButtonGroup = new ButtonGroup<>();
         categoryButtonGroup.setMaxCheckCount(1);
-        categoryButtonGroup.setMinCheckCount(0);
+        categoryButtonGroup.setMinCheckCount(1);
 
         categoryTable = new Table(skin);
+        Table entryScrollContainer = new Table();
         entryTable = new Table(skin);
-        entryScrollPane = new ScrollPane(entryTable, skin);
+        entryScrollContainer.add(entryTable).width(200).row();
+        entryScrollPane = new ScrollPane(entryScrollContainer, skin);
         entryScrollPane.setFadeScrollBars(false);
         entryScrollPane.setForceScroll(false, true);
         entryScrollPane.setScrollingDisabled(true, false);
         entryScrollPane.pack();
 
         List<ShopCategory> categoriesList = new ArrayList<>();
-        categoriesList.add(new ShopCategory("Can Build", entity -> entity.hasComponent(AvailableRecipesComponent.class), "IRON_ORE_ICON"));
-        categoriesList.add(new ShopCategory("Production", entity -> entity.hasComponent(AvailableRecipesComponent.class), "TITANIUM_ICON"));
-        ShopCategory miscCategory = new ShopCategory("Miscellaneous", entity -> true, "IRON_ORE_ICON");
+        categoriesList.add(new ShopCategory("Can Build", entity -> {
+            if (!entity.hasComponent(PurchaseCostComponent.class) || !entity.hasComponent(ConstructionComponent.class)) {
+                return false;
+            }
+            ResourceSystem resourceSystem = screenHelper.gameManager.getEngine().getSystem(ResourceSystem.class);
+            int existingCount = 0;
+            BuildingComponent bc = entity.getComponent(BuildingComponent.class);
+            if (bc != null) {
+                existingCount = entity.getComponent(PurchaseCostComponent.class).getExistingCount(screenHelper.playerUUID, bc.buildingId, screenHelper.gameManager.getEngine());
+            }
+            Map<String, Float> costMap = entity.getComponent(PurchaseCostComponent.class).getResourceCost(existingCount);
+            if (!resourceSystem.hasEnoughResources(screenHelper.playerUUID, costMap)) {
+                return false;
+            }
+            ResearchSystem researchSystem = screenHelper.gameManager.getEngine().getSystem(ResearchSystem.class);
+            ResearchRequirementComponent rrc = entity.getComponent(ResearchRequirementComponent.class);
+            return researchSystem.hasMetRequirements(screenHelper.playerUUID, rrc);
+        }, "CONSTRUCTION"));
+        categoriesList.add(new ShopCategory("Production", entity -> entity.hasComponent(AvailableRecipesComponent.class), "REFINERY"));
+        ShopCategory miscCategory = new ShopCategory("All", entity -> true, "IRON_ORE_ICON");
         categoriesList.add(miscCategory);
 
-        for (ShopCategory category : categoriesList) {
-            categoryTable.add(category).pad(5);
-            categoryButtonGroup.add(category);
-        }
+        final List<ShopEntry> allEntries = new ArrayList<>();
     
         for (Entry<String, Entity> buildingEntry : BuildingFactory.getRegisteredBuildingEntities().entrySet()) {
             ShopCategory category = categoriesList.stream()
@@ -85,7 +107,7 @@ public class ShopMenu extends GameMenu {
                         if (rrc != null) {
                             ResearchSystem researchSystem = screenHelper.gameManager.getEngine().getSystem(ResearchSystem.class);
                             for (String techId : rrc.technologiesRequired) {
-                                if (!researchSystem.getPlayerResearchManager(screenHelper.playerUUID.toString()).hasResearched(techId)) {
+                                if (!researchSystem.getPlayerResearchManager(screenHelper.playerUUID).hasResearched(techId)) {
                                     return "Requires technology: " + techId;
                                 }
                             }
@@ -122,17 +144,63 @@ public class ShopMenu extends GameMenu {
                         screenHelper.gameManager.tryPlaceBuilding(screenHelper.playerUUID, buildingId, tilePoint.getX(), tilePoint.getY(), false);
                     }
                 };
-                entryButtonGroup.add(shopEntry);
-                entryTable.add(shopEntry).growX().space(2).row();
+                allEntries.add(shopEntry);
+                //entryButtonGroup.add(shopEntry);
+                //entryTable.add(shopEntry).growX().space(2).row();
             } catch (IllegalArgumentException e) {
                 System.err.println("Error creating shop entry for building " + buildingEntry.getKey() + ": " + e.getMessage());
             }
         }
 
+
+        Runnable createShopMenu = new Runnable() {
+            Long lastRun = 0L;
+            @Override
+            public void run() {
+                /*entryTable.clearChildren();
+                if (categoryButtonGroup.getChecked() == null) {
+                    entryTable.add(new Label("Select a category", skin)).pad(5);
+                    return;
+                }*/
+
+                Predicate<Entity> filter = categoryButtonGroup.getChecked().getPredicate();
+                for (ShopEntry entry : allEntries) {
+                    if (!filter.test(entry.shopEntity)) {
+                        entryTable.removeActor(entry);
+                        entryButtonGroup.remove(entry);
+                    } else {
+                        if (!entryTable.getChildren().contains(entry, true)) {
+                            entryButtonGroup.add(entry);
+                            entryTable.add(entry).growX().space(2).row();
+                        }
+                    }
+                }
+                entryTable.pack();
+                entryScrollPane.layout();
+            }
+        };
+
+        for (ShopCategory category : categoriesList) {
+            categoryTable.add(category).pad(5);
+            categoryButtonGroup.add(category);
+            category.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    Gdx.app.postRunnable(() -> {
+                        entryTable.clearChildren();
+                        entryButtonGroup.uncheckAll();
+                        createShopMenu.run();
+                    });
+                }
+            });
+        }
+
+        createShopMenu.run();
+
         addContinuousUpdate(() -> {
-            if (lastUpdateSecond != (int)System.currentTimeMillis() / 10) {
-                lastUpdateSecond = (int)System.currentTimeMillis() / 10;
-                entryButtonGroup.getButtons().forEach(entry -> entry.recalculateShopMenu());
+            createShopMenu.run();
+            for (ShopEntry entry : entryButtonGroup.getButtons()) {
+                entry.recalculateShopMenu();
             }
         });
 
@@ -289,11 +357,19 @@ public class ShopMenu extends GameMenu {
         public ShopCategory(String name, Predicate<Entity> filter, String renderId) {
             super(skin, "toggle");
             Image icon = new Image(Sprites.getSprite(renderId));
+            icon.setScaling(Scaling.fillX);
             this.name = name;
             this.filter = filter;
             this.renderId = renderId;
             add(icon).size(16).pad(1);
             pack();
+
+            Table tooltipTable = new Table(skin);
+            tooltipTable.setBackground("window");
+            tooltipTable.add(new Label(name, skin)).pad(5).row();
+            Tooltip<Table> tooltip = new Tooltip<>(tooltipTable);
+            tooltip.setInstant(true);
+            this.addListener(tooltip);
         }
 
         public String getName() {

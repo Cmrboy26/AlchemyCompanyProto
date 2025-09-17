@@ -26,25 +26,25 @@ public class VisibilitySystem extends EntitySystem {
 
     }
 
-    private Entity getFogHolderEntity(UUID playerID) {
+    private Entity getFogHolderEntity(UUID playerUUID) {
         Set<Entity> fogEntities = engine.getEntities(fogOfWarFamily);
         for (Entity entity : fogEntities) {
             OwnerComponent owner = entity.getComponent(OwnerComponent.class);
-            if (owner != null && owner.playerID != null && owner.playerID.equals(playerID.toString())) {
+            if (owner != null && owner.getUUID() != null && owner.getUUID().equals(playerUUID)) {
                 return entity;
             }
         }
         return null;
     }
 
-    private FogOfWarComponent getFogComponent(UUID playerID) {
-        Entity fogEntity = getFogHolderEntity(playerID);
+    private FogOfWarComponent getFogComponent(UUID playerUUID) {
+        Entity fogEntity = getFogHolderEntity(playerUUID);
         if (fogEntity == null) {
-            throw new IllegalStateException("No FogOfWarComponent found for player " + playerID);
+            throw new IllegalStateException("No FogOfWarComponent found for player " + playerUUID);
         }
         FogOfWarComponent fogOfWar = fogEntity.getComponent(FogOfWarComponent.class);
         if (fogOfWar == null) {
-            throw new IllegalStateException("No FogOfWarComponent found for player " + playerID);
+            throw new IllegalStateException("No FogOfWarComponent found for player " + playerUUID);
         }
         return fogOfWar;
     }
@@ -56,32 +56,32 @@ public class VisibilitySystem extends EntitySystem {
         return false;
     }
 
-    public boolean isVisibleCurrently(UUID playerID, int x, int y) {
-        FogOfWarComponent fogOfWar = getFogComponent(playerID);
-        fogOfWar.currentlyVisibleTiles.putIfAbsent(playerID, new HashSet<>());
-        return fogOfWar.currentlyVisibleTiles.get(playerID).contains(new TilePoint(x, y));
+    public boolean isVisibleCurrently(UUID playerUUID, int x, int y) {
+        FogOfWarComponent fogOfWar = getFogComponent(playerUUID);
+        fogOfWar.currentlyVisibleTiles.putIfAbsent(playerUUID, new HashSet<>());
+        return fogOfWar.currentlyVisibleTiles.get(playerUUID).contains(new TilePoint(x, y));
     }
 
-    public boolean wasVisiblePreviously(UUID playerID, int x, int y) {
-        FogOfWarComponent fogOfWar = getFogComponent(playerID);
-        fogOfWar.previouslyVisibleTiles.putIfAbsent(playerID, new HashSet<>());
-        return fogOfWar.previouslyVisibleTiles.get(playerID).contains(new TilePoint(x, y));
+    public boolean wasVisiblePreviously(UUID playerUUID, int x, int y) {
+        FogOfWarComponent fogOfWar = getFogComponent(playerUUID);
+        fogOfWar.previouslyVisibleTiles.putIfAbsent(playerUUID, new HashSet<>());
+        return fogOfWar.previouslyVisibleTiles.get(playerUUID).contains(new TilePoint(x, y));
     }
 
-    public void updateVisibility(UUID playerID) {
-        FogOfWarComponent fogOfWar = getFogComponent(playerID);
+    public void updateVisibility(UUID playerUUID) {
+        FogOfWarComponent fogOfWar = getFogComponent(playerUUID);
         Family sightFamily = Family.all(SightComponent.class, TilePositionComponent.class, OwnerComponent.class);
         Set<Entity> validEntities = engine.getEntities(sightFamily);
         // Keep references valid
-        fogOfWar.currentlyVisibleTiles.putIfAbsent(playerID, new HashSet<>());
-        fogOfWar.previouslyVisibleTiles.putIfAbsent(playerID, new HashSet<>());
-        Set<TilePoint> visibleTileCoordinates = fogOfWar.currentlyVisibleTiles.get(playerID);
-        Set<TilePoint> previousVisibleCoordinates = fogOfWar.previouslyVisibleTiles.get(playerID);
+        fogOfWar.currentlyVisibleTiles.putIfAbsent(playerUUID, new HashSet<>());
+        fogOfWar.previouslyVisibleTiles.putIfAbsent(playerUUID, new HashSet<>());
+        Set<TilePoint> visibleTileCoordinates = fogOfWar.currentlyVisibleTiles.get(playerUUID);
+        Set<TilePoint> previousVisibleCoordinates = fogOfWar.previouslyVisibleTiles.get(playerUUID);
         visibleTileCoordinates.clear();
         for (Entity entity : validEntities) {
             TilePositionComponent tilePosition = entity.getComponent(TilePositionComponent.class);
             OwnerComponent owner = entity.getComponent(OwnerComponent.class);
-            if (!owner.playerID.equals(playerID.toString())) {
+            if (!owner.getUUID().equals(playerUUID)) {
                 continue;
             }
             int radius = entity.getComponent(SightComponent.class).radius;
@@ -95,8 +95,8 @@ public class VisibilitySystem extends EntitySystem {
             }
         }
         previousVisibleCoordinates.addAll(visibleTileCoordinates);
-        //engine.changedEntity(getFogHolderEntity(playerID));
-        engine.changedComponent(getFogHolderEntity(playerID), FogOfWarComponent.class);
+        //engine.changedEntity(getFogHolderEntity(playerUUID));
+        engine.changedComponent(getFogHolderEntity(playerUUID), FogOfWarComponent.class);
     }
 
 }

@@ -25,18 +25,18 @@ import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
+import net.cmr.alchemycompany.ecs.NotifyEntitySystem;
 import net.cmr.alchemycompany.game.Registry;
 import net.cmr.alchemycompany.game.Registry.ResourceFilter;
 import net.cmr.alchemycompany.game.Resource;
 import net.cmr.alchemycompany.screen.GameScreen;
 
-public class ResourceSystem extends EntitySystem implements ITurnSystem {
+public class ResourceSystem extends NotifyEntitySystem<Void> implements ITurnSystem {
 
     private Map<UUID, Map<String, Float>> cachedGenerationPerSecond = new HashMap<>();
     private Map<UUID, Map<String, Float>> cachedStoredResources = new HashMap<>();
     private Map<UUID, Map<String, Float>> cachedTotalStorageCapacity = new HashMap<>();
     private Map<UUID, List<Entity>> activeEntities = new HashMap<>();
-    private Set<Consumer<ResourceSystem>> listeners = new HashSet<>();
     private final @Null GameScreen playerScreen;
 
     public ResourceSystem() {
@@ -47,7 +47,6 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
         this.cachedStoredResources = new HashMap<>();
         this.cachedGenerationPerSecond = new HashMap<>();
         this.cachedTotalStorageCapacity = new HashMap<>();
-        this.listeners = new HashSet<>();
     }
 
     @Override
@@ -63,11 +62,11 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
             Set<Entity> ownedEntities = engine.getComponentMapper(OwnerComponent.class);
             for (Entity e : ownedEntities) {
                 OwnerComponent owner = e.getComponent(OwnerComponent.class);
-                if (owner != null && owner.playerID != null) {
+                if (owner != null && owner.getUUID() != null) {
                     try {
-                        players.add(UUID.fromString(owner.playerID));
+                        players.add(owner.getUUID());
                     } catch (IllegalArgumentException ex) {
-                        System.err.println("Invalid UUID string in OwnerComponent: " + owner.playerID);
+                        System.err.println("Invalid UUID string in OwnerComponent: " + owner.getUUID());
                     }
                 }
             }
@@ -77,7 +76,7 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
             calculateTurn(playerUUID, simulate);
         }
 
-        notifyListeners();
+        notifyListeners(null);
     }
 
     private void calculateTurn(UUID playerUUID, boolean simulate) {
@@ -125,7 +124,7 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
             for (Entity building : storageBuildings) {
                 StorageComponent storage = building.getComponent(StorageComponent.class);
                 OwnerComponent owner = building.getComponent(OwnerComponent.class);
-                if (owner == null || owner.playerID == null || !owner.playerID.equals(playerUUID.toString())) {
+                if (owner == null || owner.getUUID() == null || !owner.getUUID().equals(playerUUID)) {
                     continue; // Not owned by this player
                 }
 
@@ -153,7 +152,7 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
         for (Entity building : storageBuildings) {
             StorageComponent storage = building.getComponent(StorageComponent.class);
             OwnerComponent owner = building.getComponent(OwnerComponent.class);
-            if (owner == null || owner.playerID == null || !owner.playerID.equals(playerUUID.toString())) {
+            if (owner == null || owner.getUUID() == null || !owner.getUUID().equals(playerUUID)) {
                 continue; // Not owned by this player
             }
 
@@ -176,9 +175,9 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
         System.out.println();*/
 
         this.cachedGenerationPerSecond.put(playerUUID, new HashMap<>(generationPerSecond));
-        this.activeEntities.put(playerUUID, new ArrayList<>(activeEntities));
         this.cachedStoredResources.put(playerUUID, new HashMap<>(trueResourcesInStorage));
         this.cachedTotalStorageCapacity.put(playerUUID, new HashMap<>(calculatedTotalStorageCapacity));
+        this.activeEntities.put(playerUUID, new ArrayList<>(activeEntities));
         //}
     }
 
@@ -199,7 +198,7 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
         uniqueEntities.addAll(engine.getComponentMapper(StorageComponent.class));
         uniqueEntities.removeIf((e) -> {
             OwnerComponent owner = e.getComponent(OwnerComponent.class);
-            return owner == null || owner.playerID == null || !owner.playerID.equals(playerUUID.toString());
+            return owner == null || owner.getUUID() == null || !owner.getUUID().equals(playerUUID);
         });
         buildingsToProcess.addAll(uniqueEntities);
 
@@ -335,7 +334,7 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
 
                 // If buildingsProcessed matches finalBuildingsProcessed, then break
                 if (Arrays.equals(buildingsProcessed, finalBuildingsProcessed)) {
-                    System.err.println("Nothing changed, continuing.");
+                    //System.err.println("Nothing changed, continuing.");
                     break;
                 }
 
@@ -347,6 +346,19 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
         }
 
         return toBeActive;
+    }
+
+    public boolean hasEnoughResources(UUID playerUUID, Map<String, Float> resourcesToCheck) {
+        Map<String, Float> storedResources = this.cachedStoredResources.getOrDefault(playerUUID, new HashMap<>());
+        // Check if enough resources are available
+        for (String resourceId : resourcesToCheck.keySet()) {
+            float amountToUse = resourcesToCheck.get(resourceId);
+            float amountInStorage = storedResources.getOrDefault(resourceId, 0f);
+            if (amountInStorage < amountToUse) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public boolean tryUseResources(UUID playerUUID, Map<String, Float> resourcesToUse) {
@@ -367,7 +379,7 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
             System.out.println(toUse);
             for (Entity building : storageBuildings) {
                 OwnerComponent owner = building.getComponent(OwnerComponent.class);
-                if (owner == null || owner.playerID == null || !owner.playerID.equals(playerUUID.toString())) {
+                if (owner == null || owner.getUUID() == null || !owner.getUUID().equals(playerUUID)) {
                     continue; // Not owned by this player
                 }
                 StorageComponent storage = building.getComponent(StorageComponent.class);
@@ -398,21 +410,8 @@ public class ResourceSystem extends EntitySystem implements ITurnSystem {
     public Map<String, Float> getCachedTotalStorageCapacity(UUID playerUUID) {
         return cachedTotalStorageCapacity.get(playerUUID);
     }
-
     public List<Entity> getActiveEntities(UUID playerUUID) {
-        return activeEntities.get(playerUUID);
-    }
-
-    public void addListener(Consumer<ResourceSystem> listener) {
-        listeners.add(listener);
-    }
-    public void removeListener(Consumer<ResourceSystem> listener) {
-        listeners.remove(listener);
-    }
-    public void notifyListeners() {
-        for (Consumer<ResourceSystem> listener : listeners) {
-            listener.accept(this);
-        }
+        return activeEntities.getOrDefault(playerUUID, new ArrayList<>());
     }
 
     public static Image getImageDisplay(Resource resource) {

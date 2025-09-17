@@ -7,7 +7,6 @@ import java.util.function.Consumer;
 import net.cmr.alchemycompany.ACEngine;
 import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.ITurnSystem;
-import net.cmr.alchemycompany.IUpdateSystem;
 import net.cmr.alchemycompany.component.BuildingComponent;
 import net.cmr.alchemycompany.component.Component;
 import net.cmr.alchemycompany.component.ConstructionComponent;
@@ -23,6 +22,7 @@ import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
+import net.cmr.alchemycompany.ecs.IUpdateSystem;
 import net.cmr.alchemycompany.entity.BuildingFactory;
 import net.cmr.alchemycompany.world.Tile;
 
@@ -41,7 +41,7 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
             PlayerActionComponent pac = entity.getComponent(PlayerActionComponent.class);
             BuildingActionComponent bac = entity.getComponent(BuildingActionComponent.class);
 
-            UUID playerID = pac.playerUUID;
+            UUID playerUUID = pac.playerUUID;
             int x = bac.x;
             int y = bac.y;
             String type = bac.type;
@@ -49,18 +49,18 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
             System.out.println("BuildManagementSystem recieved action "+pac+"\n"+bac);
 
             if (type != null) {
-                if (tryPlaceBuilding(playerID, type, x, y, false, engine.as(ACEngine.class))) {
-                    GameManager.onPlacementChange(playerID, x, y, engine);
+                if (tryPlaceBuilding(playerUUID, type, x, y, false, engine.as(ACEngine.class))) {
+                    GameManager.onPlacementChange(playerUUID, x, y, engine);
                 }
             } else {
-                if (tryRemoveBuilding(playerID, x, y, engine.as(ACEngine.class))) {
-                    GameManager.onPlacementChange(playerID, x, y, engine);
+                if (tryRemoveBuilding(playerUUID, x, y, engine.as(ACEngine.class))) {
+                    GameManager.onPlacementChange(playerUUID, x, y, engine);
                 }
             }
         });
     }
 
-    public static boolean tryRemoveBuilding(UUID playerID, int x, int y, ACEngine engine) {
+    public static boolean tryRemoveBuilding(UUID playerUUID, int x, int y, ACEngine engine) {
         Tile tile = engine.as(ACEngine.class).getWorld().getTile(x, y);
         if (tile != null && !tile.canPlaceBuilding()) {
             // Remove tile at location if it is the players
@@ -68,7 +68,7 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
             BuildingComponent bc = building.getComponent(BuildingComponent.class);
             if (!bc.buildingId.equals("HEADQUARTERS")) {
                 UUID buildingOwner = building.getComponent(OwnerComponent.class).getUUID();
-                if (playerID.equals(buildingOwner)) {
+                if (playerUUID.equals(buildingOwner)) {
                     tile.setBuildingSlotID(null); // set tile unoccupied
                     engine.removeEntity(building);
                     return true;
@@ -78,18 +78,18 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
         return false;
     }
 
-    public static boolean tryPlaceBuilding(UUID playerID, String type, int x, int y, boolean overrideVisibility, ACEngine engine) {
+    public static boolean tryPlaceBuilding(UUID playerUUID, String type, int x, int y, boolean overrideVisibility, ACEngine engine) {
         Tile tile = engine.as(ACEngine.class).getWorld().getTile(x, y);
         if (tile != null && tile.canPlaceBuilding()) {
             VisibilitySystem visibilitySystem = engine.getSystem(VisibilitySystem.class);
-            if (overrideVisibility || visibilitySystem == null || (visibilitySystem != null && visibilitySystem.isVisibleCurrently(playerID, x, y))) {
-                Entity building = BuildingFactory.createBuilding(playerID, type, x, y);
+            if (overrideVisibility || visibilitySystem == null || (visibilitySystem != null && visibilitySystem.isVisibleCurrently(playerUUID, x, y))) {
+                Entity building = BuildingFactory.createBuilding(playerUUID, type, x, y);
                 BuildingComponent bc = building.getComponent(BuildingComponent.class);
                 PurchaseCostComponent pcc = building.getComponent(PurchaseCostComponent.class);
                 PlacementComponent pc = building.getComponent(PlacementComponent.class);
                 ResearchSystem rs = engine.getSystem(ResearchSystem.class);
                 ResearchRequirementComponent rrc = building.getComponent(ResearchRequirementComponent.class);
-                ResearchManagementComponent rmc = rs.getPlayerResearchManager(playerID.toString());
+                ResearchManagementComponent rmc = rs.getPlayerResearchManager(playerUUID);
                 if (pc.getValidPlacement().contains(tile.getFeature())) {
                     if (rrc != null) {
                         for (String technologyId : rrc.technologiesRequired) {
@@ -101,7 +101,7 @@ public class BuildingManagementSystem extends EntitySystem implements IUpdateSys
                     if (pcc != null) {
                         ResourceSystem resourceSystem = engine.getSystem(ResourceSystem.class);
                         if (resourceSystem != null) {
-                            if (!resourceSystem.tryUseResources(playerID, pcc.getResourceCost(playerID, bc.buildingId, engine))) {
+                            if (!resourceSystem.tryUseResources(playerUUID, pcc.getResourceCost(playerUUID, bc.buildingId, engine))) {
                                 return false;
                             }
                         }

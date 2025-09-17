@@ -58,21 +58,21 @@ public class PurchaseCostComponent extends Component {
         }
     }
 
-    public int getExistingCount(UUID playerUUID, String buildingID, Engine engine) {
+    public int getExistingCount(UUID playerUUID, String buildingId, Engine engine) {
         int existingBuildings = 0;
         for (Entity entity : engine.getEntities(Family.all(BuildingComponent.class, OwnerComponent.class))) {
             OwnerComponent owner = entity.getComponent(OwnerComponent.class);
             BuildingComponent building = entity.getComponent(BuildingComponent.class);
-            if (owner != null && owner.playerID != null && owner.playerID.equals(playerUUID.toString())
-                && building != null && building.buildingId != null && building.buildingId.equals(buildingID)) {
+            if (owner != null && owner.getUUID() != null && owner.getUUID().equals(playerUUID)
+                && building != null && building.buildingId != null && building.buildingId.equals(buildingId)) {
                 existingBuildings++;
             }
         }
         return existingBuildings;
     }
 
-    public HashMap<String, Float> getResourceCost(UUID playerUUID, String buildingID, Engine engine) {
-        int existingBuildings = getExistingCount(playerUUID, buildingID, engine);
+    public HashMap<String, Float> getResourceCost(UUID playerUUID, String buildingId, Engine engine) {
+        int existingBuildings = getExistingCount(playerUUID, buildingId, engine);
         return getResourceCost(existingBuildings);
     }
 

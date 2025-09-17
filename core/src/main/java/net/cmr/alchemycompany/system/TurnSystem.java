@@ -8,13 +8,13 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import net.cmr.alchemycompany.ITurnSystem;
-import net.cmr.alchemycompany.IUpdateSystem;
 import net.cmr.alchemycompany.component.actions.IActionComponent;
 import net.cmr.alchemycompany.component.actions.PlayerActionComponent;
 import net.cmr.alchemycompany.component.actions.TurnActionComponent;
 import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
+import net.cmr.alchemycompany.ecs.IUpdateSystem;
 import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.network.PlayerStateListener;
 import net.cmr.alchemycompany.network.Stream;
@@ -137,12 +137,10 @@ public class TurnSystem extends EntitySystem implements IUpdateSystem, PlayerSta
             PlayerActionComponent pac = entity.getComponent(PlayerActionComponent.class);
             TurnActionComponent tac = entity.getComponent(TurnActionComponent.class);
 
-            UUID playerID = pac.playerUUID;
+            UUID playerUUID = pac.playerUUID;
             boolean turnFinished = tac.turnFinished;
 
-            System.out.println("TurnSystem received action "+pac+"\n"+tac);
-
-            setPlayerTurnState(playerID, turnFinished);
+            setPlayerTurnState(playerUUID, turnFinished);
         });
     }
 

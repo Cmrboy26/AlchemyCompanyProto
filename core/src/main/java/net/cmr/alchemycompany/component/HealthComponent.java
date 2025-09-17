@@ -27,7 +27,6 @@ public class HealthComponent extends Component {
         if (this.health == null) {
             this.health = maxHealth;
         }
-        System.out.println(maxHealth + ", "+ health);
     }  
 
 }

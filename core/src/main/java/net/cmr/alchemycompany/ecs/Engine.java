@@ -129,7 +129,6 @@ public abstract class Engine {
         if (indexed != null) {
             indexed.remove(entity);
         }
-        // notify listeners
         onComponentChanged(entity, component.getClass());
     }
     protected void onAddComponent(Entity entity, Component component) {
@@ -137,7 +136,6 @@ public abstract class Engine {
         if (indexed != null) {
             indexed.add(entity);
         }
-        // notify listeners
         onComponentChanged(entity, component.getClass());
     }
     protected void onEntityAdded(Entity entity) {

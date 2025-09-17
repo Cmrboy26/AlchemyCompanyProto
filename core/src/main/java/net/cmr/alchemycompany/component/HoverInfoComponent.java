@@ -70,8 +70,8 @@ public class HoverInfoComponent extends Component {
                 intermediateBuilder.append(recipe.getName());
             });
             processComponent(component, OwnerComponent.class, (oc) -> {
-                if (!oc.playerID.equals(playerUUID.toString())) {
-                    //intermediateBuilder.append(playerUUID.toString());
+                if (!oc.getUUID().equals(playerUUID)) {
+                    //intermediateBuilder.append(playerUUID);
                 }
             });
             processComponent(component, ConstructionComponent.class, (oc) -> {

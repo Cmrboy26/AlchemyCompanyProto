@@ -5,7 +5,6 @@ import java.util.Set;
 import java.util.function.Function;
 
 import net.cmr.alchemycompany.ITurnSystem;
-import net.cmr.alchemycompany.IUpdateSystem;
 import net.cmr.alchemycompany.component.AttackComponent;
 import net.cmr.alchemycompany.component.AttackCooldownComponent;
 import net.cmr.alchemycompany.component.Component;
@@ -19,6 +18,7 @@ import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
+import net.cmr.alchemycompany.ecs.IUpdateSystem;
 import net.cmr.alchemycompany.game.Effects.AttackType;
 
 public class CombatSystem extends EntitySystem implements IUpdateSystem, ITurnSystem {
@@ -43,7 +43,7 @@ public class CombatSystem extends EntitySystem implements IUpdateSystem, ITurnSy
             }
             OwnerComponent ocAE = attackingEntity.getComponent(OwnerComponent.class);
             OwnerComponent ocDE = defendingEntity.getComponent(OwnerComponent.class);
-            if (!pac.playerUUID.toString().equals(ocAE.playerID) || pac.playerUUID.toString().equals(ocDE.playerID)) {
+            if (!pac.playerUUID.equals(ocAE.getUUID()) || pac.playerUUID.equals(ocDE.getUUID())) {
                 return;
             }
             if (attackingEntity.hasComponent(AttackCooldownComponent.class)) {

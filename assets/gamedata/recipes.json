@@ -179,8 +179,17 @@
             "description": "Sell iron for gold.",
             "icon": "IRON_ICON",
             "input": { "IRON": 5.0 },
-            "output": { "GOLD": 10.0 },
+            "output": { "GOLD": 2.0 },
             "requiredTechnologies": [ "ECONOMICS" ]
+        }
+
+        , {
+            "id": "RESEARCH_SCIENCE",
+            "name": "RESEARCH SCIENCE",
+            "description": "Convert gold into science.",
+            "icon": "SCIENCE_ICON",
+            "input": { "GOLD": 2.0 },
+            "output": { "SCIENCE": 1.0 }
         }
 
     ]

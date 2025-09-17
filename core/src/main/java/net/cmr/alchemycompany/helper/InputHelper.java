@@ -185,11 +185,10 @@ public class InputHelper extends ScreenHelper {
         if (Gdx.input.isKeyJustPressed(Input.Keys.L)) {
             for (Entity entity : gameManager.getEngine().getEntities(Family.all(BuildingComponent.class, OwnerComponent.class))) {
                 OwnerComponent oc = entity.getComponent(OwnerComponent.class);
-                if (oc.playerID != null && oc.playerID.equals(playerUUID.toString())) {
+                if (oc.getUUID() != null && oc.getUUID().equals(playerUUID)) {
                     BuildingComponent bc = entity.getComponent(BuildingComponent.class);
                     if (bc.buildingId.equals("HEADQUARTERS")) {
                         TilePositionComponent tpc = entity.getComponent(TilePositionComponent.class);
-                        System.out.println("FOCUSING");
                         screen.focusOnTile(tpc.tileX, tpc.tileY);
                         break;
                     }
@@ -216,7 +215,7 @@ public class InputHelper extends ScreenHelper {
         if (buildingId != null) {
             Entity buildingEntity = gameManager.getEngine().getEntity(buildingId);
             if (buildingEntity != null) {
-                if (anyOwner || (buildingEntity.hasComponent(OwnerComponent.class) && buildingEntity.getComponent(OwnerComponent.class).playerID.equals(playerUUID.toString()))) {
+                if (anyOwner || (buildingEntity.hasComponent(OwnerComponent.class) && buildingEntity.getComponent(OwnerComponent.class).getUUID().equals(playerUUID))) {
                     entitiesList.add(gameManager.getEngine().getEntity(buildingId));
                 }
             }
@@ -224,7 +223,7 @@ public class InputHelper extends ScreenHelper {
         if (unitId != null) {
             Entity unitEntity = gameManager.getEngine().getEntity(unitId);
             if (unitEntity != null) {
-                if (anyOwner || (unitEntity.hasComponent(OwnerComponent.class) && unitEntity.getComponent(OwnerComponent.class).playerID.equals(playerUUID.toString()))) {
+                if (anyOwner || (unitEntity.hasComponent(OwnerComponent.class) && unitEntity.getComponent(OwnerComponent.class).getUUID().equals(playerUUID))) {
                     entitiesList.add(gameManager.getEngine().getEntity(unitId));
                 }
             }

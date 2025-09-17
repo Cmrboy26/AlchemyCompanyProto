@@ -18,7 +18,7 @@ public class PlayerActionComponent extends Component implements IActionComponent
 
     @Override
     public void write(Json json) {
-        json.writeValue("playerUUID", playerUUID != null ? playerUUID.toString() : null);
+        json.writeValue("playerUUID", playerUUID != null ? playerUUID : null);
     }
 
     @Override

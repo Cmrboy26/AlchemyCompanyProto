@@ -29,7 +29,6 @@ public class ResearchManagementComponent extends Component {
         
         json.writeObjectStart("costRemaining");
         for (String key : costRemaining.keySet()) {
-            System.out.println(key + " : "+costRemaining.get(key));
             json.writeValue(key, costRemaining.get(key), Float.class);
         }
         json.writeObjectEnd();

@@ -17,7 +17,6 @@ import java.util.UUID;
 import net.cmr.alchemycompany.ACEngine;
 import net.cmr.alchemycompany.GameManager;
 import net.cmr.alchemycompany.ITurnSystem;
-import net.cmr.alchemycompany.IUpdateSystem;
 import net.cmr.alchemycompany.component.MovementComponent;
 import net.cmr.alchemycompany.component.MovementPathComponent;
 import net.cmr.alchemycompany.component.OwnerComponent;
@@ -29,6 +28,7 @@ import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.Entity;
 import net.cmr.alchemycompany.ecs.EntitySystem;
 import net.cmr.alchemycompany.ecs.Family;
+import net.cmr.alchemycompany.ecs.IUpdateSystem;
 import net.cmr.alchemycompany.network.GameServer;
 import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.world.Tile;
@@ -60,7 +60,7 @@ public class MovementSystem extends EntitySystem implements IUpdateSystem, ITurn
                 return;
             }
             OwnerComponent oc = movementEntity.getComponent(OwnerComponent.class);
-            if (!pac.playerUUID.toString().equals(oc.playerID)) {
+            if (!pac.playerUUID.equals(oc.getUUID())) {
                 return;
             }
 

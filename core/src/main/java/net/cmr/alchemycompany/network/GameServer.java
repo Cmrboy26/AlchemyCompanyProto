@@ -120,22 +120,21 @@ public class GameServer implements PlayerStateListener {
         }
         synchronized (streamLock) {
             for (Packet packet : packetQueue) {
-                for (UUID playerID : playerStreams.keySet()) {
-                    Stream stream = playerStreams.get(playerID);
+                for (UUID playerUUID : playerStreams.keySet()) {
+                    Stream stream = playerStreams.get(playerUUID);
                     stream.sendPacket(packet);
-                    //System.out.println("[DEBUG] Sent packet "+packet);
                 }
             }
 
             List<UUID> removeStreams = new ArrayList<>();
-            for (UUID playerID : playerStreams.keySet()) {
-                Stream stream = playerStreams.get(playerID);
+            for (UUID playerUUID : playerStreams.keySet()) {
+                Stream stream = playerStreams.get(playerUUID);
                 try {
                     StreamState previousState = stream.getState();
                     stream.updateStream();
                     if (stream.getState() == StreamState.FINISHED) {
                         Thread.dumpStack();
-                        removeStreams.add(playerID);
+                        removeStreams.add(playerUUID);
                         // Update players about stream removal
                         continue;
                     }
@@ -145,12 +144,12 @@ public class GameServer implements PlayerStateListener {
                     if (stream.getState() == StreamState.PLAYING) {
                         List<Packet> newPackets = stream.pollAllPackets();
                         for (Packet packet : newPackets) {
-                            processPacket(playerID, stream, packet);
+                            processPacket(playerUUID, stream, packet);
                         }
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
-                    removeStreams.add(playerID);
+                    removeStreams.add(playerUUID);
                 }
             }
             while (!removeStreams.isEmpty()) {
@@ -268,15 +267,15 @@ public class GameServer implements PlayerStateListener {
         return playerUUID;
     }
 
-    public void processPacket(UUID playerID, Stream stream, Packet packet) {
-        System.out.println("Server processing packet: "+packet.toString());
+    public void processPacket(UUID playerUUID, Stream stream, Packet packet) {
+        //System.out.println("Server processing packet: "+packet.toString());
         if (packet instanceof EntityPacket) {
             EntityPacket entityPacket = (EntityPacket) packet;
             Entity entity = entityPacket.entity;
             if (entity != null && entity.hasComponent(PlayerActionComponent.class)) {
                 PlayerActionComponent pac = entity.getComponent(PlayerActionComponent.class);
                 // Ensure the action is being performed by the same player
-                pac.playerUUID = playerID;
+                pac.playerUUID = playerUUID;
                 for (Component component : entity.getComponents().values()) {
                     if (!(component instanceof IActionComponent)) {
                         // Entity has a non-action component. Must be disgarded
@@ -284,8 +283,8 @@ public class GameServer implements PlayerStateListener {
                         return;
                     }
                 }
-                queuedActions.putIfAbsent(playerID, new ArrayList<>());
-                queuedActions.get(playerID).add(entity);
+                queuedActions.putIfAbsent(playerUUID, new ArrayList<>());
+                queuedActions.get(playerUUID).add(entity);
                 //getEngine().addEntity(entity);
             } else {
                 // DO NOTHING: they sent over a non-action component.

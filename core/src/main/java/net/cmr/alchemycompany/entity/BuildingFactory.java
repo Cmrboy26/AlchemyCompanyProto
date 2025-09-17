@@ -35,10 +35,10 @@ public class BuildingFactory {
         return getReader().getEntity(unitId);
     }    
 
-    public static Entity createBuilding(UUID playerID, String buildingId, int x, int y) {
+    public static Entity createBuilding(UUID playerUUID, String buildingId, int x, int y) {
         Entity building = createEmptyBuilding(buildingId);
         building.addComponent(new TilePositionComponent(x, y), null);
-        building.addComponent(new OwnerComponent(playerID), null);
+        building.addComponent(new OwnerComponent(playerUUID), null);
         building.addComponent(new HealthComponent(100), null);
         if (!building.hasComponent(SightComponent.class)) {
             building.addComponent(new SightComponent(VisibilitySystem.DEFAULT_BUILDING_RADIUS), null);

@@ -85,72 +85,72 @@ public class GameManager {
     /*
      * When the player attempts to perform an action, send it to the server. The server will give a response if it is possible.
      */
-    public boolean tryPlaceBuilding(UUID playerId, String type, int x, int y, boolean ignoreVisibility) {
+    public boolean tryPlaceBuilding(UUID playerUUID, String type, int x, int y, boolean ignoreVisibility) {
         if (isClient()) {
             Entity buildAction = new Entity();
-            buildAction.addComponent(new PlayerActionComponent(playerId), getEngine());
+            buildAction.addComponent(new PlayerActionComponent(playerUUID), getEngine());
             buildAction.addComponent(new BuildingActionComponent(type, x, y), getEngine());
             clientStream.sendPacket(new EntityPacket(buildAction, EntityState.ADDED));
             return true;
         } else {
-            boolean result = BuildingManagementSystem.tryPlaceBuilding(playerId, type, x, y, ignoreVisibility, engine);
+            boolean result = BuildingManagementSystem.tryPlaceBuilding(playerUUID, type, x, y, ignoreVisibility, engine);
             return result;
         }
     }
 
-    public boolean tryRemoveBuilding(UUID playerId, int x, int y) {
+    public boolean tryRemoveBuilding(UUID playerUUID, int x, int y) {
         if (isClient()) {
             Entity buildAction = new Entity();
-            buildAction.addComponent(new PlayerActionComponent(playerId), getEngine());
+            buildAction.addComponent(new PlayerActionComponent(playerUUID), getEngine());
             buildAction.addComponent(new BuildingActionComponent(null, x, y), getEngine());
             clientStream.sendPacket(new EntityPacket(buildAction, EntityState.ADDED));
             return true;
         } else {
-            boolean result = BuildingManagementSystem.tryRemoveBuilding(playerId, x, y, engine);
+            boolean result = BuildingManagementSystem.tryRemoveBuilding(playerUUID, x, y, engine);
             return result;
         }
     }
 
-    public boolean trySelectRecipe(UUID playerId, String recipeId, UUID buildingId) {
+    public boolean trySelectRecipe(UUID playerUUID, String recipeId, UUID buildingId) {
         if (isClient()) {
             Entity recipeAction = new Entity();
-            recipeAction.addComponent(new PlayerActionComponent(playerId), getEngine());
+            recipeAction.addComponent(new PlayerActionComponent(playerUUID), getEngine());
             recipeAction.addComponent(new SelectRecipeActionComponent(recipeId, buildingId), getEngine());
             clientStream.sendPacket(new EntityPacket(recipeAction, EntityState.ADDED));
             return true;
         } else {
-            boolean result = RecipeSystem.trySelectRecipe(playerId, engine.getEntity(buildingId), recipeId, engine);
+            boolean result = RecipeSystem.trySelectRecipe(playerUUID, engine.getEntity(buildingId), recipeId, engine);
             return result;
         }
     }
 
-    public void tryMoveUnit(UUID playerId, UUID unitId, int x, int y) {
+    public void tryMoveUnit(UUID playerUUID, UUID unitId, int x, int y) {
         if (isClient()) {
             Entity moveAction = new Entity();
-            moveAction.addComponent(new PlayerActionComponent(playerId), engine);
+            moveAction.addComponent(new PlayerActionComponent(playerUUID), engine);
             moveAction.addComponent(new MovementActionComponent(unitId, x, y), engine);
             clientStream.sendPacket(new EntityPacket(moveAction, EntityState.ADDED));
         }
     }
 
-    public void tryAttackUnit(UUID playerId, UUID unitId, UUID targetId) {
+    public void tryAttackUnit(UUID playerUUID, UUID unitId, UUID targetId) {
         if (isClient()) {
             Entity attackAction = new Entity();
-            attackAction.addComponent(new PlayerActionComponent(playerId), engine);
+            attackAction.addComponent(new PlayerActionComponent(playerUUID), engine);
             attackAction.addComponent(new AttackActionComponent(unitId, targetId), engine);
             clientStream.sendPacket(new EntityPacket(attackAction, EntityState.ADDED));
         }
     }
 
-    public static void onBuildingChange(UUID buildingPlayerId, Entity buildingEntity, Engine engine) {
+    public static void onBuildingChange(UUID buildingplayerUUID, Entity buildingEntity, Engine engine) {
         TilePositionComponent tpc = buildingEntity.getComponent(TilePositionComponent.class);
         int x = tpc.tileX;
         int y = tpc.tileY;
-        onPlacementChange(buildingPlayerId, x, y, engine);
+        onPlacementChange(buildingplayerUUID, x, y, engine);
     }
 
-    public static void onPlacementChange(UUID buildingPlayerId, int x, int y, Engine engine) {
-        engine.getSystem(VisibilitySystem.class).updateVisibility(buildingPlayerId);
+    public static void onPlacementChange(UUID buildingplayerUUID, int x, int y, Engine engine) {
+        engine.getSystem(VisibilitySystem.class).updateVisibility(buildingplayerUUID);
         engine.getSystem(ResourceSystem.class).calculateTurn(true);
     }
 

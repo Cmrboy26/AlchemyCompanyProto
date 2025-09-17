@@ -35,7 +35,6 @@ public class MovementPathComponent extends Component {
     public void read(Json json, JsonValue jsonData) {
         LinkedList<TilePoint> tp = new LinkedList<>();
         for (JsonValue entry = jsonData.get("movementPath").child; entry != null; entry = entry.next) {
-            System.out.println(entry);
             int x = entry.child.asInt();
             int y = entry.child.next.asInt();
             TilePoint tilePoint = new TilePoint(x, y);

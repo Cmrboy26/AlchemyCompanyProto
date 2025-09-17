@@ -55,7 +55,7 @@ import net.cmr.alchemycompany.screen.GameScreen;
 import net.cmr.alchemycompany.screen.UpdatingImage;
 import net.cmr.alchemycompany.screen.menus.GameMenu;
 import net.cmr.alchemycompany.screen.menus.ShopMenu;
-import net.cmr.alchemycompany.screen.menus.TechnologyMenu;
+import net.cmr.alchemycompany.screen.menus.ResearchMenu;
 import net.cmr.alchemycompany.system.ResearchSystem;
 import net.cmr.alchemycompany.system.ResourceSystem;
 import net.cmr.alchemycompany.system.SelectionSystem;
@@ -105,9 +105,9 @@ public class MenuHelper extends ScreenHelper {
         technologyMenuTable.setVisible(false);
         stage.addActor(technologyMenuTable);
 
-        GameMenu technologyMenu = new TechnologyMenu(Align.left, this);
+        GameMenu technologyMenu = new ResearchMenu(Align.left, this);
         technologyMenu.setVisible(true);
-        menus.put(TechnologyMenu.class, technologyMenu);
+        menus.put(ResearchMenu.class, technologyMenu);
         technologyMenuTable.add(technologyMenu).left().expand().space(10);
 
         Table menuSelectorTable = new Table();
@@ -226,7 +226,7 @@ public class MenuHelper extends ScreenHelper {
         Label turnLabel = new Label("Turn: " + screen.getTurn(), skin);
         topMenu.add(hudTable).growX().right().space(8);
         hudTable.addAction(Actions.forever(Actions.run(() -> {
-            if (haveResourcesChanged()) {
+            //if (haveResourcesChanged()) {
                 hudTable.clearChildren();
                 hudTable.pack();
                 
@@ -237,7 +237,7 @@ public class MenuHelper extends ScreenHelper {
                 populateResourceTable(hudTable, false, (resId -> {
                     return resId.equals("GOLD") || resId.equals("SCIENCE");
                 }));
-            }
+            //}
         })));
         hudTable.pack();
 
@@ -285,16 +285,33 @@ public class MenuHelper extends ScreenHelper {
         productionMap.entrySet().forEach(entry -> {
             if (entry.getValue() != 0) validResourceKeys.add(entry.getKey());
         });
+        
+        ResearchSystem researchSystem = gameManager.getEngine().getSystem(ResearchSystem.class);
+        ResearchManagementComponent rmc = researchSystem.getPlayerResearchManager(playerUUID);
         for (String resourceID : validResourceKeys) {
             if (filter != null && !filter.test(resourceID)) continue;
             Resource resource = Registry.getInstance().getRegistry(Resource.class).get(resourceID);
-            float storedAmount = resourceMap.getOrDefault(resourceID, 0f);
+            Float storedAmount = resourceMap.getOrDefault(resourceID, 0f);
+            Float totalStorage = totalStorageMap.getOrDefault(resourceID, 0f);
             if (resource.isPerTurnResource()) {
-                storedAmount = -1;
+                storedAmount = null;
+                totalStorage = null;
+            }
+            if (resource.isPerTurnResource() && resourceID.equals("SCIENCE") && rmc != null && rmc.getCurrentResearch() != null) {
+                totalStorage = rmc.getCostConsumed().get("SCIENCE") + rmc.getCostRemaining().get("SCIENCE");
+                storedAmount = rmc.getCostConsumed().get("SCIENCE");
             }
 
-            Table resourceSection = Resources.createResourceTable(resourceID, 12, storedAmount, totalStorageMap.get(resourceID), productionMap.get(resourceID), false);
+            Table resourceSection = Resources.createResourceTable(resourceID, 12, storedAmount, totalStorage, productionMap.get(resourceID), false);
             resourceTable.add(resourceSection).right().fillX();
+            if (resource.isPerTurnResource() && resourceID.equals("SCIENCE")) {
+                if (rmc != null && rmc.getCurrentResearch() != null) {
+                    int turnsRemaining = researchSystem.estimateTurnCount(playerUUID, rmc.getCostRemaining());
+                    Label turnsLabel = new Label("(" + turnsRemaining + " turn(s))", skin);
+                    turnsLabel.setFontScale(0.75f);
+                    resourceTable.add(turnsLabel).right().pad(0, 4, 0, 4);
+                }
+            }
             if (vertical) { resourceTable.row(); } else { resourceTable.add("").width(8); }
         }
         resourceTable.pack();
@@ -478,7 +495,7 @@ public class MenuHelper extends ScreenHelper {
                 WorldFeature featureAt = tileAt != null ? tileAt.getFeature() : null;
 
                 ResearchSystem researchSystem = gameManager.getEngine().getSystem(ResearchSystem.class);
-                ResearchManagementComponent rmc = researchSystem.getPlayerResearchManager(playerUUID.toString());
+                ResearchManagementComponent rmc = researchSystem.getPlayerResearchManager(playerUUID);
                 for (String recipeId : arc.getAvailableRecipes(featureAt)) {
                     Recipe recipe = Registry.getInstance().getRegistry(Recipe.class).get(recipeId);
                     if (recipe == null) continue;
@@ -489,13 +506,13 @@ public class MenuHelper extends ScreenHelper {
                     }
                 }
 
+                // TODO: Selecting none doesn't update the menu as it should
                 SelectBox<String> recipeSelectBox = new SelectBox<>(skin);
                 recipeSelectBox.setItems(recipeOptions.toArray(new String[0]));
                 if (src != null) {
                     String recipeId = src.selectedRecipe;
                     Recipe recipe = Registry.getInstance().getRegistry(Recipe.class).getOrDefault(recipeId, null);
                     int index = recipeIds.indexOf(recipe);
-                    System.out.println(index);
                     if (index < 0) index = 0;
                     recipeSelectBox.setSelectedIndex(index);
                 }
@@ -549,6 +566,14 @@ public class MenuHelper extends ScreenHelper {
                     Table rowTable = new Table();
                     for (Entry<String, Float> entry : cnc.consumption.entrySet()) {
                         Table resourceEntry = Resources.createResourceTable(entry.getKey(), 12, null, null, -entry.getValue(), !bothPresent);
+                        resourceEntry.addAction(Actions.forever(Actions.run(() -> {
+                            ResourceSystem resourceSystem = gameManager.getEngine().getSystem(ResourceSystem.class);
+                            if (!resourceSystem.getActiveEntities(playerUUID).contains(entity)) {
+                                resourceEntry.setColor(1, 0.25f, 0.25f, 0.5f);
+                            } else {
+                                resourceEntry.setColor(1, 1, 1, 1);
+                            }
+                        })));
                         rowTable.add(resourceEntry).pad(1);
                         count++;
                         if (count % 2 == 0) {
@@ -573,6 +598,14 @@ public class MenuHelper extends ScreenHelper {
                     Table rowTable = new Table();
                     for (Entry<String, Float> entry : pc.production.entrySet()) {
                         Table resourceEntry = Resources.createResourceTable(entry.getKey(), 12, null, null, entry.getValue(), !bothPresent);
+                        resourceEntry.addAction(Actions.forever(Actions.run(() -> {
+                            ResourceSystem resourceSystem = gameManager.getEngine().getSystem(ResourceSystem.class);
+                            if (!resourceSystem.getActiveEntities(playerUUID).contains(entity)) {
+                                resourceEntry.setColor(1, 0.25f, 0.25f, 0.5f);
+                            } else {
+                                resourceEntry.setColor(1, 1, 1, 1);
+                            }
+                        })));
                         rowTable.add(resourceEntry).pad(1);
                         count++;
                         if (count % 2 == 0) {

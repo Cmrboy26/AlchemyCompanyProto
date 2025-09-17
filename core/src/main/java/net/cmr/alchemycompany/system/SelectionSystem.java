@@ -45,7 +45,7 @@ public class SelectionSystem extends EntitySystem {
                     sameTileClickCount = 0;
                 }
                 /*OwnerComponent oc = entity.getComponent(OwnerComponent.class);
-                if (oc != null && oc.playerID.equals(playerUUID.toString())) {
+                if (oc != null && oc.getUUID().equals(playerUUID)) {
                     return;
                 }*/
             }

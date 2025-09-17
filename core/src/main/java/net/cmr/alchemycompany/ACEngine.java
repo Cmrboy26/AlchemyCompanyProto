@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
 import net.cmr.alchemycompany.ecs.Engine;
 import net.cmr.alchemycompany.ecs.EntitySystem;
+import net.cmr.alchemycompany.ecs.IUpdateSystem;
 import net.cmr.alchemycompany.system.RenderSystem;
 import net.cmr.alchemycompany.world.World;
 

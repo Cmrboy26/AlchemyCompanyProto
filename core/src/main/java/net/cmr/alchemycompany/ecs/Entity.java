@@ -131,42 +131,4 @@ public class Entity implements Serializable, Cloneable {
         return getID().hashCode();
     }
 
-    /*@Override
-    public void read(Json json, JsonValue jsonData) {
-        JsonValue componentArray = jsonData.get("components");
-        this.componentMap = new HashMap<>();
-        if (componentArray != null) {
-            String componentPackage = Component.class.getPackage().getName();
-            for (JsonValue componentValue : componentArray) {
-                System.out.println(componentValue.toString());
-                // You need to know the actual class of the component to deserialize it properly.
-                // Assuming each component JSON has a "type" field with the class name:
-                try {
-                    Class<? extends Component> componentClass =
-                        (Class<? extends Component>) Class.forName(componentValue.getString("type"));
-                    componentMap.put(componentClass, componentObject);
-                } catch (ClassNotFoundException e) {
-                    throw new RuntimeException("Unknown component type", e);
-                } catch (InstantiationException e) {
-                    e.printStackTrace();
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    @Override
-    public void write(Json json) {
-        json.writeValue("id", id.toString());
-        json.writeArrayStart("components");
-        for (Component component : componentMap.values()) {
-            // Write the class name for deserialization
-            json.writeObjectStart();
-            json.writeValue("type", component.getClass().getName());
-            json.writeValue("component", component);
-            json.writeObjectEnd();
-        }
-        json.writeArrayEnd();
-    }*/
 }

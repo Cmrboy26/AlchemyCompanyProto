@@ -26,12 +26,12 @@ import net.cmr.alchemycompany.network.packet.EntityPacket;
 import net.cmr.alchemycompany.network.packet.EntityPacket.EntityState;
 import net.cmr.alchemycompany.system.ResearchSystem;
 
-public class TechnologyMenu extends GameMenu {
+public class ResearchMenu extends GameMenu {
 
-    ButtonGroup<TechnologyEntry> techButtonGroup;
+    public ButtonGroup<TechnologyEntry> techButtonGroup;
 
-    public TechnologyMenu(int alignment, MenuHelper menuHelper) {
-        super(alignment, menuHelper, "Technology");
+    public ResearchMenu(int alignment, MenuHelper menuHelper) {
+        super(alignment, menuHelper, "Research");
     }
 
     @Override
@@ -59,11 +59,11 @@ public class TechnologyMenu extends GameMenu {
 
         addContinuousUpdate(() -> {
             ResearchSystem researchSystem = screenHelper.gameManager.getEngine().getSystem(ResearchSystem.class);
-            Technology currentResearch = researchSystem.getPlayerResearchManager(screenHelper.playerUUID.toString()).getCurrentResearch();
+            Technology currentResearch = researchSystem.getPlayerResearchManager(screenHelper.playerUUID).getCurrentResearch();
             techButtonGroup.getButtons().forEach(button -> {
                 TechnologyEntry entry = (TechnologyEntry) button;
-                boolean hasTechnology = researchSystem.hasTechnology(screenHelper.playerUUID.toString(), entry.tech.getId());
-                boolean hasPrerequisites = researchSystem.canResearchTechnology(screenHelper.playerUUID.toString(), entry.tech.getId());
+                boolean hasTechnology = researchSystem.hasTechnology(screenHelper.playerUUID, entry.tech.getId());
+                boolean hasPrerequisites = researchSystem.canResearchTechnology(screenHelper.playerUUID, entry.tech.getId());
                 boolean isResearching = currentResearch != null && currentResearch.getId().equals(entry.tech.getId());
                 button.setDisabled(hasTechnology || !hasPrerequisites);
                 Color color = Color.WHITE;
@@ -106,11 +106,20 @@ public class TechnologyMenu extends GameMenu {
             addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
-                    Entity researchAction = new Entity();
-                    screenHelper.gameManager.getEngine().addEntity(researchAction);
-                    researchAction.addComponent(new PlayerActionComponent(screenHelper.playerUUID), screenHelper.gameManager.getEngine());
-                    researchAction.addComponent(new ResearchActionComponent(tech.getId(), TechnologyEntry.this.isChecked()), screenHelper.gameManager.getEngine());
-                    screenHelper.screen.getStream().sendPacket(new EntityPacket(researchAction, EntityState.ADDED));
+                    Gdx.app.postRunnable(() -> {
+                        boolean researching = true;
+
+                        if (ResearchMenu.this.techButtonGroup.getChecked() == null) {
+                            researching = false;
+                        } else if (!isChecked()){
+                            return;
+                        }
+                        Entity researchAction = new Entity();
+                        screenHelper.gameManager.getEngine().addEntity(researchAction);
+                        researchAction.addComponent(new PlayerActionComponent(screenHelper.playerUUID), screenHelper.gameManager.getEngine());
+                        researchAction.addComponent(new ResearchActionComponent(tech.getId(), researching), screenHelper.gameManager.getEngine());
+                        screenHelper.screen.getStream().sendPacket(new EntityPacket(researchAction, EntityState.ADDED));
+                    });
                 }
             });
         }
@@ -124,10 +133,11 @@ public class TechnologyMenu extends GameMenu {
     public String getQuickMessage() {
         ResearchSystem researchSystem = screenHelper.gameManager.getEngine().getSystem(ResearchSystem.class);
         
-        Technology currentResearch = researchSystem.getPlayerResearchManager(screenHelper.playerUUID.toString()).getCurrentResearch();
+        Technology currentResearch = researchSystem.getPlayerResearchManager(screenHelper.playerUUID).getCurrentResearch();
         if (currentResearch != null) {
-            int turnsRemaining = researchSystem.estimateTurnCount(screenHelper.playerUUID);
-            return currentResearch.getName() + " ("+turnsRemaining+" turn(s))";
+            /*int turnsRemaining = researchSystem.estimateTurnCount(screenHelper.playerUUID);
+            return currentResearch.getName() + " ("+turnsRemaining+" turn(s))";*/
+            return "Researching: " + currentResearch.getName();
         } else {
             return "No technology being researched.";
         }

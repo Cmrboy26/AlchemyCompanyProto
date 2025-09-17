@@ -243,7 +243,7 @@ public class GameScreen implements Screen {
                 engine.addEntity(entityPacket.entity);
                 BuildingComponent bc = entityPacket.entity.getComponent(BuildingComponent.class);
                 OwnerComponent oc = entityPacket.entity.getComponent(OwnerComponent.class);
-                if (bc != null && bc.buildingId.equals("HEADQUARTERS") && oc != null && oc.playerID.equals(playerUUID.toString())) {
+                if (bc != null && bc.buildingId.equals("HEADQUARTERS") && oc != null && oc.getUUID().equals(playerUUID)) {
                     TilePositionComponent tpc = entityPacket.entity.getComponent(TilePositionComponent.class);
                     focusOnTile(tpc.tileX, tpc.tileY);
                 }

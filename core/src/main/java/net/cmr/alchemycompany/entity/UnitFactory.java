@@ -29,10 +29,10 @@ public class UnitFactory {
         return getReader().getEntity(unitId);
     }    
 
-    public static Entity createUnit(UUID playerID, String unitId, int x, int y) {
+    public static Entity createUnit(UUID playerUUID, String unitId, int x, int y) {
         Entity building = createEmptyUnit(unitId);
         building.addComponent(new TilePositionComponent(x, y), null);
-        building.addComponent(new OwnerComponent(playerID), null);
+        building.addComponent(new OwnerComponent(playerUUID), null);
         if (!building.hasComponent(SightComponent.class)) {
             building.addComponent(new SightComponent(VisibilitySystem.DEFAULT_UNIT_RADIUS), null);
         }
