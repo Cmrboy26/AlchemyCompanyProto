@@ -1,0 +1,20 @@
+{
+    "animations": {
+        "MISSING_ANIMATION": {
+            "frameDuration": 0.5,
+            "playMode": "LOOP"
+        },
+        "TROOP_MOVE": {
+            "frameDuration": 0.1,
+            "playMode": "LOOP"
+        },
+        "SCOUT_IDLE": {
+            "frameDuration": 2,
+            "playMode": "LOOP"
+        },
+        "SCOUT_MOVE": {
+            "frameDuration": 0.1,
+            "playMode": "LOOP"
+        }
+    }
+}

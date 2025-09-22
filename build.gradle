@@ -8,9 +8,9 @@ buildscript {
     maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
     maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
     maven { url 'https://jitpack.io' }
+    maven { url 'http://clojars.org/repo/' }
   }
   dependencies {
-
 
   }
 }
@@ -30,7 +30,8 @@ allprojects {
 
 configure(subprojects) {
   apply plugin: 'java-library'
-  sourceCompatibility = 8
+  sourceCompatibility = 14
+  targetCompatibility = 14
 
   // From https://lyze.dev/2021/04/29/libGDX-Internal-Assets-List/
   // The article can be helpful when using assets.txt in your project.

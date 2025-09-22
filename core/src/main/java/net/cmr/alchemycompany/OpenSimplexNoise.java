@@ -9,14 +9,14 @@ public class OpenSimplexNoise {
 
 	private static final double STRETCH_CONSTANT_3D = -1.0 / 6;
 	private static final double SQUISH_CONSTANT_3D = 1.0 / 3;
-	
+
 	private short[] perm;
 	private short[] permGradIndex3D;
-	
+
 	public OpenSimplexNoise() {
 		this(PERM_DEFAULT);
 	}
-	
+
 	public OpenSimplexNoise(short[] perm) {
 		this.perm = perm;
 		permGradIndex3D = new short[256];
@@ -24,7 +24,7 @@ public class OpenSimplexNoise {
 			permGradIndex3D[i] = (short)((perm[i] % (gradients3D.length / 3)) * 3);
 		}
 	}
-	
+
 	//Initializes the class using a permutation array generated from a 64-bit seed.
 	//Generates a proper permutation (i.e. doesn't merely perform N successive pair swaps on a base array)
 	//Uses java.util.Random
@@ -42,32 +42,32 @@ public class OpenSimplexNoise {
 			source[r] = source[i];
 		}
 	}
-	
+
 	//3D OpenSimplex (Simplectic) Noise.
 	public double eval(double x, double y, double z) {
-	
+
 		//Place input coordinates on simplectic lattice.
 		double stretchOffset = (x + y + z) * STRETCH_CONSTANT_3D;
 		double xs = x + stretchOffset;
 		double ys = y + stretchOffset;
 		double zs = z + stretchOffset;
-		
+
 		//Floor to get simplectic lattice coordinates of rhombohedron (stretched cube) super-cell origin.
 		int xsb = fastFloor(xs);
 		int ysb = fastFloor(ys);
 		int zsb = fastFloor(zs);
-		
+
 		//Skew out to get actual coordinates of rhombohedron origin. We'll need these later.
 		double squishOffset = (xsb + ysb + zsb) * SQUISH_CONSTANT_3D;
 		double xb = xsb + squishOffset;
 		double yb = ysb + squishOffset;
 		double zb = zsb + squishOffset;
-		
+
 		//Compute simplectic lattice coordinates relative to rhombohedral origin.
 		double xins = xs - xsb;
 		double yins = ys - ysb;
 		double zins = zs - zsb;
-		
+
 		//Sum those together to get a value that determines which cell we're in.
 		double inSum = xins + yins + zins;
 
@@ -75,16 +75,16 @@ public class OpenSimplexNoise {
 		double dx0 = x - xb;
 		double dy0 = y - yb;
 		double dz0 = z - zb;
-		
+
 		//We'll be defining these inside the next block and using them afterwards.
 		double dx_ext0, dy_ext0, dz_ext0;
 		double dx_ext1, dy_ext1, dz_ext1;
 		int xsv_ext0, ysv_ext0, zsv_ext0;
 		int xsv_ext1, ysv_ext1, zsv_ext1;
-		
+
 		double value = 0;
 		if (inSum <= 1) { //We're inside the Tetrahedron (3-Simplex) at (0,0,0)
-			
+
 			//Determine which two of (0,0,1), (0,1,0), (1,0,0) are closest.
 			byte aPoint = 0x01;
 			double aScore = xins;
@@ -97,13 +97,13 @@ public class OpenSimplexNoise {
 				aScore = zins;
 				aPoint = 0x04;
 			}
-			
+
 			//Now we determine the two lattice points not part of the tetrahedron that may contribute.
 			//This depends on the closest two tetrahedral vertices, including (0,0,0)
 			double wins = 1 - inSum;
 			if (wins > aScore || wins > bScore) { //(0,0,0) is one of the closest two tetrahedral vertices.
 				byte c = (bScore > aScore ? bPoint : aPoint); //Our other closest vertex is the closest out of a and b.
-				
+
 				if ((c & 0x01) == 0) {
 					xsv_ext0 = xsb - 1;
 					xsv_ext1 = xsb;
@@ -140,7 +140,7 @@ public class OpenSimplexNoise {
 				}
 			} else { //(0,0,0) is not one of the closest two tetrahedral vertices.
                 		byte c = (byte)(aPoint | bPoint); //Our two extra vertices are determined by the closest two.
-				
+
 				if ((c & 0x01) == 0) {
 					xsv_ext0 = xsb;
 					xsv_ext1 = xsb - 1;
@@ -212,7 +212,7 @@ public class OpenSimplexNoise {
 				value += attn3 * attn3 * extrapolate(xsb + 0, ysb + 0, zsb + 1, dx3, dy3, dz3);
 			}
 		} else if (inSum >= 2) { //We're inside the Tetrahedron (3-Simplex) at (1,1,1)
-		
+
 			//Determine which two tetrahedral vertices are the closest, out of (1,1,0), (1,0,1), (0,1,1) but not (1,1,1).
 			byte aPoint = 0x06;
 			double aScore = xins;
@@ -225,13 +225,13 @@ public class OpenSimplexNoise {
 				aScore = zins;
 				aPoint = 0x03;
 			}
-			
+
 			//Now we determine the two lattice points not part of the tetrahedron that may contribute.
 			//This depends on the closest two tetrahedral vertices, including (1,1,1)
 			double wins = 3 - inSum;
 			if (wins < aScore || wins < bScore) { //(1,1,1) is one of the closest two tetrahedral vertices.
 				byte c = (bScore < aScore ? bPoint : aPoint); //Our other closest vertex is the closest out of a and b.
-				
+
 				if ((c & 0x01) != 0) {
 					xsv_ext0 = xsb + 2;
 					xsv_ext1 = xsb + 1;
@@ -268,7 +268,7 @@ public class OpenSimplexNoise {
 				}
 			} else { //(1,1,1) is not one of the closest two tetrahedral vertices.
                 		byte c = (byte)(aPoint & bPoint); //Our two extra vertices are determined by the closest two.
-				
+
 				if ((c & 0x01) != 0) {
 					xsv_ext0 = xsb + 1;
 					xsv_ext1 = xsb + 2;
@@ -302,7 +302,7 @@ public class OpenSimplexNoise {
 					dz_ext1 = dz0 - 2 * SQUISH_CONSTANT_3D;
 				}
 			}
-			
+
 			//Contribution (1,1,0)
 			double dx3 = dx0 - 1 - 2 * SQUISH_CONSTANT_3D;
 			double dy3 = dy0 - 1 - 2 * SQUISH_CONSTANT_3D;
@@ -373,7 +373,7 @@ public class OpenSimplexNoise {
 				bPoint = 0x02;
 				bIsFurtherSide = false;
 			}
-			
+
 			//The closest out of the two (0,0,1) and (1,1,0) will replace the furthest out of the two decided above, if closer.
 			double p3 = yins + zins;
 			if (p3 > 1) {
@@ -399,7 +399,7 @@ public class OpenSimplexNoise {
 					bIsFurtherSide = false;
 				}
 			}
-			
+
 			//Where each of the two closest points are determines how the extra two vertices are calculated.
 			if (aIsFurtherSide == bIsFurtherSide) {
 				if (aIsFurtherSide) { //Both closest points on (1,1,1) side
@@ -590,7 +590,7 @@ public class OpenSimplexNoise {
 				value += attn6 * attn6 * extrapolate(xsb + 0, ysb + 1, zsb + 1, dx6, dy6, dz6);
 			}
 		}
- 
+
 		//First extra vertex
 		double attn_ext0 = 2 - dx_ext0 * dx_ext0 - dy_ext0 * dy_ext0 - dz_ext0 * dz_ext0;
 		if (attn_ext0 > 0)
@@ -612,7 +612,7 @@ public class OpenSimplexNoise {
 		//evaluations were -28.12974224468639 (min) and 28.134269887817773 (max).
 		return value / 28.25;
 	}
-	
+
 	private double extrapolate(int xsb, int ysb, int zsb, double dx, double dy, double dz)
 	{
 		short index = permGradIndex3D[(perm[(perm[xsb & 0xFF] + ysb) & 0xFF] + zsb) & 0xFF];
@@ -620,12 +620,12 @@ public class OpenSimplexNoise {
 			+ gradients3D[index + 1] * dy
 			+ gradients3D[index + 2] * dz;
 	}
-	
+
 	private static int fastFloor(double x) {
 		int xi = (int)x;
 		return x < xi ? xi - 1 : xi;
 	}
-	
+
 	//Array of gradient values for 3D.
 	//(New gradient set 9/19/14)
 	private static byte[] gradients3D = new byte[] {
@@ -634,7 +634,7 @@ public class OpenSimplexNoise {
 		 0, 3,-2,    0,-2, 3,    3, 0,-2,   -2, 0, 3,   3,-2, 0,    -2, 3, 0,
 		 0,-3,-2,    0,-2,-3,   -3, 0,-2,   -2, 0,-3,  -3,-2, 0,    -2,-3, 0,
 	};
-	
+
 	//The standardized permutation order as used in Ken Perlin's "Improved Noise"
 	//(and basically every noise implementation on the Internet).
 	//Also note that there's no reason this can't be a byte array other than that this is Java.

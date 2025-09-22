@@ -1,14 +1,5 @@
-X Adding and removing structures
-X Turn Logic
-X Resource Production
-X Structure Cost
-X Resource UI
-X Resource Manufacturing
-X Resource Storage
-X Building Construction
-X Troops
-X Troop Equipment
-X Reaction Vessel
-X Make archer tower work
-X Make barracks work
-X Tech Tree
+- Have client send username over and use that to create the random UUID for them combined with the seed of the world
+- Display turn counter
+- Display turns left with research
+- Make notifications in right bottom (icons with tooltips, right click to delete)
+

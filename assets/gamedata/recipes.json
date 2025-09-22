@@ -1,0 +1,196 @@
+{
+    "registry": [
+        {
+            "id": "EXTRACT_WATER",
+            "icon": "WATER_ICON",
+            "output": { "WATER": 3.0 }
+        },
+        {
+            "id": "EXTRACT_OIL",
+            "icon": "OIL_ICON",
+            "output": { "OIL": 2.0 }
+        },
+        {
+            "id": "PRODUCE_SULFURIC_ACID",
+            "icon": "SULFURIC_ACID_ICON",
+            "input": { "SULFUR": 1.0, "WATER": 1.0 },
+            "output": { "SULFURIC_ACID": 1.0 }
+        },
+        {
+            "id": "PRODUCE_SALT",
+            "icon": "SALT_ICON",
+            "input": { "WATER": 2.0 },
+            "output": { "SALTS": 1.0 }
+        },
+        {
+            "id": "ELECTROLYZE_SALT",
+            "icon": "LYE_ICON",
+            "input": { "SALTS": 1 },
+            "output": { "LYE": 1 },
+            "requiredTechnologies": [ "ELECTROLYTIC_PROCESSING" ]
+        },
+        {
+            "id": "EXTRACT_QUARTZ",
+            "icon": "QUARTZ_ICON",
+            "input": {},
+            "output": { "QUARTZ": 3.0 }
+        },
+        {
+            "id": "EXTRACT_COAL",
+            "icon": "COAL_ICON",
+            "input": {},
+            "output": { "COAL": 1.0 }
+        },
+        {
+            "id": "EXTRACT_IRON_ORE",
+            "icon": "IRON_ORE_ICON",
+            "input": {},
+            "output": { "IRON_ORE": 1.0 }
+        },
+        {
+            "id": "EXTRACT_COPPER_ORE",
+            "icon": "COPPER_ORE_ICON",
+            "input": {},
+            "output": { "COPPER_ORE": 1.0 }
+        },
+        {
+            "id": "EXTRACT_SULFUR",
+            "icon": "SULFUR_ICON",
+            "input": {},
+            "output": { "SULFUR": 1.0 },
+            "requiredTechnologies": ["ADVANCED_EXTRACTION"]
+        },
+        {
+            "id": "EXTRACT_TITANIUM_ORE",
+            "icon": "TITANIUM_ORE_ICON",
+            "input": {},
+            "output": { "TITANIUM_ORE": 1.0 },
+            "requiredTechnologies": ["ADVANCED_EXTRACTION"]
+        },
+        {
+            "id": "EXTRACT_CRYSTAL",
+            "icon": "CRYSTAL_ICON",
+            "input": {},
+            "output": { "CRYSTAL": 1.0 },
+            "requiredTechnologies": ["MAGIC"]
+        },
+        {
+            "id": "EXTRACT_MYTHRIL",
+            "icon": "MYTHRIL_ICON",
+            "input": {},
+            "output": { "MYTHRIL": 1.0 },
+            "requiredTechnologies": ["ADVANCED_MAGIC", "ADVANCED_EXTRACTION"]
+        },
+        {
+            "id": "EXTRACT_CORN",
+            "name": "HARVEST CORN",
+            "description": "Harvest corn.",
+            "icon": "CORN_ICON",
+            "input": {},
+            "output": { "CORN": 1.0 }
+        },
+        {
+            "id": "EXTRACT_STARDUST",
+            "icon": "STARDUST_ICON",
+            "input": {},
+            "output": { "STARDUST": 1.0 }
+        },
+        {
+            "id": "REFINE_IRON",
+            "icon": "IRON_ICON",
+            "input": { "IRON_ORE": 1.0 },
+            "output": { "IRON": 1.0 },
+            "requiredTechnologies": ["PROCESSING"]
+        },
+        {
+            "id": "REFINE_COPPER",
+            "icon": "COPPER_ICON",
+            "input": { "COPPER_ORE": 1.0 },
+            "output": { "COPPER": 1.0 },
+            "requiredTechnologies": ["PROCESSING"]
+        },
+        {
+            "id": "REFINE_STEEL",
+            "icon": "STEEL_ICON",
+            "input": { "COAL": 1.0, "IRON": 1.0 },
+            "output": { "STEEL": 1.0 },
+            "requiredTechnologies": ["STEEL_PROCESSING"]
+        },
+        {
+            "id": "REFINE_TITANIUM",
+            "icon": "TITANIUM_ICON",
+            "input": { "TITANIUM_ORE": 1.0, "COAL": 1.0 },
+            "output": { "TITANIUM": 1.0 },
+            "requiredTechnologies": ["ADVANCED_PROCESSING"]
+        },
+        {
+            "id": "REFINE_SILICON",
+            "icon": "SILICON_ICON",
+            "input": { "QUARTZ": 2.0 },
+            "output": { "SILICON": 1.0 },
+            "requiredTechnologies": ["ADVANCED_PROCESSING"]
+        },
+        {
+            "id": "STARDUST_TO_SUNSTONE",
+            "name": "SUNSTONE TRANSMUTATION",
+            "description": "Transmute stardust into sunstone.",
+            "icon": "SUNSTONE_ICON",
+            "input": { "STARDUST": 5.0 },
+            "output": { "SUNSTONE": 1.0 },
+            "requiredTechnologies": ["MAGIC"]
+        },
+        {
+            "id": "STARDUST_TO_MOONSTONE",
+            "name": "MOONSTONE TRANSMUTATION",
+            "description": "Transmute stardust into moonstone.",
+            "icon": "MOONSTONE_ICON",
+            "input": { "STARDUST": 5.0 },
+            "output": { "MOONSTONE": 1.0 },
+            "requiredTechnologies": ["MAGIC"]
+        },
+        {
+            "id": "REFINE_GLASS",
+            "icon": "GLASS_ICON",
+            "input": { "QUARTZ": 2.0 },
+            "output": { "GLASS": 1.0 },
+            "requiredTechnologies": ["PROCESSING"]
+        },
+        {
+            "id": "PRODUCE_BATTERY",
+            "name": "PRODUCE BATTERY",
+            "icon": "BATTERY_ICON",
+            "input": { "IRON": 1.0, "COPPER": 1.0, "SULFURIC_ACID": 2.0 },
+            "output": { "BATTERY": 1.0 },
+            "requiredTechnologies": ["ELECTRICITY"]
+        },
+        {
+            "id": "PRODUCE_BATTERY_MAGIC_STONE",
+            "name": "PRODUCE BATTERY (Magic)",
+            "icon": "BATTERY_ICON",
+            "input": { "SUNSTONE": 1.0, "MOONSTONE": 1.0 },
+            "output": { "BATTERY": 1.0 },
+            "requiredTechnologies": ["ADVANCED_MAGIC", "ELECTRICITY"]
+        }
+
+
+        , {
+            "id": "SELL_IRON",
+            "name": "SELL IRON",
+            "description": "Sell iron for gold.",
+            "icon": "IRON_ICON",
+            "input": { "IRON": 5.0 },
+            "output": { "GOLD": 2.0 },
+            "requiredTechnologies": [ "ECONOMICS" ]
+        }
+
+        , {
+            "id": "RESEARCH_SCIENCE",
+            "name": "RESEARCH SCIENCE",
+            "description": "Convert gold into science.",
+            "icon": "SCIENCE_ICON",
+            "input": { "GOLD": 2.0 },
+            "output": { "SCIENCE": 1.0 }
+        }
+
+    ]
+}

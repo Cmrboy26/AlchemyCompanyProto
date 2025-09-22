@@ -1,0 +1,104 @@
+{
+    "registry": [
+        {
+            "id": "PROCESSING",
+            "name": "Processing",
+            "description": "Process new technologies.",
+            "icon": "PROCESSING_1_ICON",
+            "position": [1, 0],
+            "cost": 5
+        },
+        {
+            "id": "STEEL_PROCESSING",
+            "prerequisites": [
+                "PROCESSING"
+            ],
+            "name": "Steel Processing",
+            "description": "Process steel from iron and carbon.",
+            "icon": "STEEL_PROCESSING_ICON",
+            "position": [1, 1],
+            "cost": 50
+        },
+        {
+            "id": "ADVANCED_PROCESSING",
+            "prerequisites": [
+                "STEEL_PROCESSING"
+            ],
+            "name": "Advanced Processing",
+            "description": "Process new technologies.",
+            "icon": "PROCESSING_2_ICON",
+            "position": [1, 2],
+            "cost": 350
+        },
+        {
+            "id": "ELECTRICITY",
+            "prerequisites": [
+                "ADVANCED_PROCESSING"
+            ],
+            "name": "Electricity",
+            "description": "Use the power of electricity",
+            "icon": "ELECTRICITY_ICON",
+            "position": [0.5, 3],
+            "cost": 250
+        },
+        {
+            "id": "ELECTROLYTIC_PROCESSING",
+            "prerequisites": [
+                "ELECTRICITY"
+            ],
+            "name": "Electrolytic Processing",
+            "description": "Use the power of electricity to make metals",
+            "icon": "ELECTROLYTIC_PROCESSING_ICON",
+            "position": [0.5, 4],
+            "cost": 500
+        },
+        {
+            "id": "EXTRACTION",
+            "name": "Extraction",
+            "description": "New technologies allow extraction.",
+            "icon": "EXTRACTION_1_ICON",
+            "position": [0, 0],
+            "cost": 5
+        },
+        {
+            "id": "ADVANCED_EXTRACTION",
+            "prerequisites": [
+                "EXTRACTION"
+            ],
+            "name": "Advanced Extraction",
+            "description": "New technologies allow advanced extraction.",
+            "icon": "EXTRACTION_2_ICON",
+            "position": [0, 1],
+            "cost": {
+                "SCIENCE": 100
+            }
+        },
+        {
+            "id": "MAGIC",
+            "name": "Magic",
+            "description": "Use the power of magic",
+            "icon": "MAGIC_1_ICON",
+            "position": [2, 0],
+            "cost": 25
+        },
+        {
+            "id": "ADVANCED_MAGIC",
+            "name": "Advanced Magic",
+            "prerequisites": [
+                "MAGIC"
+            ],
+            "description": "Use the power of ADVANCED magic",
+            "icon": "MAGIC_2_ICON",
+            "position": [2, 1],
+            "cost": 25
+        },
+        {
+            "id": "ECONOMICS",
+            "name": "Economics",
+            "description": "Learn the secrets of economics.",
+            "icon": "GOLD_ICON",
+            "position": [3, 0],
+            "cost": 10
+        }
+    ]
+}
